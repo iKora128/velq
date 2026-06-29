@@ -75,7 +75,11 @@ fn classify(url: &str, base: &Path) -> Source {
     }
 }
 
-fn fetch(source: &Source, fetch_cdn: bool) -> Result<Vec<u8>, String> {
+async fn fetch(
+    client: &reqwest::Client,
+    source: &Source,
+    fetch_cdn: bool,
+) -> Result<Vec<u8>, String> {
     match source {
         Source::Inline => Err("inline".into()),
         Source::Local(p) => std::fs::read(p).map_err(|e| e.to_string()),
@@ -83,18 +87,14 @@ fn fetch(source: &Source, fetch_cdn: bool) -> Result<Vec<u8>, String> {
             if !fetch_cdn {
                 return Err("CDN fetch disabled".into());
             }
-            let resp = reqwest::blocking::Client::builder()
-                .timeout(std::time::Duration::from_secs(20))
-                .build()
-                .map_err(|e| e.to_string())?
-                .get(u)
-                .header("User-Agent", "Velq/0.1")
-                .send()
-                .map_err(|e| e.to_string())?;
+            let resp = client.get(u).send().await.map_err(|e| e.to_string())?;
             if !resp.status().is_success() {
                 return Err(format!("HTTP {}", resp.status().as_u16()));
             }
-            resp.bytes().map(|b| b.to_vec()).map_err(|e| e.to_string())
+            resp.bytes()
+                .await
+                .map(|b| b.to_vec())
+                .map_err(|e| e.to_string())
         }
     }
 }
@@ -196,7 +196,15 @@ fn first_srcset_url(srcset: &str) -> Vec<String> {
 }
 
 /// Bundle `html` (with assets resolved relative to `base_dir`) into an offline package.
-pub fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResult {
+/// Network fetches are async; the caller drives them on its own runtime.
+pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResult {
+    // One client (and connection pool) for every fetch in this bundle.
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .user_agent("Velq/0.1")
+        .build()
+        .unwrap_or_default();
+
     // Pass 1 — collect references.
     let refs: RefCell<Vec<(String, Kind)>> = RefCell::new(Vec::new());
     let style_buf = RefCell::new(String::new());
@@ -260,7 +268,7 @@ pub fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResult {
         if matches!(source, Source::Inline) {
             continue;
         }
-        match fetch(&source, fetch_cdn) {
+        match fetch(&client, &source, fetch_cdn).await {
             Ok(mut bytes) => {
                 // For CSS, recurse into url() references, then rewrite the CSS itself.
                 if kind == Kind::Css {
@@ -278,7 +286,7 @@ pub fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResult {
                         if matches!(inner_src, Source::Inline) {
                             continue;
                         }
-                        if let Ok(ib) = fetch(&inner_src, fetch_cdn) {
+                        if let Ok(ib) = fetch(&client, &inner_src, fetch_cdn).await {
                             seen.insert(inner.clone());
                             let p = asset_path(kind_from_url(&inner), &inner, &ib);
                             report.bytes += ib.len() as u64;
@@ -398,8 +406,8 @@ mod tests {
         p
     }
 
-    #[test]
-    fn collects_and_rewrites_local_assets_offline() {
+    #[tokio::test]
+    async fn collects_and_rewrites_local_assets_offline() {
         let dir = tmpdir();
         std::fs::create_dir_all(dir.join("css")).unwrap();
         std::fs::write(
@@ -413,7 +421,7 @@ mod tests {
         let html = r#"<html><head><link rel="stylesheet" href="css/site.css"></head>
             <body><img src="img/bg.png"><script src="app.js"></script></body></html>"#;
 
-        let res = bundle(html, &dir, false);
+        let res = bundle(html, &dir, false).await;
 
         // css, js, png (referenced twice but deduped) collected; nothing failed.
         assert!(res.report.failed.is_empty(), "{:?}", res.report.failed);
@@ -435,13 +443,13 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
     }
 
-    #[test]
-    fn bundle_then_pack_produces_a_valid_velq() {
+    #[tokio::test]
+    async fn bundle_then_pack_produces_a_valid_velq() {
         let dir = tmpdir();
         std::fs::write(dir.join("style.css"), "body{margin:0}").unwrap();
         let html =
             r#"<html><head><link rel="stylesheet" href="style.css"></head><body>Hi</body></html>"#;
-        let res = bundle(html, &dir, false);
+        let res = bundle(html, &dir, false).await;
 
         let out = dir.join("doc.velq");
         let manifest = velq_core::Manifest {
@@ -459,11 +467,11 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
     }
 
-    #[test]
-    fn missing_local_asset_is_reported_not_fatal() {
+    #[tokio::test]
+    async fn missing_local_asset_is_reported_not_fatal() {
         let dir = tmpdir();
         let html = r#"<html><body><img src="nope.png"></body></html>"#;
-        let res = bundle(html, &dir, false);
+        let res = bundle(html, &dir, false).await;
         assert_eq!(res.report.failed.len(), 1);
         assert!(res.index_html.contains("nope.png")); // left as-is, not broken
         std::fs::remove_dir_all(&dir).ok();

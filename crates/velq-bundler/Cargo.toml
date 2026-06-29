@@ -9,9 +9,12 @@ repository.workspace = true
 
 [dependencies]
 lol_html = "3.0"
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 serde.workspace = true
 sha2 = "0.10"
 thiserror.workspace = true
 url = "2"
 velq-core = { path = "../velq-core" }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
