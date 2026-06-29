@@ -1,0 +1,471 @@
+//! `velq-bundler` — turn an HTML document into a fully offline `.velq` by collecting
+//! every dependency (local files *and* CDN URLs) and rewriting links to `assets/`
+//! (plan §6/§14). One streaming pass to collect, fetch, then one pass to rewrite.
+
+#![forbid(unsafe_code)]
+
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+
+use lol_html::html_content::ContentType;
+use lol_html::{element, rewrite_str, text, RewriteStrSettings};
+use serde::Serialize;
+use sha2::{Digest, Sha256};
+use velq_core::Asset;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Kind {
+    Css,
+    Js,
+    Img,
+    Font,
+    Other,
+}
+
+impl Kind {
+    fn dir(self) -> &'static str {
+        match self {
+            Kind::Css => "css",
+            Kind::Js => "js",
+            Kind::Img => "img",
+            Kind::Font => "fonts",
+            Kind::Other => "other",
+        }
+    }
+}
+
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleReport {
+    pub collected: usize,
+    pub bytes: u64,
+    pub failed: Vec<FailedUrl>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FailedUrl {
+    pub url: String,
+    pub reason: String,
+}
+
+pub struct BundleResult {
+    pub index_html: String,
+    pub assets: Vec<Asset>,
+    pub report: BundleReport,
+}
+
+enum Source {
+    Local(PathBuf),
+    Remote(String),
+    Inline, // data: URIs etc. — leave untouched
+}
+
+fn classify(url: &str, base: &Path) -> Source {
+    let u = url.trim();
+    if u.starts_with("data:") || u.starts_with('#') || u.is_empty() {
+        Source::Inline
+    } else if u.starts_with("http://") || u.starts_with("https://") {
+        Source::Remote(u.to_string())
+    } else if let Some(rest) = u.strip_prefix("//") {
+        Source::Remote(format!("https://{rest}"))
+    } else {
+        Source::Local(base.join(u.split(['?', '#']).next().unwrap_or(u)))
+    }
+}
+
+fn fetch(source: &Source, fetch_cdn: bool) -> Result<Vec<u8>, String> {
+    match source {
+        Source::Inline => Err("inline".into()),
+        Source::Local(p) => std::fs::read(p).map_err(|e| e.to_string()),
+        Source::Remote(u) => {
+            if !fetch_cdn {
+                return Err("CDN fetch disabled".into());
+            }
+            let resp = reqwest::blocking::Client::builder()
+                .timeout(std::time::Duration::from_secs(20))
+                .build()
+                .map_err(|e| e.to_string())?
+                .get(u)
+                .header("User-Agent", "Velq/0.1")
+                .send()
+                .map_err(|e| e.to_string())?;
+            if !resp.status().is_success() {
+                return Err(format!("HTTP {}", resp.status().as_u16()));
+            }
+            resp.bytes().map(|b| b.to_vec()).map_err(|e| e.to_string())
+        }
+    }
+}
+
+fn kind_from_url(url: &str) -> Kind {
+    let clean = url.split(['?', '#']).next().unwrap_or(url).to_lowercase();
+    if [".woff2", ".woff", ".ttf", ".otf", ".eot"]
+        .iter()
+        .any(|e| clean.ends_with(e))
+    {
+        Kind::Font
+    } else if clean.ends_with(".css") {
+        Kind::Css
+    } else if clean.ends_with(".js") || clean.ends_with(".mjs") {
+        Kind::Js
+    } else {
+        Kind::Img
+    }
+}
+
+fn ext_of(url: &str, kind: Kind) -> String {
+    let clean = url.split(['?', '#']).next().unwrap_or(url);
+    let ext = clean
+        .rsplit('/')
+        .next()
+        .and_then(|f| f.rsplit_once('.'))
+        .map(|(_, e)| e);
+    match ext {
+        Some(e) if e.len() <= 5 && e.chars().all(|c| c.is_ascii_alphanumeric()) => e.to_lowercase(),
+        _ => match kind {
+            Kind::Css => "css".into(),
+            Kind::Js => "js".into(),
+            Kind::Img => "img".into(),
+            Kind::Font => "bin".into(),
+            Kind::Other => "bin".into(),
+        },
+    }
+}
+
+fn asset_path(kind: Kind, url: &str, bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    let hash = hasher.finalize();
+    let short: String = hash.iter().take(5).map(|b| format!("{b:02x}")).collect();
+    format!("assets/{}/{}.{}", kind.dir(), short, ext_of(url, kind))
+}
+
+/// Rewrite `url(...)` references inside a CSS string using `map` (original → asset path).
+fn rewrite_css(css: &str, map: &BTreeMap<String, String>) -> String {
+    let mut out = String::with_capacity(css.len());
+    let bytes = css.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if css[i..].starts_with("url(") {
+            if let Some(close) = css[i + 4..].find(')') {
+                let inner = &css[i + 4..i + 4 + close];
+                let trimmed = inner.trim().trim_matches(['"', '\'']);
+                if let Some(asset) = map.get(trimmed) {
+                    out.push_str("url(");
+                    out.push_str(asset);
+                    out.push(')');
+                } else {
+                    out.push_str(&css[i..i + 4 + close + 1]);
+                }
+                i += 4 + close + 1;
+                continue;
+            }
+        }
+        out.push(bytes[i] as char);
+        i += 1;
+    }
+    out
+}
+
+fn collect_css_urls(css: &str) -> Vec<String> {
+    let mut urls = Vec::new();
+    let mut rest = css;
+    while let Some(pos) = rest.find("url(") {
+        rest = &rest[pos + 4..];
+        if let Some(close) = rest.find(')') {
+            let inner = rest[..close].trim().trim_matches(['"', '\'']);
+            if !inner.is_empty() && !inner.starts_with("data:") {
+                urls.push(inner.to_string());
+            }
+            rest = &rest[close + 1..];
+        } else {
+            break;
+        }
+    }
+    urls
+}
+
+fn first_srcset_url(srcset: &str) -> Vec<String> {
+    srcset
+        .split(',')
+        .filter_map(|part| part.split_whitespace().next())
+        .map(str::to_string)
+        .collect()
+}
+
+/// Bundle `html` (with assets resolved relative to `base_dir`) into an offline package.
+pub fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResult {
+    // Pass 1 — collect references.
+    let refs: RefCell<Vec<(String, Kind)>> = RefCell::new(Vec::new());
+    let style_buf = RefCell::new(String::new());
+    let collect_settings = RewriteStrSettings::new()
+        .append_element_content_handler(element!("link[href]", |el| {
+            if let Some(h) = el.get_attribute("href") {
+                let rel = el.get_attribute("rel").unwrap_or_default();
+                let kind = if rel.contains("stylesheet") {
+                    Kind::Css
+                } else {
+                    Kind::Other
+                };
+                refs.borrow_mut().push((h, kind));
+            }
+            Ok(())
+        }))
+        .append_element_content_handler(element!("script[src]", |el| {
+            if let Some(s) = el.get_attribute("src") {
+                refs.borrow_mut().push((s, Kind::Js));
+            }
+            Ok(())
+        }))
+        .append_element_content_handler(element!("img[src]", |el| {
+            if let Some(s) = el.get_attribute("src") {
+                refs.borrow_mut().push((s, Kind::Img));
+            }
+            Ok(())
+        }))
+        .append_element_content_handler(element!("img[srcset], source[srcset]", |el| {
+            if let Some(s) = el.get_attribute("srcset") {
+                for u in first_srcset_url(&s) {
+                    refs.borrow_mut().push((u, Kind::Img));
+                }
+            }
+            Ok(())
+        }))
+        .append_element_content_handler(text!("style", |t| {
+            style_buf.borrow_mut().push_str(t.as_str());
+            if t.last_in_text_node() {
+                for u in collect_css_urls(&style_buf.borrow()) {
+                    let k = kind_from_url(&u);
+                    refs.borrow_mut().push((u, k));
+                }
+                style_buf.borrow_mut().clear();
+            }
+            Ok(())
+        }));
+    let _ = rewrite_str(html, collect_settings);
+
+    // Resolve every reference (dedup by original URL).
+    let mut map: BTreeMap<String, String> = BTreeMap::new();
+    let mut assets: Vec<Asset> = Vec::new();
+    let mut report = BundleReport::default();
+    let mut seen = std::collections::BTreeSet::new();
+
+    for (url, kind) in refs.into_inner() {
+        if !seen.insert(url.clone()) {
+            continue;
+        }
+        let source = classify(&url, base_dir);
+        if matches!(source, Source::Inline) {
+            continue;
+        }
+        match fetch(&source, fetch_cdn) {
+            Ok(mut bytes) => {
+                // For CSS, recurse into url() references, then rewrite the CSS itself.
+                if kind == Kind::Css {
+                    let css = String::from_utf8_lossy(&bytes).into_owned();
+                    let css_base = match &source {
+                        Source::Local(p) => p.parent().unwrap_or(base_dir).to_path_buf(),
+                        _ => base_dir.to_path_buf(),
+                    };
+                    let mut css_map: BTreeMap<String, String> = BTreeMap::new();
+                    for inner in collect_css_urls(&css) {
+                        if seen.contains(&inner) {
+                            continue;
+                        }
+                        let inner_src = classify(&inner, &css_base);
+                        if matches!(inner_src, Source::Inline) {
+                            continue;
+                        }
+                        if let Ok(ib) = fetch(&inner_src, fetch_cdn) {
+                            seen.insert(inner.clone());
+                            let p = asset_path(kind_from_url(&inner), &inner, &ib);
+                            report.bytes += ib.len() as u64;
+                            report.collected += 1;
+                            css_map.insert(inner.clone(), relative_to_css(&p));
+                            assets.push(Asset { path: p, bytes: ib });
+                        } else {
+                            report.failed.push(FailedUrl {
+                                url: inner,
+                                reason: "fetch failed".into(),
+                            });
+                        }
+                    }
+                    bytes = rewrite_css(&css, &css_map).into_bytes();
+                }
+                let p = asset_path(kind, &url, &bytes);
+                report.bytes += bytes.len() as u64;
+                report.collected += 1;
+                map.insert(url.clone(), p.clone());
+                assets.push(Asset { path: p, bytes });
+            }
+            Err(reason) => report.failed.push(FailedUrl { url, reason }),
+        }
+    }
+
+    // Pass 2 — rewrite the HTML to point at assets/.
+    let style_buf2 = RefCell::new(String::new());
+    let rewrite_settings = RewriteStrSettings::new()
+        .append_element_content_handler(rewrite_attr("link[href]", "href", &map))
+        .append_element_content_handler(rewrite_attr("script[src]", "src", &map))
+        .append_element_content_handler(rewrite_attr("img[src]", "src", &map))
+        .append_element_content_handler(element!("img[srcset], source[srcset]", |el| {
+            if let Some(s) = el.get_attribute("srcset") {
+                let rewritten: Vec<String> = s
+                    .split(',')
+                    .map(|part| {
+                        let mut it = part.split_whitespace();
+                        match (it.next(), it.next()) {
+                            (Some(u), d) => {
+                                let nu = map.get(u).map(String::as_str).unwrap_or(u);
+                                match d {
+                                    Some(desc) => format!("{nu} {desc}"),
+                                    None => nu.to_string(),
+                                }
+                            }
+                            _ => part.trim().to_string(),
+                        }
+                    })
+                    .collect();
+                el.set_attribute("srcset", &rewritten.join(", "))?;
+            }
+            Ok(())
+        }))
+        .append_element_content_handler(text!("style", |t| {
+            style_buf2.borrow_mut().push_str(t.as_str());
+            if t.last_in_text_node() {
+                let rewritten = rewrite_css(&style_buf2.borrow(), &map);
+                t.replace(&rewritten, ContentType::Html);
+                style_buf2.borrow_mut().clear();
+            } else {
+                t.remove();
+            }
+            Ok(())
+        }));
+    let index_html = rewrite_str(html, rewrite_settings).unwrap_or_else(|_| html.to_string());
+
+    BundleResult {
+        index_html,
+        assets,
+        report,
+    }
+}
+
+/// CSS assets live in assets/css/; their url() targets (assets/fonts/…) need a path
+/// relative to that, i.e. `../fonts/…`.
+fn relative_to_css(asset_path: &str) -> String {
+    asset_path
+        .strip_prefix("assets/")
+        .map(|r| format!("../{r}"))
+        .unwrap_or_else(|| asset_path.to_string())
+}
+
+fn rewrite_attr<'a>(
+    selector: &'a str,
+    attr: &'a str,
+    map: &'a BTreeMap<String, String>,
+) -> (
+    std::borrow::Cow<'a, lol_html::Selector>,
+    lol_html::ElementContentHandlers<'a>,
+) {
+    let attr = attr.to_string();
+    element!(selector, move |el| {
+        if let Some(v) = el.get_attribute(&attr) {
+            if let Some(p) = map.get(&v) {
+                el.set_attribute(&attr, p)?;
+            }
+        }
+        Ok(())
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tmpdir() -> PathBuf {
+        let mut p = std::env::temp_dir();
+        p.push(format!(
+            "velq-bundler-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&p).unwrap();
+        p
+    }
+
+    #[test]
+    fn collects_and_rewrites_local_assets_offline() {
+        let dir = tmpdir();
+        std::fs::create_dir_all(dir.join("css")).unwrap();
+        std::fs::write(
+            dir.join("css/site.css"),
+            "body{background:url('../img/bg.png')}",
+        )
+        .unwrap();
+        std::fs::create_dir_all(dir.join("img")).unwrap();
+        std::fs::write(dir.join("img/bg.png"), b"\x89PNG fake").unwrap();
+        std::fs::write(dir.join("app.js"), b"console.log(1)").unwrap();
+        let html = r#"<html><head><link rel="stylesheet" href="css/site.css"></head>
+            <body><img src="img/bg.png"><script src="app.js"></script></body></html>"#;
+
+        let res = bundle(html, &dir, false);
+
+        // css, js, png (referenced twice but deduped) collected; nothing failed.
+        assert!(res.report.failed.is_empty(), "{:?}", res.report.failed);
+        assert!(res.report.collected >= 3);
+        // HTML now points at assets/.
+        assert!(res.index_html.contains("assets/css/"));
+        assert!(res.index_html.contains("assets/js/"));
+        assert!(res.index_html.contains("assets/img/"));
+        assert!(!res.index_html.contains("css/site.css"));
+        // The CSS asset's url() was rewritten to ../img/…
+        let css = res
+            .assets
+            .iter()
+            .find(|a| a.path.contains("/css/"))
+            .unwrap();
+        let css_text = String::from_utf8_lossy(&css.bytes);
+        assert!(css_text.contains("url(../img/"), "{css_text}");
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn bundle_then_pack_produces_a_valid_velq() {
+        let dir = tmpdir();
+        std::fs::write(dir.join("style.css"), "body{margin:0}").unwrap();
+        let html =
+            r#"<html><head><link rel="stylesheet" href="style.css"></head><body>Hi</body></html>"#;
+        let res = bundle(html, &dir, false);
+
+        let out = dir.join("doc.velq");
+        let manifest = velq_core::Manifest {
+            title: "T".into(),
+            ..Default::default()
+        };
+        velq_core::pack(&out, &manifest, res.index_html.as_bytes(), &res.assets).unwrap();
+
+        velq_core::validate(&out).unwrap();
+        assert_eq!(velq_core::read_manifest(&out).unwrap().title, "T");
+        // The bundled CSS is in the package and the index points at it.
+        let idx =
+            String::from_utf8(velq_core::read_file_bytes(&out, "index.html").unwrap()).unwrap();
+        assert!(idx.contains("assets/css/"));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn missing_local_asset_is_reported_not_fatal() {
+        let dir = tmpdir();
+        let html = r#"<html><body><img src="nope.png"></body></html>"#;
+        let res = bundle(html, &dir, false);
+        assert_eq!(res.report.failed.len(), 1);
+        assert!(res.index_html.contains("nope.png")); // left as-is, not broken
+        std::fs::remove_dir_all(&dir).ok();
+    }
+}

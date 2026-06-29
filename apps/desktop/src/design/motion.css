@@ -1,0 +1,70 @@
+/* Motion primitives + the global reduced-motion contract (WCAG 2.2.2). */
+
+@keyframes velq-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes velq-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes velq-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes velq-check-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.anim-fade {
+  animation: velq-fade-in var(--dur-base) var(--ease-out);
+}
+.anim-pop {
+  animation: velq-pop-in var(--dur-base) var(--ease-out);
+}
+.anim-slide-up {
+  animation: velq-slide-up var(--dur-base) var(--ease-out);
+}
+
+/* Honor the user's preference: collapse non-essential motion to a cross-fade,
+   never remove feedback entirely. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

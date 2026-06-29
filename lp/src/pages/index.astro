@@ -1,0 +1,157 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const GITHUB = "https://github.com/iKora128/velq";
+const RELEASES = `${GITHUB}/releases/latest`;
+
+const features = [
+  {
+    ic: "✍️",
+    title: "Write, don't toggle",
+    body: "A live preview that formats in place — headings, tables, task lists, footnotes — while your cursor still edits the raw Markdown on the active line.",
+  },
+  {
+    ic: "🕘",
+    title: "Save history, no git to learn",
+    body: "Every save quietly keeps a version. Browse past versions, see a GitHub-quality diff, and restore — without ever meeting the word “commit”.",
+  },
+  {
+    ic: "📦",
+    title: "One-file .velq packaging",
+    body: "Bundle an HTML document with its CSS, JS, images and fonts into a single .velq that runs fully offline. It's just a ZIP — rename it and it opens.",
+  },
+  {
+    ic: "🔒",
+    title: "Safe by construction",
+    body: "A .velq previews in a zero-capability window: JavaScript runs, but it can't touch your files or the network. Security from the architecture, not a scanner.",
+  },
+  {
+    ic: "🧩",
+    title: "Plugins that are just extensions",
+    body: "The plugin API is CodeMirror itself. KaTeX math and Mermaid diagrams ship as references — turn them off and you're left with plain Markdown.",
+  },
+  {
+    ic: "🌙",
+    title: "Calm, and yours",
+    body: "Dark and light, reduced-motion aware, WCAG-AA text, keyboard-driven, comfortable or compact. Cross-platform and offline-first.",
+  },
+];
+---
+
+<BaseLayout>
+  <nav class="nav">
+    <div class="wrap nav__inner">
+      <a class="brand" href="/">
+        <span class="mark"></span> Velq
+      </a>
+      <div class="nav__links">
+        <a href="#features">Features</a>
+        <a href="#velq">.velq</a>
+        <a href="#download">Download</a>
+        <a href={GITHUB}>GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <div class="hero__mark"></div>
+      <h1>A calm place to write<br />Markdown &amp; HTML.</h1>
+      <p class="lede">
+        Velq is a desktop editor that gets out of your way — live preview, a friendly save history
+        with no git to learn, and one-file <code>.velq</code> packaging that runs fully offline.
+      </p>
+      <div class="hero__cta">
+        <a class="btn btn--primary" href={RELEASES}>Download for macOS</a>
+        <a class="btn" href={GITHUB}>View on GitHub</a>
+      </div>
+      <p class="hero__note">Free &amp; open source · Apache-2.0 · macOS, Windows &amp; Linux</p>
+      <div class="shot">
+        <img src="/screenshot.png" alt="The Velq editor: file tree, document list and live preview" />
+      </div>
+    </div>
+  </header>
+
+  <section class="block" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Everything in its place</h2>
+        <p>The features of a serious editor, with the quiet of a notebook.</p>
+      </div>
+      <div class="grid">
+        {
+          features.map((f) => (
+            <article class="card">
+              <span class="ic">{f.ic}</span>
+              <h3>{f.title}</h3>
+              <p>{f.body}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="velq">
+    <div class="wrap">
+      <div class="velq-band">
+        <div>
+          <h2>The <code>.velq</code> file</h2>
+          <p>
+            A document and everything it needs to render — collected, de-duplicated by content hash,
+            and rewritten to point at local copies. Share one file; it works on a plane. Open it
+            anywhere: it's a ZIP with a manifest, so even without Velq you can rename it to
+            <code>.zip</code> and look inside.
+          </p>
+        </div>
+        <div class="tree">
+          <b>document.velq</b><br />
+          ├── manifest.json<br />
+          ├── <b>index.html</b><br />
+          └── assets/<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;├── css/<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;├── js/<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;├── img/<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;└── fonts/
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="download">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Download Velq</h2>
+        <p>Get the latest release. Velq keeps itself up to date after that.</p>
+      </div>
+      <div class="downloads">
+        <div class="dl">
+          <div class="os">macOS</div>
+          <div class="meta">Apple Silicon &amp; Intel · .dmg</div>
+          <a class="btn btn--primary btn--sm" href={RELEASES}>Download</a>
+        </div>
+        <div class="dl">
+          <div class="os">Windows</div>
+          <div class="meta">64-bit · .msi / .exe</div>
+          <a class="btn btn--sm" href={RELEASES}>Download</a>
+        </div>
+        <div class="dl">
+          <div class="os">Linux</div>
+          <div class="meta">.AppImage / .deb</div>
+          <a class="btn btn--sm" href={RELEASES}>Download</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap footer__inner">
+      <div>© 2026 Velq · Apache-2.0 (plugins exempt)</div>
+      <div class="footer__links">
+        <a href={GITHUB}>GitHub</a>
+        <a href={`${GITHUB}/blob/main/docs/plugin-api.md`}>Plugin API</a>
+        <a href={`${GITHUB}/releases`}>Releases</a>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>

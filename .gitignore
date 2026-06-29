@@ -1,0 +1,32 @@
+# Rust
+/target
+**/target
+Cargo.lock.bak
+
+# Node
+node_modules
+dist
+.pnpm-store
+*.tsbuildinfo
+
+# Tauri generated
+apps/desktop/src-tauri/gen
+apps/desktop/src-tauri/target
+
+# Velq working artifacts (keep test fixtures)
+*.velq
+!**/fixtures/**/*.velq
+
+# Screenshots are committed; scratch renders are not
+docs/screenshots/**/*.tmp.png
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Env / secrets
+.env
+.env.local
+*.key
+~/.tauri

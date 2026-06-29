@@ -1,0 +1,16 @@
+[package]
+name = "velq-vcs"
+description = "Save-history domain API over git2 + similar. No git vocabulary leaks out."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+git2 = { version = "0.21.0", default-features = false, features = ["vendored-libgit2"] }
+serde.workspace = true
+serde_json.workspace = true
+similar = { version = "3.1.1", features = ["inline"] }
+thiserror.workspace = true

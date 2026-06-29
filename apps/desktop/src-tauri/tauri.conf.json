@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Velq",
+  "version": "0.1.0",
+  "identifier": "sh.velq.app",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Velq",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 720,
+        "minHeight": 480,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "publisher": "Daichi Nagashima",
+    "shortDescription": "Markdown / HTML editor with .velq packaging",
+    "longDescription": "Velq reads and writes Markdown and HTML, keeps a friendly save history, and packages documents — dependencies and all — into a single offline .velq file.",
+    "copyright": "© 2026 Daichi Nagashima",
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "fileAssociations": [
+      {
+        "ext": ["velq"],
+        "mimeType": "application/zip",
+        "description": "Velq Package",
+        "role": "Viewer"
+      },
+      {
+        "ext": ["md", "markdown"],
+        "mimeType": "text/markdown",
+        "description": "Markdown Document",
+        "role": "Editor"
+      },
+      {
+        "ext": ["html", "htm"],
+        "mimeType": "text/html",
+        "description": "HTML Document",
+        "role": "Editor"
+      }
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://github.com/iKora128/velq/releases/latest/download/latest.json"],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzNDE2NDMzOTg1MTI2RTEKUldUaEpsR1lNMlJCMHlhR004blVCK3lwT2Q1UmY0NGF1OXdCZE0yMFV1emlwR1NUbHVOeVQ4dGgK"
+    }
+  }
+}

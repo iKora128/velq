@@ -1,0 +1,48 @@
+import type { EditorView } from "@codemirror/view";
+import { useCallback, useRef, useState } from "react";
+import { PreviewPane } from "@/preview/PreviewPane";
+import { type Doc, useDoc } from "@/store/doc";
+import { useSettings } from "@/store/settings";
+import { CodeMirror } from "./CodeMirror";
+
+/** Source on the left, live HTML preview on the right, scroll-synced. */
+export function SplitView({ doc, content }: { doc: Doc; content: string }) {
+  const reportChange = useDoc((s) => s.reportChange);
+  const vimMode = useSettings((s) => s.vimMode);
+  const proseFont = useSettings((s) => s.proseFont);
+  const [previewSource, setPreviewSource] = useState(content);
+  const viewRef = useRef<EditorView | null>(null);
+  const debounce = useRef(0);
+
+  const onChange = useCallback(
+    (text: string) => {
+      reportChange(text);
+      clearTimeout(debounce.current);
+      debounce.current = window.setTimeout(() => setPreviewSource(text), 150);
+    },
+    [reportChange],
+  );
+
+  const font = doc.language === "html" || !proseFont ? "mono" : "prose";
+
+  return (
+    <div className="split">
+      <div className="split__pane split__editor">
+        <CodeMirror
+          initialDoc={content}
+          language={doc.language}
+          vimMode={vimMode}
+          live={false}
+          font={font}
+          onChange={onChange}
+          onReady={(v) => {
+            viewRef.current = v;
+          }}
+        />
+      </div>
+      <div className="split__pane split__preview">
+        <PreviewPane source={previewSource} language={doc.language} viewRef={viewRef} />
+      </div>
+    </div>
+  );
+}

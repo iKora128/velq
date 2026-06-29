@@ -1,0 +1,10 @@
+.cm-host {
+  height: 100%;
+}
+.cm-host .cm-editor {
+  height: 100%;
+}
+/* Headings in the markdown source get a touch more air above. */
+.cm-host .cm-line:has(.tok-heading) {
+  margin-top: 0.2em;
+}

@@ -1,0 +1,80 @@
+/* Live-preview decoration styling. Applied to .cm-line (line decorations) and
+   inline spans (mark decorations). Colors come from the editor token layer. */
+
+.cm-live-h {
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.cm-live-h1 {
+  font-size: 1.7em;
+}
+.cm-live-h2 {
+  font-size: 1.42em;
+}
+.cm-live-h3 {
+  font-size: 1.22em;
+}
+.cm-live-h4 {
+  font-size: 1.08em;
+}
+.cm-live-h5,
+.cm-live-h6 {
+  font-size: 1em;
+  color: var(--text-secondary);
+}
+
+.cm-live-strong {
+  font-weight: 700;
+}
+.cm-live-em {
+  font-style: italic;
+}
+.cm-live-strike {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+.cm-live-code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--cm-code-bg);
+  color: var(--cm-code-fg);
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+}
+.cm-live-link {
+  color: var(--cm-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.cm-live-quote {
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-secondary);
+  padding-left: var(--space-4) !important;
+  font-style: italic;
+}
+
+.cm-live-codeblock {
+  background: var(--cm-code-bg);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.cm-live-hr {
+  display: inline-block;
+  width: 100%;
+  height: 0;
+  vertical-align: middle;
+  border-top: 1px solid var(--border);
+}
+
+input.cm-live-task {
+  appearance: auto;
+  accent-color: var(--accent);
+  margin-right: 0.1em;
+  cursor: pointer;
+  vertical-align: middle;
+  transform: translateY(-1px);
+}

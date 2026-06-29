@@ -1,0 +1,42 @@
+[package]
+name = "velq-desktop"
+description = "Velq — Markdown / HTML editor with .velq packaging."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+default-run = "velq-desktop"
+
+# The lib is what `main.rs` calls into; the cdylib/staticlib targets keep Windows happy.
+[lib]
+name = "velq_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+comrak = "0.52"
+trash = "5"
+url = "2"
+
+# Desktop-only: the auto-updater (and the relaunch it triggers) are meaningless on mobile.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+
+# Local domain crates (wired in as their milestones land).
+velq-core = { path = "../../../crates/velq-core" }
+velq-vcs = { path = "../../../crates/velq-vcs" }
+velq-bundler = { path = "../../../crates/velq-bundler" }
+velq-search = { path = "../../../crates/velq-search" }
+notify = "8.2.0"
+notify-debouncer-full = "0.7.0"

@@ -1,0 +1,356 @@
+/* Velq landing — shares the app's calm token palette (docs/ui-ux-spec.md §6). */
+:root {
+  --neutral-50: #fafafa;
+  --neutral-100: #f5f5f5;
+  --neutral-200: #e5e5e5;
+  --neutral-300: #d4d4d4;
+  --neutral-400: #a3a3a3;
+  --neutral-500: #737373;
+  --neutral-600: #525252;
+  --neutral-700: #404040;
+  --neutral-800: #262626;
+  --neutral-900: #171717;
+  --neutral-950: #0a0a0a;
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+
+  --bg: var(--neutral-50);
+  --surface: #ffffff;
+  --border: var(--neutral-200);
+  --border-strong: var(--neutral-300);
+  --text: var(--neutral-900);
+  --text-secondary: var(--neutral-600);
+  --text-muted: var(--neutral-500);
+  --accent: var(--blue-600);
+  --accent-hover: var(--blue-700);
+
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-prose: "iA Writer Quattro", "New York", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --maxw: 1080px;
+  --radius: 12px;
+  --radius-lg: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: var(--neutral-950);
+    --surface: var(--neutral-900);
+    --border: var(--neutral-800);
+    --border-strong: var(--neutral-700);
+    --text: var(--neutral-100);
+    --text-secondary: var(--neutral-400);
+    --text-muted: #8d8d8d;
+    --accent: var(--blue-400);
+    --accent-hover: var(--blue-500);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--neutral-500) 14%, transparent);
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+}
+.wrap {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ---- Nav ---- */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: saturate(180%) blur(12px);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.nav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 18px;
+}
+.mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--blue-600) 40%, transparent);
+}
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.nav__links a:hover {
+  color: var(--text);
+}
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 11px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn--primary:hover {
+  background: var(--accent-hover);
+}
+.btn--sm {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+/* ---- Hero ---- */
+.hero {
+  text-align: center;
+  padding: 96px 0 56px;
+}
+.hero__mark {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  margin: 0 auto 28px;
+  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--blue-600) 35%, transparent);
+}
+.hero h1 {
+  font-size: clamp(34px, 6vw, 56px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+.hero .lede {
+  max-width: 620px;
+  margin: 20px auto 0;
+  font-size: clamp(17px, 2.4vw, 20px);
+  color: var(--text-secondary);
+}
+.hero .lede code {
+  color: var(--text);
+}
+.hero__cta {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 32px;
+}
+.hero__note {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ---- Shot ---- */
+.shot {
+  margin: 16px auto 0;
+  max-width: 980px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 30px 80px color-mix(in srgb, var(--neutral-950) 18%, transparent);
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---- Sections ---- */
+section.block {
+  padding: 72px 0;
+}
+.section-head {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 44px;
+}
+.section-head h2 {
+  font-size: clamp(26px, 4vw, 36px);
+  letter-spacing: -0.02em;
+}
+.section-head p {
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 17px;
+}
+
+/* ---- Feature grid ---- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+@media (max-width: 860px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 26px;
+}
+.card h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.card p {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+.card .ic {
+  font-size: 22px;
+  margin-bottom: 14px;
+  display: block;
+}
+
+/* ---- .velq explainer ---- */
+.velq-band {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 44px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  align-items: center;
+}
+@media (max-width: 860px) {
+  .velq-band {
+    grid-template-columns: 1fr;
+    padding: 28px;
+  }
+}
+.velq-band h2 {
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.velq-band p {
+  color: var(--text-secondary);
+}
+.tree {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+.tree b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---- Download ---- */
+.downloads {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+@media (max-width: 720px) {
+  .downloads {
+    grid-template-columns: 1fr;
+  }
+}
+.dl {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  text-align: center;
+}
+.dl .os {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.dl .meta {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* ---- Footer ---- */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.footer__inner {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.footer__links {
+  display: flex;
+  gap: 20px;
+}
+.footer__links a:hover {
+  color: var(--text);
+}

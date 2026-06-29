@@ -1,0 +1,14 @@
+[package]
+name = "velq-core"
+description = "The .velq package format: manifest types and ZIP read/write."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+zip = { version = "8.6", default-features = false, features = ["deflate"] }

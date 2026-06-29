@@ -1,0 +1,86 @@
+.plugins-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-7);
+}
+.plugins {
+  width: min(520px, 92vw);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.plugins__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.plugins__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+.plugins__list {
+  padding: var(--space-2);
+}
+.plugin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+}
+.plugin-row:hover {
+  background: var(--surface-hover);
+}
+.plugin-row__name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.plugin-row__desc {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.plugins__foot {
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Toggle switch */
+.toggle {
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--border-strong);
+  padding: 2px;
+  flex: none;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.toggle--on {
+  background: var(--accent);
+}
+.toggle__knob {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+.toggle--on .toggle__knob {
+  transform: translateX(16px);
+}

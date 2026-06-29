@@ -1,0 +1,294 @@
+/**
+ * Velq design tokens — the single source of truth for color, space, type and motion.
+ * Values come from docs/ui-ux-spec.md §6. Components MUST reference var(--token);
+ * never hardcode a hex. Primitives (the raw ramp) are aliased into semantic tokens,
+ * and only the semantic layer flips between light and dark.
+ */
+
+:root {
+  /* ---- Neutral ramp (Tailwind neutral — warm true-gray, calm for writing) ---- */
+  --neutral-50: #fafafa;
+  --neutral-100: #f5f5f5;
+  --neutral-200: #e5e5e5;
+  --neutral-300: #d4d4d4;
+  --neutral-400: #a3a3a3;
+  --neutral-450: #8d8d8d; /* between 400/500 — dark muted text that clears WCAG AA */
+  --neutral-500: #737373;
+  --neutral-600: #525252;
+  --neutral-700: #404040;
+  --neutral-800: #262626;
+  --neutral-900: #171717;
+  --neutral-950: #0a0a0a;
+
+  /* ---- Accent ramp (one calm blue, used for selection/focus/links/primary) ---- */
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+
+  /* ---- Status primitives ---- */
+  --green-400: #4ade80;
+  --green-500: #22c55e;
+  --green-600: #16a34a;
+  --amber-400: #fbbf24;
+  --amber-500: #f59e0b;
+  --red-400: #f87171;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+
+  /* ---- Spacing scale (4px base, 8px rhythm) ---- */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+  --space-9: 64px;
+
+  /* ---- Radii ---- */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* ---- Typography ---- */
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-prose: "iA Writer Quattro", "New York", Georgia, "Times New Roman", serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 25px;
+  --text-2xl: 31px;
+
+  --leading-tight: 1.25;
+  --leading-snug: 1.4;
+  --leading-normal: 1.5;
+  --leading-prose: 1.65;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Editor prose */
+  --prose-size: 17px;
+  --prose-measure: 66ch;
+
+  /* ---- Motion ---- */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0, 0, 0, 1);
+  --ease-in: cubic-bezier(0.3, 0, 1, 1);
+  --dur-instant: 100ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+
+  /* ---- Elevation (z-index layers) ---- */
+  --z-base: 0;
+  --z-sidebar: 10;
+  --z-sticky: 20;
+  --z-panel: 30;
+  --z-popover: 40;
+  --z-overlay: 50;
+  --z-dialog: 60;
+  --z-toast: 70;
+  --z-quicklook: 65;
+
+  /* ---- Diff colors — GitHub Primer (light, exact hex) ---- */
+  --diff-add-line: #dafbe1;
+  --diff-add-word: #aceebb;
+  --diff-del-line: #ffebe9;
+  --diff-del-word: #ffcecb;
+  --diff-hunk: #ddf4ff;
+  --diff-text: #1f2328;
+  /* Colorblind-safe alternates (green→blue, red→orange) */
+  --diff-add-cb: #cce5ff;
+  --diff-del-cb: #ffe2c7;
+}
+
+/* ===================== LIGHT (default) ===================== */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: var(--neutral-50);
+  --bg-subtle: var(--neutral-100);
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-hover: var(--neutral-100);
+  --surface-active: var(--neutral-200);
+  --surface-sunken: var(--neutral-100);
+
+  --border-subtle: var(--neutral-200);
+  --border: var(--neutral-300);
+  --border-strong: var(--neutral-400);
+  --border-focus: var(--blue-600);
+
+  --text: var(--neutral-900);
+  --text-secondary: var(--neutral-600);
+  --text-muted: var(--neutral-500);
+  --text-on-accent: #ffffff;
+
+  --accent: var(--blue-600);
+  --accent-hover: var(--blue-700);
+  --accent-subtle: color-mix(in srgb, var(--blue-600) 12%, transparent);
+  --accent-text: var(--blue-700);
+
+  --success: var(--green-600);
+  --warning: var(--amber-500);
+  --danger: var(--red-600);
+
+  /* git status dots (plain language: new / edited / removed) */
+  --dot-new: var(--green-500);
+  --dot-edited: var(--amber-500);
+  --dot-removed: var(--red-500);
+
+  --selection: color-mix(in srgb, var(--blue-600) 22%, transparent);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  --diff-add-line-bg: var(--diff-add-line);
+  --diff-add-word-bg: var(--diff-add-word);
+  --diff-del-line-bg: var(--diff-del-line);
+  --diff-del-word-bg: var(--diff-del-word);
+  --diff-hunk-bg: var(--diff-hunk);
+
+  /* CodeMirror editor (one var-based theme adapts to light/dark) */
+  --cm-cursor: var(--accent);
+  --cm-selection: var(--selection);
+  --cm-active-line: color-mix(in srgb, var(--neutral-500) 7%, transparent);
+  --cm-search: color-mix(in srgb, var(--amber-400) 45%, transparent);
+  --cm-search-active: color-mix(in srgb, var(--amber-500) 70%, transparent);
+  --cm-heading: var(--text);
+  --cm-marker: var(--text-muted);
+  --cm-emphasis: var(--text);
+  --cm-link: var(--accent-text);
+  --cm-url: var(--text-secondary);
+  --cm-code-fg: #9a3412;
+  --cm-code-bg: color-mix(in srgb, var(--neutral-500) 9%, transparent);
+  --cm-quote: var(--text-secondary);
+  --cm-list: var(--accent);
+  --cm-keyword: #7c3aed;
+  --cm-string: #15803d;
+  --cm-tag: #0e7490;
+}
+
+/* ===================== DARK ===================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces get lighter as they rise (≈+6% luminance per level). */
+  --bg: var(--neutral-950);
+  --bg-subtle: var(--neutral-900);
+  --surface: var(--neutral-900);
+  --surface-elevated: var(--neutral-800);
+  --surface-hover: var(--neutral-800);
+  --surface-active: var(--neutral-700);
+  --surface-sunken: #050505;
+
+  --border-subtle: var(--neutral-800);
+  --border: var(--neutral-700);
+  --border-strong: var(--neutral-600);
+  --border-focus: var(--blue-400);
+
+  --text: var(--neutral-100);
+  --text-secondary: var(--neutral-400);
+  --text-muted: var(--neutral-450); /* AA on bg/surface/elevated; see ramp note */
+  --text-on-accent: #ffffff;
+
+  --accent: var(--blue-400);
+  --accent-hover: var(--blue-500);
+  --accent-subtle: color-mix(in srgb, var(--blue-400) 18%, transparent);
+  --accent-text: var(--blue-400);
+
+  --success: var(--green-400);
+  --warning: var(--amber-400);
+  --danger: var(--red-400);
+
+  --dot-new: var(--green-400);
+  --dot-edited: var(--amber-400);
+  --dot-removed: var(--red-400);
+
+  --selection: color-mix(in srgb, var(--blue-400) 30%, transparent);
+
+  /* Dark uses a lighter top border + low shadow rather than heavy drop shadow. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6), 0 2px 10px rgba(0, 0, 0, 0.45);
+
+  /* Diff: low-alpha overlays so prose stays readable on dark. */
+  --diff-add-line-bg: rgba(46, 160, 67, 0.16);
+  --diff-add-word-bg: rgba(46, 160, 67, 0.4);
+  --diff-del-line-bg: rgba(248, 81, 73, 0.16);
+  --diff-del-word-bg: rgba(248, 81, 73, 0.4);
+  --diff-hunk-bg: rgba(56, 139, 253, 0.16);
+  --diff-text: #f0f6fc;
+
+  /* CodeMirror dark overrides (the rest inherit via the light defaults + token swaps). */
+  --cm-active-line: color-mix(in srgb, var(--neutral-100) 5%, transparent);
+  --cm-code-fg: #fca5a5;
+  --cm-code-bg: color-mix(in srgb, var(--neutral-100) 8%, transparent);
+  --cm-keyword: #c4b5fd;
+  --cm-string: #86efac;
+  --cm-tag: #67e8f9;
+}
+
+/* When the user hasn't chosen, follow the OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+    --bg: var(--neutral-950);
+    --bg-subtle: var(--neutral-900);
+    --surface: var(--neutral-900);
+    --surface-elevated: var(--neutral-800);
+    --surface-hover: var(--neutral-800);
+    --surface-active: var(--neutral-700);
+    --surface-sunken: #050505;
+    --border-subtle: var(--neutral-800);
+    --border: var(--neutral-700);
+    --border-strong: var(--neutral-600);
+    --border-focus: var(--blue-400);
+    --text: var(--neutral-100);
+    --text-secondary: var(--neutral-400);
+    --text-muted: var(--neutral-450);
+    --accent: var(--blue-400);
+    --accent-hover: var(--blue-500);
+    --accent-subtle: color-mix(in srgb, var(--blue-400) 18%, transparent);
+    --accent-text: var(--blue-400);
+    --success: var(--green-400);
+    --warning: var(--amber-400);
+    --danger: var(--red-400);
+    --dot-new: var(--green-400);
+    --dot-edited: var(--amber-400);
+    --dot-removed: var(--red-400);
+    --selection: color-mix(in srgb, var(--blue-400) 30%, transparent);
+    --diff-add-line-bg: rgba(46, 160, 67, 0.16);
+    --diff-add-word-bg: rgba(46, 160, 67, 0.4);
+    --diff-del-line-bg: rgba(248, 81, 73, 0.16);
+    --diff-del-word-bg: rgba(248, 81, 73, 0.4);
+    --diff-hunk-bg: rgba(56, 139, 253, 0.16);
+    --diff-text: #f0f6fc;
+  }
+}
+
+/* Density toggle (compact trims vertical rhythm). */
+:root[data-density="compact"] {
+  --row-h: 26px;
+  --list-row-h: 52px;
+}
+:root {
+  --row-h: 30px;
+  --list-row-h: 64px;
+}

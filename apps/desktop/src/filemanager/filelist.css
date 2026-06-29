@@ -1,0 +1,129 @@
+.filelist {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+
+.filelist-folder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--row-h);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: left;
+}
+.filelist-folder:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.filelist-folder__icon {
+  color: var(--text-muted);
+  flex: none;
+}
+.filelist-folder__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filelist-folder__chev {
+  color: var(--text-muted);
+  flex: none;
+}
+
+.filelist-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  text-align: left;
+  min-height: var(--list-row-h);
+  justify-content: center;
+}
+.filelist-card:hover {
+  background: var(--surface-hover);
+}
+.filelist-card.is-selected,
+.filelist-card.is-selected:hover {
+  background: var(--accent-subtle);
+}
+.filelist-card__title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filelist-card.is-selected .filelist-card__title {
+  color: var(--accent-text);
+}
+.filelist-card__snippet {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-snug);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.filelist-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Search result rows */
+.filelist-result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--row-h);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+.filelist-result:hover {
+  background: var(--surface-hover);
+}
+.filelist-result.is-selected {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+.filelist-result__icon {
+  color: var(--text-muted);
+  flex: none;
+}
+.filelist-result__name {
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filelist-result__path {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

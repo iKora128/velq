@@ -1,0 +1,12 @@
+[package]
+name = "velq-search"
+description = "SearchIndex trait + Turso-backed filename / full-text search."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true

@@ -1,0 +1,75 @@
+import { Columns3, List } from "lucide-react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { useDoc } from "@/store/doc";
+import { useSettings } from "@/store/settings";
+import { useUI } from "@/store/ui";
+import { useVault } from "@/store/vault";
+import { cn } from "@/util/cn";
+import "./explorer.css";
+import { FileListPane } from "./FileListPane";
+import { MillerColumns } from "./MillerColumns";
+import { PaneDivider } from "./PaneDivider";
+import { Sidebar } from "./Sidebar";
+
+/** A dedicated, full-window file browser (Finder-like): list mode (tree + previewed
+ * cards) or column mode (Miller columns). Opening a document jumps to the editor. */
+export function ExplorerView() {
+  const fileView = useSettings((s) => s.fileView);
+  const update = useSettings((s) => s.update);
+  const root = useVault((s) => s.root);
+  const view = useUI((s) => s.view);
+  const setView = useUI((s) => s.setView);
+  const activeId = useDoc((s) => s.activeId);
+
+  // Browse here, open to edit: jump to the editor only when a *new* doc opens
+  // (not when entering the explorer with one already open).
+  const lastActive = useRef(activeId);
+  useEffect(() => {
+    if (view === "explorer" && activeId && activeId !== lastActive.current) {
+      setView("editor");
+    }
+    lastActive.current = activeId;
+  }, [view, activeId, setView]);
+
+  return (
+    <div className="explorer">
+      <div className="explorer__toolbar">
+        <span className="explorer__title">{root ? root.name : "Files"}</span>
+        <div className="explorer__spacer" />
+        <div className="seg">
+          <button
+            type="button"
+            className="seg__item"
+            aria-pressed={fileView !== "columns"}
+            onClick={() => update({ fileView: "list" })}
+          >
+            <List size={14} /> List
+          </button>
+          <button
+            type="button"
+            className="seg__item"
+            aria-pressed={fileView === "columns"}
+            onClick={() => update({ fileView: "columns" })}
+          >
+            <Columns3 size={14} /> Columns
+          </button>
+        </div>
+      </div>
+      <div className="explorer__body">
+        {fileView === "columns" ? <MillerColumns /> : <ListBrowser />}
+      </div>
+    </div>
+  );
+}
+
+function ListBrowser() {
+  const [sidebarW, setSidebarW] = useState(300);
+  const vars = { "--sidebar-w": `${sidebarW}px` } as CSSProperties;
+  return (
+    <div className={cn("explorer-list")} style={vars}>
+      <Sidebar />
+      <PaneDivider value={sidebarW} min={220} max={480} onChange={setSidebarW} />
+      <FileListPane />
+    </div>
+  );
+}

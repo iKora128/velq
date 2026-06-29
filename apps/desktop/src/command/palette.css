@@ -1,0 +1,115 @@
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+}
+.palette {
+  width: min(640px, 92vw);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.palette__input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  height: 48px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex: none;
+}
+.palette__icon {
+  color: var(--text-muted);
+  flex: none;
+}
+.palette__input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: var(--text-md);
+  color: var(--text);
+}
+.palette__input::placeholder {
+  color: var(--text-muted);
+}
+.palette__mode {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.palette__list {
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+.palette__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  color: var(--text);
+}
+.palette__item.is-active {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+.palette__item-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+  flex: none;
+}
+.palette__item.is-active .palette__item-icon {
+  color: inherit;
+}
+.palette__item-label {
+  flex: none;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.palette__item-sub {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  direction: rtl;
+}
+.palette__item.is-active .palette__item-sub {
+  color: var(--text-on-accent);
+  opacity: 0.8;
+}
+.palette__item-hint {
+  flex: none;
+  margin-left: auto;
+}
+.palette__item.is-active .palette__item-hint {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: transparent;
+  color: inherit;
+}
+.palette__empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

@@ -1,0 +1,33 @@
+{
+  "name": "velq",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Markdown / HTML viewer & editor with .velq packaging",
+  "author": "Daichi Nagashima",
+  "license": "Apache-2.0",
+  "homepage": "https://velq.sh",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iKora128/velq"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter desktop dev",
+    "tauri:dev": "pnpm --filter desktop tauri dev",
+    "build": "pnpm --filter desktop build",
+    "tauri:build": "pnpm --filter desktop tauri build",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "pnpm -r test",
+    "dedupe": "pnpm dedupe"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

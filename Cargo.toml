@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/desktop/src-tauri",
+    "crates/velq-core",
+    "crates/velq-bundler",
+    "crates/velq-search",
+    "crates/velq-vcs",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Daichi Nagashima"]
+repository = "https://github.com/iKora128/velq"
+homepage = "https://velq.sh"
+rust-version = "1.82"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "2"
+
+[profile.dev]
+# Tauri/webview deps are heavy; opt-level 1 keeps debug builds responsive.
+opt-level = 1
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "unwind"

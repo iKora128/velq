@@ -1,0 +1,54 @@
+.activitybar {
+  grid-area: activity;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 52px;
+  padding: var(--space-3) 0;
+  background: var(--bg-subtle);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.activitybar__spacer {
+  flex: 1;
+}
+.activitybar__rule {
+  width: 24px;
+  height: 1px;
+  margin: var(--space-2) 0;
+  background: var(--border);
+  flex: none;
+}
+
+.activitybar__btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  position: relative;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    background var(--dur-fast) var(--ease-standard);
+}
+.activitybar__btn:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.activitybar__btn.is-active {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+/* The VSCode-style active indicator bar on the left edge. */
+.activitybar__btn.is-active::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 9px;
+  bottom: 9px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}

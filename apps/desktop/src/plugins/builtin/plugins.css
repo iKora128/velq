@@ -1,0 +1,30 @@
+.cm-math {
+  cursor: default;
+}
+.cm-math--block {
+  display: block;
+  text-align: center;
+  margin: 0.5em 0;
+}
+
+.cm-mermaid {
+  display: block;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin: 0.5em 0;
+  text-align: center;
+  overflow-x: auto;
+}
+.cm-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+.cm-mermaid--err {
+  color: var(--danger);
+  background: var(--surface-sunken);
+  border-color: var(--border);
+  font-size: var(--text-sm);
+  text-align: left;
+}

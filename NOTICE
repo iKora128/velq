@@ -1,0 +1,20 @@
+Velq
+Copyright 2026 Daichi Nagashima and Velq contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+Plugins written against Velq's published plugin API are exempt — see the
+PLUGIN EXCEPTION at the end of LICENSE.
+
+This software bundles and builds upon third-party open-source components,
+each under its own license, including but not limited to:
+
+  - Tauri, wry, tao (Apache-2.0 / MIT) — https://tauri.app
+  - React (MIT) — https://react.dev
+  - CodeMirror 6 (MIT) — https://codemirror.net
+  - comrak (BSD-2-Clause) — Markdown rendering
+  - lol_html (BSD-3-Clause) — HTML rewriting
+  - libgit2 / git2-rs (GPL-2.0-with-linking-exception / MIT) — save history
+  - KaTeX (MIT) and Mermaid (MIT) — reference plugins
+
+Full license texts for dependencies are reproduced in their respective
+distributions and crate/package metadata.

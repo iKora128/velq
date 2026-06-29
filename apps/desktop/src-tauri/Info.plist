@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSDesktopFolderUsageDescription</key>
+  <string>Velq needs access to open and save the documents in this folder.</string>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>Velq needs access to open and save the documents in this folder.</string>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>Velq needs access to open and save the documents in this folder.</string>
+  <key>NSRemovableVolumesUsageDescription</key>
+  <string>Velq needs access to open and save documents on this volume.</string>
+</dict>
+</plist>

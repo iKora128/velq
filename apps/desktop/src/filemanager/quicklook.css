@@ -1,0 +1,50 @@
+.ql-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-quicklook);
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+}
+.ql-panel {
+  width: min(780px, 92vw);
+  height: min(82vh, 920px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.ql-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 var(--space-3) 0 var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  flex: none;
+}
+.ql-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.ql-frame {
+  flex: 1;
+  border: none;
+  background: #ffffff;
+}
+.ql-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  padding: 0 var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  flex: none;
+}
