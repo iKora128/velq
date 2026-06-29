@@ -1,6 +1,6 @@
-import { ChevronRight, Folder } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { fileIcon } from "@/filemanager/fileIcon";
+import { FileGlyph } from "@/filemanager/FileGlyph";
 import type { FileNode } from "@/ipc/types";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
@@ -55,7 +55,6 @@ export function MillerColumns() {
                 items.map((node) => {
                   const isDir = node.kind === "dir";
                   const active = isDir ? trail[i] === node.path : fileSel === node.path;
-                  const Icon = isDir ? Folder : fileIcon(node.ext);
                   return (
                     <button
                       type="button"
@@ -66,7 +65,12 @@ export function MillerColumns() {
                         if (!isDir) void useDoc.getState().openFile(node, { preview: false });
                       }}
                     >
-                      <Icon size={15} className="miller__icon" />
+                      <FileGlyph
+                        ext={node.ext}
+                        kind={node.kind}
+                        size={15}
+                        className="miller__icon"
+                      />
                       <span className="miller__name">{node.name}</span>
                       {isDir && <ChevronRight size={14} className="miller__chev" />}
                     </button>

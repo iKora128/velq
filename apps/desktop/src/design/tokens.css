@@ -114,6 +114,19 @@
   /* Colorblind-safe alternates (green→blue, red→orange) */
   --diff-add-cb: #cce5ff;
   --diff-del-cb: #ffe2c7;
+
+  /* ---- File-type icon hues (shared light/dark; mid-saturation reads on both,
+     so a folder is always the same blue, a Markdown doc always the same teal) ---- */
+  --icon-folder: #4c9aff;
+  --icon-doc: #14b8a6;
+  --icon-web: #f97316;
+  --icon-image: #22c55e;
+  --icon-pdf: #ef4444;
+  --icon-code: #8b5cf6;
+  --icon-archive: #f59e0b;
+  --icon-audio: #ec4899;
+  --icon-video: #0ea5e9;
+  --icon-default: var(--neutral-400);
 }
 
 /* ===================== LIGHT (default) ===================== */

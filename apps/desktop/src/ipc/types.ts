@@ -39,7 +39,7 @@ export interface FilePreview {
 export type ThemePref = "light" | "dark" | "system";
 export type Density = "comfortable" | "compact";
 export type EditorMode = "source" | "split" | "live";
-export type FileView = "list" | "columns" | "tree";
+export type FileView = "grid" | "list" | "columns" | "tree";
 
 export interface Settings {
   theme: ThemePref;
@@ -60,7 +60,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   density: "comfortable",
   editorMode: "live",
-  fileView: "list",
+  fileView: "grid",
   vimMode: false,
   showLineNumbers: false,
   proseFont: true,

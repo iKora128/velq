@@ -1,4 +1,4 @@
-import { Columns3, List } from "lucide-react";
+import { Columns3, LayoutGrid, List } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useDoc } from "@/store/doc";
 import { useSettings } from "@/store/settings";
@@ -7,6 +7,7 @@ import { useVault } from "@/store/vault";
 import { cn } from "@/util/cn";
 import "./explorer.css";
 import { FileListPane } from "./FileListPane";
+import { GridBrowser } from "./GridBrowser";
 import { MillerColumns } from "./MillerColumns";
 import { PaneDivider } from "./PaneDivider";
 import { Sidebar } from "./Sidebar";
@@ -40,7 +41,15 @@ export function ExplorerView() {
           <button
             type="button"
             className="seg__item"
-            aria-pressed={fileView !== "columns"}
+            aria-pressed={fileView !== "columns" && fileView !== "list"}
+            onClick={() => update({ fileView: "grid" })}
+          >
+            <LayoutGrid size={14} /> Icons
+          </button>
+          <button
+            type="button"
+            className="seg__item"
+            aria-pressed={fileView === "list"}
             onClick={() => update({ fileView: "list" })}
           >
             <List size={14} /> List
@@ -56,7 +65,13 @@ export function ExplorerView() {
         </div>
       </div>
       <div className="explorer__body">
-        {fileView === "columns" ? <MillerColumns /> : <ListBrowser />}
+        {fileView === "columns" ? (
+          <MillerColumns />
+        ) : fileView === "list" ? (
+          <ListBrowser />
+        ) : (
+          <GridBrowser />
+        )}
       </div>
     </div>
   );

@@ -1,14 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-  ChevronRight,
-  Copy,
-  FilePlus,
-  Folder,
-  FolderOpen,
-  FolderPlus,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { ChevronRight, Copy, FilePlus, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { type DragEvent, useMemo, useRef, useState } from "react";
 import type { FileNode } from "@/ipc/types";
 import { revealInOs } from "@/ipc/vault";
@@ -17,7 +8,7 @@ import { flattenTree, type TreeRow, useFiles } from "@/store/files";
 import { cn } from "@/util/cn";
 import { isMac } from "@/util/platform";
 import { ContextMenu, type MenuEntry } from "./ContextMenu";
-import { fileIcon } from "./fileIcon";
+import { FileGlyph } from "./FileGlyph";
 import { RenameInput } from "./RenameInput";
 import "./tree.css";
 
@@ -148,7 +139,6 @@ export function Tree() {
           const { node, depth } = row;
           const isDir = node.kind === "dir";
           const isOpen = expanded[node.path];
-          const Icon = fileIcon(node.ext);
           const isRenaming = renaming === node.path;
           return (
             <button
@@ -205,15 +195,7 @@ export function Tree() {
                 )}
               </span>
               <span className="tree-row__icon">
-                {isDir ? (
-                  isOpen ? (
-                    <FolderOpen size={15} />
-                  ) : (
-                    <Folder size={15} />
-                  )
-                ) : (
-                  <Icon size={15} />
-                )}
+                <FileGlyph ext={node.ext} kind={node.kind} open={isOpen} size={15} />
               </span>
               {isRenaming ? (
                 <RenameInput

@@ -390,13 +390,21 @@ fn rewrite_attr<'a>(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
     use super::*;
+
+    /// Monotonic, so two tests entering tmpdir() within the same clock tick
+    /// (SystemTime is coarse on macOS) can never collide on a directory name —
+    /// otherwise one test's cleanup wipes a dir another is still bundling.
+    static TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 
     fn tmpdir() -> PathBuf {
         let mut p = std::env::temp_dir();
         p.push(format!(
-            "velq-bundler-{}-{}",
+            "velq-bundler-{}-{}-{}",
             std::process::id(),
+            TMP_SEQ.fetch_add(1, Ordering::Relaxed),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()

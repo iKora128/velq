@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Density, EditorMode, ThemePref } from "@/ipc/types";
+import type { Density, EditorMode, FileView, ThemePref } from "@/ipc/types";
 import { useSettings } from "@/store/settings";
 import { cn } from "@/util/cn";
 import "./settings-view.css";
@@ -82,6 +82,23 @@ export function SettingsView() {
             checked={s.vimMode}
             onChange={(vimMode) => update({ vimMode })}
           />
+        </Section>
+
+        <Section title="Files" desc="How the file browser shows your folders.">
+          <Field
+            label="Default view"
+            hint="Icons is the most visual; Columns drills folder by folder."
+          >
+            <Segmented<FileView>
+              value={s.fileView === "columns" ? "columns" : s.fileView === "list" ? "list" : "grid"}
+              onChange={(fileView) => update({ fileView })}
+              options={[
+                { value: "grid", label: "Icons" },
+                { value: "list", label: "List" },
+                { value: "columns", label: "Columns" },
+              ]}
+            />
+          </Field>
         </Section>
 
         <Section title="Packaging" desc="How HTML becomes a portable .velq.">

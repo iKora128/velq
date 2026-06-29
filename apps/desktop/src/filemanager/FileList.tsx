@@ -1,9 +1,9 @@
-import { ChevronRight, Folder, Inbox, Search } from "lucide-react";
+import { ChevronRight, Inbox, Search } from "lucide-react";
 import { useEffect } from "react";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { cn } from "@/util/cn";
-import { fileIcon } from "./fileIcon";
+import { FileGlyph } from "./FileGlyph";
 import "./filelist.css";
 
 function parentOf(p: string): string {
@@ -45,7 +45,6 @@ export function FileList() {
     return (
       <div className="filelist">
         {searchResults.map((n) => {
-          const Icon = fileIcon(n.ext);
           return (
             <button
               type="button"
@@ -57,7 +56,7 @@ export function FileList() {
               }}
               onDoubleClick={() => n.kind === "file" && void openFile(n, { preview: false })}
             >
-              <Icon size={15} className="filelist-result__icon" />
+              <FileGlyph ext={n.ext} kind={n.kind} size={15} className="filelist-result__icon" />
               <span className="filelist-result__name">{n.name}</span>
               <span className="filelist-result__path">{parentOf(n.path).split("/").pop()}</span>
             </button>
@@ -103,7 +102,7 @@ export function FileList() {
           className={cn("filelist-folder", selected?.path === p.node.path && "is-selected")}
           onClick={() => useFiles.getState().select(p.node)}
         >
-          <Folder size={15} className="filelist-folder__icon" />
+          <FileGlyph kind="dir" ext={null} size={15} className="filelist-folder__icon" />
           <span className="filelist-folder__name">{p.node.name}</span>
           <ChevronRight size={14} className="filelist-folder__chev" />
         </button>

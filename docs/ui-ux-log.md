@@ -451,3 +451,28 @@ release `.app` builds and launches.
 **Verdict:** the calm core now sits in a familiar VSCode-like frame with a true Finder column view,
 reversible file edits, and a native menu — without losing the quiet. Where a claim outran the code
 (columns), it was called out and made real.
+
+### Icon grid — the beginner-first file view
+
+Researched the file managers people call easiest to read in 2026 — **Spacedrive** (the Rust/Tauri
+one, big colour thumbnails) and the **Files app** (Windows 11 Fluent: a grid of large icons with a
+breadcrumb). Both lead with *large, colour-coded icons in a grid* — the opposite of VSCode's dense
+grey tree. So the Explorer now defaults to an **Icons** view built to be obvious to a complete
+newcomer:
+
+- **Recognisable, colour-coded glyphs everywhere** (`FileGlyph` + `fileVisual`, hues in
+  `tokens.css`): a folder is always the same blue folder; Markdown teal, web/HTML orange, images
+  green, PDF red, code violet, archives amber, audio pink, video sky. One source of truth, now used
+  by the grid, list, columns **and** the tree (they were tiny grey outlines before).
+- **Roomy icon grid** with **Folders / Files** group labels and a clickable **breadcrumb**
+  (🏠 Notes › Clients › Acme) + Back button, so "where am I" is always answered. Double-click opens
+  a document or drills into a folder, exactly like Finder; New-document / New-folder live on the bar.
+- **Three views** now — Icons (default) / List / Columns — switchable from the toolbar and from a
+  new **Settings → Files → Default view** control.
+- Verified via Playwright in light, dark, and drilled-in states: the colour icons read on both
+  themes, the breadcrumb navigates, no console errors. Screenshots in `docs/screenshots/m21-grid/`.
+
+Also fixed a *test-only* race in `velq-bundler`: parallel `#[tokio::test]`s could mint the same temp
+dir name on macOS's coarse `SystemTime`, so one test's cleanup deleted a dir another was still
+bundling → spurious "No such file". `tmpdir()` now appends an atomic counter; `cargo test
+--workspace` is green across repeated runs.

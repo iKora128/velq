@@ -26,7 +26,7 @@ impl Default for Settings {
             theme: "system".into(),
             density: "comfortable".into(),
             editor_mode: "live".into(),
-            file_view: "list".into(),
+            file_view: "grid".into(),
             vim_mode: false,
             show_line_numbers: false,
             prose_font: true,
