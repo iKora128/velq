@@ -1,7 +1,8 @@
-import { FilePlus, FolderPlus, Search, X } from "lucide-react";
+import { FilePlus, FolderPlus, PanelLeft, Search, X } from "lucide-react";
 import { useRef } from "react";
 import { FileList } from "@/filemanager/FileList";
 import { useFiles } from "@/store/files";
+import { useUI } from "@/store/ui";
 import { useVault } from "@/store/vault";
 
 export function FileListPane() {
@@ -24,9 +25,21 @@ export function FileListPane() {
     void f.newFolder(f.targetDir());
   };
 
+  const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
+
   return (
     <div className="file-list">
       <div className="list-toolbar">
+        <button
+          type="button"
+          className={sidebarCollapsed ? "icon-btn" : "icon-btn icon-btn--active"}
+          title={sidebarCollapsed ? "Show folders" : "Hide folders"}
+          aria-label={sidebarCollapsed ? "Show folders" : "Hide folders"}
+          aria-pressed={!sidebarCollapsed}
+          onClick={() => useUI.getState().toggleSidebar()}
+        >
+          <PanelLeft size={16} />
+        </button>
         <div className="search">
           <Search size={15} />
           <input
