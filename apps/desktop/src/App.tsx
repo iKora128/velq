@@ -56,7 +56,7 @@ async function openHome() {
   const last = useSettings.getState().lastVault;
   if (last) {
     await useVault.getState().openPath(last);
-    return;
+    if (useVault.getState().root) return; // opened cleanly; otherwise it was moved/deleted
   }
   try {
     const v = await ensureDefaultVault();
