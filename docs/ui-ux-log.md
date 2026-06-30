@@ -476,3 +476,20 @@ Also fixed a *test-only* race in `velq-bundler`: parallel `#[tokio::test]`s coul
 dir name on macOS's coarse `SystemTime`, so one test's cleanup deleted a dir another was still
 bundling → spurious "No such file". `tmpdir()` now appends an atomic counter; `cargo test
 --workspace` is green across repeated runs.
+
+### Home "Recents" — recently opened & recently added
+
+Finishing the Finder/Files-app Home: when you're at the vault root, the Icons grid now opens with two
+"Recents" shelves above Folders / Files, so you land on what you were just doing.
+
+- **🕐 Recently opened** — every document you open is remembered (newest first), persisted with your
+  settings (`recentDocs`, capped at 30; recorded in `useDoc.open` and on `.velq` viewer opens). It
+  survives restarts and updates live.
+- **✨ Recently added** — a new `recent_files` Rust command walks the vault and ranks files by
+  filesystem **create time** (`created`, added to `FileNode`; falls back to mtime). It only shows
+  files **buried in subfolders** (root-level ones are already in "Files", and anything already in
+  "Recently opened" is dropped), so the shelf is purely additive — exactly the items you'd otherwise
+  have to dig for.
+- Both are Home-only and double-click to open, same `Tile` as everything else. Verified light + dark
+  via Playwright (open two docs → both shelves populate, no console errors); shots in
+  `docs/screenshots/m21-grid/grid-recents-{light,dark}.png`.

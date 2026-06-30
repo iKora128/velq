@@ -14,6 +14,7 @@ function dirNode(path: string, name: string): FileNode {
     ext: null,
     size: 0,
     mtime: 0,
+    created: 0,
     gitStatus: "none",
     hasChildren: true,
   };

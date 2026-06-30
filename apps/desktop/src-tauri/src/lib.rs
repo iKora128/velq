@@ -206,6 +206,7 @@ pub fn run() {
             commands::vault::move_path,
             commands::vault::delete_path,
             commands::vault::reveal_in_os,
+            commands::vault::recent_files,
             commands::watch::watch_vault,
             commands::watch::unwatch_vault,
             commands::vcs::init_history,

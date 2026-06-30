@@ -113,8 +113,10 @@ export const useDoc = create<DocState>((set, get) => ({
   rev: 0,
   conflict: false,
 
-  open: (doc, content, opts) =>
-    set((s) => {
+  open: (doc, content, opts) => {
+    // A real file (not a scratch/sample buffer) lands at the top of Recents.
+    if (doc.path) useSettings.getState().recordRecentDoc(doc.path, doc.name);
+    return set((s) => {
       const preview = opts?.preview ?? false;
       const existing = s.tabs.find((t) => t.doc.id === doc.id);
       if (existing) {
@@ -139,13 +141,15 @@ export const useDoc = create<DocState>((set, get) => ({
         tabs = [...s.tabs, tab];
       }
       return { tabs, activeId: doc.id, ...mirror(tabs, doc.id) };
-    }),
+    });
+  },
 
   openFile: async (node, opts) => {
     // A .velq opens in its own isolated viewer, not as editable text.
     if (/\.velq$/i.test(node.name)) {
       try {
         await openVelqViewer(node.path);
+        useSettings.getState().recordRecentDoc(node.path, node.name);
         useToast.getState().push(`Opened ${node.name} in a secure viewer.`);
       } catch (e) {
         console.error("open_velq_viewer failed", e);
@@ -175,6 +179,7 @@ export const useDoc = create<DocState>((set, get) => ({
     if (/\.velq$/i.test(name)) {
       try {
         await openVelqViewer(path);
+        useSettings.getState().recordRecentDoc(path, name);
         useToast.getState().push(`Opened ${name} in a secure viewer.`);
       } catch (e) {
         console.error("open_velq_viewer failed", e);

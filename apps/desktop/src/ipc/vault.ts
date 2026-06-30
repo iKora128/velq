@@ -28,3 +28,6 @@ export const renamePath = (from: string, to: string) =>
 export const movePath = (from: string, to: string) => invoke<FileNode>("move_path", { from, to });
 export const deletePath = (path: string) => invoke<void>("delete_path", { path });
 export const revealInOs = (path: string) => invoke<void>("reveal_in_os", { path });
+/** The newest files anywhere in the vault, newest first (Home "Recently added"). */
+export const recentlyAdded = (root: string, limit?: number) =>
+  invoke<FileNode[]>("recent_files", { root, limit });

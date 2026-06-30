@@ -126,6 +126,7 @@ function toFileNode(path: string, name: string, node: MNode, i = 0) {
     ext: node.kind === "file" ? extOf(name) : null,
     size: node.kind === "file" ? node.content.length : 0,
     mtime: T0 - i * 86_400_000,
+    created: T0 - i * 86_400_000,
     gitStatus: "none",
     hasChildren: node.kind === "dir" && Object.keys(node.children).length > 0,
   };
@@ -226,6 +227,24 @@ registerMock(
     return out.slice(0, limit ?? 60).map((o) => o.node);
   },
 );
+
+registerMock("recent_files", ({ root, limit }: { root: string; limit?: number }) => {
+  const start = resolve(root);
+  if (start?.kind !== "dir") return [];
+  const out: ReturnType<typeof toFileNode>[] = [];
+  const walk = (dir: MDir, dirPath: string) => {
+    let i = 0;
+    for (const [name, child] of Object.entries(dir.children)) {
+      if (name.startsWith(".")) continue;
+      const path = `${dirPath}/${name}`;
+      if (child.kind === "dir") walk(child, path);
+      else out.push(toFileNode(path, name, child, i++));
+    }
+  };
+  walk(start, root);
+  out.sort((a, b) => b.created - a.created);
+  return out.slice(0, limit ?? 12);
+});
 
 registerMock("write_file", ({ path, content }: { path: string; content: string }) => {
   const node = resolve(path);

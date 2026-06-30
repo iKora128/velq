@@ -5,6 +5,16 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
+/// One entry in the "Recently opened" list (a Finder-style Recents). Kept here
+/// because it persists with the rest of the user's settings.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentDoc {
+    pub path: String,
+    pub name: String,
+    pub opened_at: i64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
@@ -18,6 +28,7 @@ pub struct Settings {
     pub last_vault: Option<String>,
     pub last_export_dir: Option<String>,
     pub auto_package_html: bool,
+    pub recent_docs: Vec<RecentDoc>,
 }
 
 impl Default for Settings {
@@ -33,6 +44,7 @@ impl Default for Settings {
             last_vault: None,
             last_export_dir: None,
             auto_package_html: true,
+            recent_docs: Vec::new(),
         }
     }
 }

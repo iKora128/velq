@@ -15,8 +15,17 @@ export interface FileNode {
   ext: string | null;
   size: number;
   mtime: number;
+  /** Filesystem create time (ms); falls back to mtime. Used to rank "recently added". */
+  created: number;
   gitStatus: GitDot;
   hasChildren: boolean;
+}
+
+/** One entry in the "Recently opened" list (a Finder-style Recents). */
+export interface RecentDoc {
+  path: string;
+  name: string;
+  openedAt: number;
 }
 
 export interface VaultInfo {
@@ -54,6 +63,8 @@ export interface Settings {
   lastExportDir: string | null;
   /** Opening an HTML file auto-packages it into Documents/Velq instead of editing. */
   autoPackageHtml: boolean;
+  /** Most-recently-opened documents, newest first (for the Home "Recents"). */
+  recentDocs: RecentDoc[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -67,6 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lastVault: null,
   lastExportDir: null,
   autoPackageHtml: true,
+  recentDocs: [],
 };
 
 /** A point in a file's save history. No git vocabulary leaks here. */

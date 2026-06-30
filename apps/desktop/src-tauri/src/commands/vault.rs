@@ -26,6 +26,7 @@ pub struct FileNode {
     pub ext: Option<String>,
     pub size: u64,
     pub mtime: i64,
+    pub created: i64,       // filesystem create time (ms); falls back to mtime
     pub git_status: String, // "none" until M11
     pub has_children: bool,
 }
@@ -48,6 +49,16 @@ fn mtime_millis(meta: &fs::Metadata) -> i64 {
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+/// Create ("birth") time in ms. Not every platform records it, so fall back to the
+/// modified time — good enough to rank "recently added" items.
+fn created_millis(meta: &fs::Metadata) -> i64 {
+    meta.created()
+        .ok()
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or_else(|| mtime_millis(meta))
 }
 
 fn dir_has_children(path: &Path) -> bool {
@@ -78,6 +89,7 @@ pub fn make_node(path: &Path) -> Option<FileNode> {
         },
         size: if is_dir { 0 } else { meta.len() },
         mtime: mtime_millis(&meta),
+        created: created_millis(&meta),
         git_status: "none".into(),
         has_children: if is_dir {
             dir_has_children(path)
@@ -288,4 +300,46 @@ pub fn reveal_in_os(app: tauri::AppHandle, path: String) -> Result<(), String> {
     app.opener()
         .reveal_item_in_dir(&path)
         .map_err(|e| e.to_string())
+}
+
+/// Collect file nodes (not folders) anywhere under `dir`, skipping hidden entries,
+/// stopping once `cap` are gathered so a huge vault can't stall the caller.
+fn collect_files(dir: &Path, out: &mut Vec<FileNode>, cap: usize) {
+    if out.len() >= cap {
+        return;
+    }
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    let mut subdirs = Vec::new();
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if is_hidden(&name) {
+            continue;
+        }
+        let path = entry.path();
+        if path.is_dir() {
+            subdirs.push(path);
+        } else if let Some(node) = make_node(&path) {
+            out.push(node);
+        }
+    }
+    for sd in subdirs {
+        if out.len() >= cap {
+            break;
+        }
+        collect_files(&sd, out, cap);
+    }
+}
+
+/// The most recently *added* files anywhere in the vault, newest first — a
+/// Finder-style "Recents". "Added" uses the filesystem create time (`created`),
+/// which falls back to the modified time where the platform doesn't record it.
+#[tauri::command]
+pub fn recent_files(root: String, limit: Option<usize>) -> Result<Vec<FileNode>, String> {
+    let mut files = Vec::new();
+    collect_files(Path::new(&root), &mut files, 4000);
+    files.sort_by(|a, b| b.created.cmp(&a.created));
+    files.truncate(limit.unwrap_or(12));
+    Ok(files)
 }

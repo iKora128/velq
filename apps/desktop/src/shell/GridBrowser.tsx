@@ -1,11 +1,38 @@
-import { ChevronLeft, ChevronRight, FilePlus, FolderPlus, House } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FilePlus,
+  FolderPlus,
+  House,
+  Sparkles,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileGlyph } from "@/filemanager/FileGlyph";
-import type { FileNode } from "@/ipc/types";
+import type { FileNode, RecentDoc } from "@/ipc/types";
+import { recentlyAdded } from "@/ipc/vault";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
+import { useSettings } from "@/store/settings";
 import { useVault } from "@/store/vault";
 import { cn } from "@/util/cn";
+
+/** Build a lightweight FileNode for a remembered (path + name) recent entry, so it
+ * renders through the same Tile as everything else. */
+function recentNode(r: RecentDoc): FileNode {
+  const dot = r.name.lastIndexOf(".");
+  return {
+    path: r.path,
+    name: r.name,
+    kind: "file",
+    ext: dot > 0 ? r.name.slice(dot + 1) : null,
+    size: 0,
+    mtime: r.openedAt,
+    created: r.openedAt,
+    gitStatus: "none",
+    hasChildren: false,
+  };
+}
 
 /** The friendly default browser: a roomy grid of big, colour-coded icons you
  * double-click to open — like Finder's icon view or the Files app. Breadcrumbs
@@ -15,7 +42,9 @@ export function GridBrowser() {
   const rootName = useVault((s) => s.root?.name ?? "Files");
   const childrenByPath = useFiles((s) => s.childrenByPath);
   const selectedPath = useFiles((s) => s.selected?.path ?? null);
+  const recentDocs = useSettings((s) => s.recentDocs);
   const [cwd, setCwd] = useState<string | null>(rootPath);
+  const [added, setAdded] = useState<FileNode[]>([]);
 
   // Follow the opened folder; if the vault changes under us, snap back to its root.
   useEffect(() => {
@@ -30,6 +59,19 @@ export function GridBrowser() {
   useEffect(() => {
     if (here && !childrenByPath[here]) void useFiles.getState().loadDir(here);
   }, [here, childrenByPath]);
+
+  // Refresh the Home "Recently added" list whenever we land on the vault root.
+  const atRoot = here === rootPath;
+  useEffect(() => {
+    if (!rootPath || !atRoot) return;
+    let alive = true;
+    recentlyAdded(rootPath, 8)
+      .then((f) => alive && setAdded(f))
+      .catch(() => alive && setAdded([]));
+    return () => {
+      alive = false;
+    };
+  }, [rootPath, atRoot]);
 
   if (!rootPath || !here) {
     return (
@@ -46,6 +88,17 @@ export function GridBrowser() {
   const items = childrenByPath[here];
   const folders = items?.filter((n) => n.kind === "dir") ?? [];
   const files = items?.filter((n) => n.kind === "file") ?? [];
+
+  // Home-only "Recents". "Recently added" earns its space by surfacing files buried
+  // in subfolders, so drop ones already visible here at root (and any already shown
+  // in the "Recently opened" row above it).
+  const recentPaths = new Set(recentDocs.map((r) => r.path));
+  const addedFiltered = atRoot
+    ? added.filter(
+        (n) => !recentPaths.has(n.path) && n.path.slice(0, n.path.lastIndexOf("/")) !== rootPath,
+      )
+    : [];
+  const hasRecents = atRoot && (recentDocs.length > 0 || addedFiltered.length > 0);
 
   const crumbs: { name: string; path: string }[] = [{ name: rootName, path: rootPath }];
   if (here !== rootPath && here.startsWith(`${rootPath}/`)) {
@@ -126,7 +179,7 @@ export function GridBrowser() {
             <p className="empty__hint">Loading…</p>
           </div>
         </div>
-      ) : folders.length === 0 && files.length === 0 ? (
+      ) : folders.length === 0 && files.length === 0 && !hasRecents ? (
         <div className="grid-scroll">
           <div className="empty">
             <div className="empty__title">This folder is empty</div>
@@ -135,6 +188,43 @@ export function GridBrowser() {
         </div>
       ) : (
         <div className="grid-scroll">
+          {atRoot && recentDocs.length > 0 && (
+            <>
+              <div className="grid-group">
+                <Clock size={12} /> Recently opened
+              </div>
+              <div className="tilegrid">
+                {recentDocs.slice(0, 8).map((r) => {
+                  const n = recentNode(r);
+                  return (
+                    <Tile
+                      key={`ro:${n.path}`}
+                      node={n}
+                      selected={selectedPath === n.path}
+                      onOpen={open}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          )}
+          {addedFiltered.length > 0 && (
+            <>
+              <div className="grid-group">
+                <Sparkles size={12} /> Recently added
+              </div>
+              <div className="tilegrid">
+                {addedFiltered.map((n) => (
+                  <Tile
+                    key={`ra:${n.path}`}
+                    node={n}
+                    selected={selectedPath === n.path}
+                    onOpen={open}
+                  />
+                ))}
+              </div>
+            </>
+          )}
           {folders.length > 0 && (
             <>
               <div className="grid-group">Folders</div>
