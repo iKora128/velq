@@ -6,9 +6,10 @@ import { isTauri, listen } from "@/ipc/tauri";
 import { ensureDefaultVault } from "@/ipc/vault";
 import { registerBuiltins } from "@/plugins/builtin";
 import { AppShell } from "@/shell/AppShell";
-import { useDoc } from "@/store/doc";
+import { describeError, useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { useSettings } from "@/store/settings";
+import { useToast } from "@/store/toast";
 import { type AppView, useUI } from "@/store/ui";
 import { useVault } from "@/store/vault";
 import { checkForUpdates } from "@/update/updater";
@@ -63,6 +64,7 @@ async function openHome() {
     await useVault.getState().openPath(v.path);
   } catch (e) {
     console.error("default vault failed", e);
+    useToast.getState().push(`Couldn't open your Velq folder: ${describeError(e)}`);
   }
 }
 
