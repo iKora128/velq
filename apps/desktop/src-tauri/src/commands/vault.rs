@@ -361,9 +361,16 @@ A few folders to start (rename or delete them freely — they're just folders on
 Tip: drag a `.velq` (or any file) onto the window to add it here.
 ";
 
-/// The default home: `Documents/Velq`. Created on first run with a small starter
-/// structure so a newcomer never faces an empty void or a folder picker. Existing
-/// folders are left exactly as they are (we only seed when first creating it).
+fn has_no_subdirs(dir: &Path) -> bool {
+    fs::read_dir(dir)
+        .map(|it| !it.flatten().any(|e| e.path().is_dir()))
+        .unwrap_or(false)
+}
+
+/// The default home: `Documents/Velq`. Seeded with a small starter structure while
+/// it has no folders yet — so a newcomer (or a Velq folder that so far only holds a
+/// stray packaged `.velq`) never faces an empty void or a folder picker. Once any
+/// folder exists we leave it alone, so we never fight the user's own organisation.
 #[tauri::command]
 pub fn ensure_default_vault(app: tauri::AppHandle) -> Result<VaultInfo, String> {
     let docs = app
@@ -371,13 +378,15 @@ pub fn ensure_default_vault(app: tauri::AppHandle) -> Result<VaultInfo, String> 
         .document_dir()
         .map_err(|e| format!("couldn't find your Documents folder: {e}"))?;
     let dir = docs.join("Velq");
-    let first_run = !dir.exists();
     fs::create_dir_all(&dir).map_err(|e| format!("couldn't create {}: {e}", dir.display()))?;
-    if first_run {
+    if has_no_subdirs(&dir) {
         for preset in ["Documents", "Projects", "Archive"] {
             let _ = fs::create_dir_all(dir.join(preset));
         }
-        let _ = fs::write(dir.join("Welcome.md"), WELCOME_MD);
+        let welcome = dir.join("Welcome.md");
+        if !welcome.exists() {
+            let _ = fs::write(welcome, WELCOME_MD);
+        }
     }
     let name = dir
         .file_name()
