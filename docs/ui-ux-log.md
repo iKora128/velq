@@ -493,3 +493,22 @@ Finishing the Finder/Files-app Home: when you're at the vault root, the Icons gr
 - Both are Home-only and double-click to open, same `Tile` as everything else. Verified light + dark
   via Playwright (open two docs → both shelves populate, no console errors); shots in
   `docs/screenshots/m21-grid/grid-recents-{light,dark}.png`.
+
+### No-confusion onboarding — one home, land on the icons, drag-and-drop in
+
+Three changes so a newcomer can't get lost (the user's "迷わないように"):
+
+- **Launch lands on the icon browser.** Default view is now the **Explorer (Icons grid)**, not a
+  blank editor — you open *into* your files. Verified: a no-hash startup lands on `.explorer` with
+  **Icons** pressed (`docs/screenshots/m21-grid/landing-light.png`).
+- **One home: `Documents/Velq`.** Instead of a cold "pick a folder", launch opens your last vault
+  or, on first run, **creates and seeds `Documents/Velq`** (new `ensure_default_vault` command) — the
+  same folder packaged `.velq`s already land in, so there's exactly one place for everything. Seeded
+  once with **Documents / Projects / Archive** + a `Welcome.md` (chosen by the user; freely
+  renamed/deleted since they're just folders).
+- **Drag a `.velq` (or any file) onto the window** → it's copied into your Velq folder (new
+  `import_file` command, binary-safe; `useFileDrop` via Tauri's `onDragDropEvent`). A dashed
+  "Drop to add to your Velq folder" overlay appears while a drag hovers. OS-native event, so it's
+  verified in the built `.app` rather than the dev server.
+
+All gates green (lint / tsc+vite / fmt / clippy `-D warnings` / `cargo test --workspace`).

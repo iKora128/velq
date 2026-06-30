@@ -12,7 +12,8 @@ interface UIState {
 }
 
 export const useUI = create<UIState>((set) => ({
-  view: "editor",
+  // Land on the file browser (icon grid), not a blank editor — the explorer is home.
+  view: "explorer",
   sidebarCollapsed: false,
   setView: (view) => set({ view }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),

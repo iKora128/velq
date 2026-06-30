@@ -3,6 +3,7 @@ import { ACTIONS } from "@/command/actions";
 import { routeUndo } from "@/editor/undoRouter";
 import { getOpenedFiles } from "@/ipc/app";
 import { isTauri, listen } from "@/ipc/tauri";
+import { ensureDefaultVault } from "@/ipc/vault";
 import { registerBuiltins } from "@/plugins/builtin";
 import { AppShell } from "@/shell/AppShell";
 import { useDoc } from "@/store/doc";
@@ -49,6 +50,22 @@ async function openAssociatedFiles(paths: string[]) {
   }
 }
 
+/** Open the user's home: their last vault, or the default `Documents/Velq` (created
+ * and seeded on first run) — so launching never dead-ends on a folder picker. */
+async function openHome() {
+  const last = useSettings.getState().lastVault;
+  if (last) {
+    await useVault.getState().openPath(last);
+    return;
+  }
+  try {
+    const v = await ensureDefaultVault();
+    await useVault.getState().openPath(v.path);
+  } catch (e) {
+    console.error("default vault failed", e);
+  }
+}
+
 export function App() {
   const load = useSettings((s) => s.load);
   useEffect(() => {
@@ -67,16 +84,14 @@ export function App() {
         if (opened.length) {
           await openAssociatedFiles(opened);
         } else {
-          const last = useSettings.getState().lastVault;
-          if (last) await useVault.getState().openPath(last);
+          await openHome();
         }
         // Quietly look for an update shortly after launch; only surfaces if one exists.
         window.setTimeout(() => void checkForUpdates(false), 3000);
         return;
       }
-      // Restore the last opened vault (browser/mock has no associations).
-      const last = useSettings.getState().lastVault;
-      if (last) await useVault.getState().openPath(last);
+      // Browser/mock has no file associations — just open home.
+      await openHome();
     })();
   }, [load]);
 

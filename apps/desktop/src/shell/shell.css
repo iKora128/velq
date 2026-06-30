@@ -602,3 +602,32 @@
 .statusbar__spacer {
   flex: 1;
 }
+
+/* ---- Drag-and-drop hint (OS file drop onto the window) ---- */
+.dropzone {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  pointer-events: none;
+}
+.dropzone__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-8);
+  border-radius: var(--radius-xl);
+  border: 2px dashed var(--accent);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+.dropzone__card svg {
+  color: var(--accent);
+}

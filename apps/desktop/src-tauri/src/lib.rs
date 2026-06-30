@@ -207,6 +207,8 @@ pub fn run() {
             commands::vault::delete_path,
             commands::vault::reveal_in_os,
             commands::vault::recent_files,
+            commands::vault::ensure_default_vault,
+            commands::vault::import_file,
             commands::watch::watch_vault,
             commands::watch::unwatch_vault,
             commands::vcs::init_history,

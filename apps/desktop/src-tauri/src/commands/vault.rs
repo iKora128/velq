@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 use serde::Serialize;
+use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 
 #[derive(Serialize)]
@@ -342,4 +343,65 @@ pub fn recent_files(root: String, limit: Option<usize>) -> Result<Vec<FileNode>,
     files.sort_by(|a, b| b.created.cmp(&a.created));
     files.truncate(limit.unwrap_or(12));
     Ok(files)
+}
+
+/// The friendly starter document dropped into a brand-new Velq folder.
+const WELCOME_MD: &str = "# Welcome to Velq
+
+This is your **Velq folder** — an ordinary folder at `Documents/Velq`. Everything you
+write, and every web page you package into a `.velq`, lives right here, so there's only
+ever one place to look.
+
+A few folders to start (rename or delete them freely — they're just folders on disk):
+
+- **Documents** — finished writing
+- **Projects** — work in progress
+- **Archive** — things you're done with
+
+Tip: drag a `.velq` (or any file) onto the window to add it here.
+";
+
+/// The default home: `Documents/Velq`. Created on first run with a small starter
+/// structure so a newcomer never faces an empty void or a folder picker. Existing
+/// folders are left exactly as they are (we only seed when first creating it).
+#[tauri::command]
+pub fn ensure_default_vault(app: tauri::AppHandle) -> Result<VaultInfo, String> {
+    let docs = app
+        .path()
+        .document_dir()
+        .map_err(|e| format!("couldn't find your Documents folder: {e}"))?;
+    let dir = docs.join("Velq");
+    let first_run = !dir.exists();
+    fs::create_dir_all(&dir).map_err(|e| format!("couldn't create {}: {e}", dir.display()))?;
+    if first_run {
+        for preset in ["Documents", "Projects", "Archive"] {
+            let _ = fs::create_dir_all(dir.join(preset));
+        }
+        let _ = fs::write(dir.join("Welcome.md"), WELCOME_MD);
+    }
+    let name = dir
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "Velq".into());
+    Ok(VaultInfo {
+        path: dir.to_string_lossy().to_string(),
+        name,
+    })
+}
+
+/// Copy a file from anywhere on disk into `dest_dir` (binary-safe; used by
+/// drag-and-drop), giving it a non-colliding name. Returns the new node.
+#[tauri::command]
+pub fn import_file(src: String, dest_dir: String) -> Result<FileNode, String> {
+    let src_p = Path::new(&src);
+    if src_p.is_dir() {
+        return Err("Dragging in a whole folder isn't supported yet — drop files.".into());
+    }
+    let name = src_p
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .ok_or("That file has no name.")?;
+    let dest = unique_path(Path::new(&dest_dir), &name);
+    fs::copy(src_p, &dest).map_err(|e| e.to_string())?;
+    make_node(&dest).ok_or_else(|| "Failed to read the imported file".into())
 }

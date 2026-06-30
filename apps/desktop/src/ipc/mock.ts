@@ -246,6 +246,19 @@ registerMock("recent_files", ({ root, limit }: { root: string; limit?: number })
   return out.slice(0, limit ?? 12);
 });
 
+registerMock("ensure_default_vault", () => ({
+  path: VAULT_ROOT,
+  name: VAULT_ROOT.split("/").filter(Boolean).pop(),
+}));
+
+registerMock("import_file", ({ src, destDir }: { src: string; destDir: string }) => {
+  const dir = resolve(destDir);
+  if (dir?.kind !== "dir") throw new Error("mock: no dest dir");
+  const name = uniqueName(dir, basename(src));
+  dir.children[name] = f(`(imported ${basename(src)})`);
+  return toFileNode(`${destDir}/${name}`, name, dir.children[name]);
+});
+
 registerMock("write_file", ({ path, content }: { path: string; content: string }) => {
   const node = resolve(path);
   if (node?.kind === "file") node.content = content;

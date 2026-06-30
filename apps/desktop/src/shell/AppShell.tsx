@@ -1,3 +1,4 @@
+import { Download } from "lucide-react";
 import { useEffect } from "react";
 import { Cheatsheet } from "@/command/Cheatsheet";
 import { CommandPalette } from "@/command/CommandPalette";
@@ -13,9 +14,11 @@ import { ExplorerView } from "./ExplorerView";
 import { SettingsView } from "./SettingsView";
 import "./shell.css";
 import { StatusBar } from "./StatusBar";
+import { useFileDrop } from "./useFileDrop";
 
 export function AppShell() {
   const view = useUI((s) => s.view);
+  const dragging = useFileDrop();
   useShortcuts();
 
   // Space previews the selected file (Finder Quick Look), unless typing.
@@ -59,6 +62,14 @@ export function AppShell() {
       <Cheatsheet />
       <PluginsPanel />
       <Toaster />
+      {dragging && (
+        <div className="dropzone" aria-hidden="true">
+          <div className="dropzone__card">
+            <Download size={28} />
+            <span>Drop to add to your Velq folder</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

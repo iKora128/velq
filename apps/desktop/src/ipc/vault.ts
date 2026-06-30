@@ -31,3 +31,8 @@ export const revealInOs = (path: string) => invoke<void>("reveal_in_os", { path 
 /** The newest files anywhere in the vault, newest first (Home "Recently added"). */
 export const recentlyAdded = (root: string, limit?: number) =>
   invoke<FileNode[]>("recent_files", { root, limit });
+/** Ensure (and on first run, seed) the default `Documents/Velq` home and return it. */
+export const ensureDefaultVault = () => invoke<VaultInfo>("ensure_default_vault");
+/** Copy an external file (e.g. a dragged-in `.velq`) into `destDir`. */
+export const importFile = (src: string, destDir: string) =>
+  invoke<FileNode>("import_file", { src, destDir });
