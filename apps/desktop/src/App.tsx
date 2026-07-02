@@ -54,6 +54,8 @@ async function openAssociatedFiles(paths: string[]) {
 /** Open the user's home: their last vault, or the default `Documents/Velq` (created
  * and seeded on first run) — so launching never dead-ends on a folder picker. */
 async function openHome() {
+  // A normal launch (no file was double-clicked) always lands on the file browser.
+  useUI.getState().setView("explorer");
   const last = useSettings.getState().lastVault;
   if (last) {
     await useVault.getState().openPath(last);

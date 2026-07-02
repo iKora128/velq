@@ -7,6 +7,7 @@ import { openVelqViewer } from "@/ipc/velq";
 import { countWords } from "@/util/text";
 import { useSettings } from "./settings";
 import { useToast } from "./toast";
+import { useUI } from "./ui";
 
 /** Document identity/metadata. The live text lives in its Tab (so switching tabs
  * never drops edits), not here. */
@@ -228,7 +229,7 @@ export const useDoc = create<DocState>((set, get) => ({
 
   activate: (id) => set((s) => ({ activeId: id, ...mirror(s.tabs, id) })),
 
-  close: (id) =>
+  close: (id) => {
     set((s) => {
       const idx = s.tabs.findIndex((t) => t.doc.id === id);
       if (idx < 0) return {};
@@ -239,7 +240,12 @@ export const useDoc = create<DocState>((set, get) => ({
         activeId = next ? next.doc.id : null;
       }
       return { tabs, activeId, ...mirror(tabs, activeId) };
-    }),
+    });
+    // Closing your last document takes you home to the file browser (not a blank editor).
+    if (get().tabs.length === 0 && useUI.getState().view === "editor") {
+      useUI.getState().setView("explorer");
+    }
+  },
 
   renameDoc: (oldId, newPath, newName) =>
     set((s) => {
