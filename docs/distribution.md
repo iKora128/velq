@@ -77,7 +77,21 @@ make release         # patch-bump every manifest, commit, tag vX.Y.Z, push
 The pushed tag triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml),
 which builds the matrix (macOS arm64 + x86_64, Windows, Linux) via `tauri-action`,
 signs the updater artifacts, and publishes the installers **and** `latest.json` to the
-GitHub Release. Provide the Apple secrets (`APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
-`APPLE_PASSWORD`, `APPLE_TEAM_ID`, `APPLE_CERTIFICATE*`) for a notarized macOS build;
-without them the macOS bundle is ad-hoc-signed (fine for local use, Gatekeeper-warned
-elsewhere).
+GitHub Release.
+
+macOS code signing + notarization needs these repo secrets (same recipe as karui):
+
+| Secret | Value |
+|---|---|
+| `APPLE_CERTIFICATE_BASE64` | Developer ID Application cert, base64 of the `.p12` |
+| `APPLE_CERTIFICATE_PASSWORD` | the `.p12` password |
+| `APPLE_SIGNING_IDENTITY` | e.g. `Developer ID Application: Name (TEAMID)` |
+| `APPLE_API_KEY` | App Store Connect API key ID |
+| `APPLE_API_KEY_BASE64` | base64 of the `AuthKey_<ID>.p8` |
+| `APPLE_API_ISSUER` | App Store Connect issuer UUID |
+
+Notarization uses the App Store Connect API key — no Apple ID password is
+involved. Each Apple step no-ops when its secrets are absent, so the pipeline
+still produces (unsigned, Gatekeeper-warned) installers on a fresh fork.
+Updater signing (`TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`,
+from `make keygen`) is independent and always required for auto-updates.

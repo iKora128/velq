@@ -2,6 +2,13 @@ name: Release
 
 # Push a tag (e.g. `make release` → v0.1.1) to build, sign and publish installers
 # plus the updater `latest.json` to this repo's GitHub Releases.
+#
+# macOS signing/notarization mirrors karui's proven build.yml: the Developer ID
+# certificate is imported into a throwaway keychain by hand (tauri-action's
+# built-in import chokes on some p12 exports) and notarization uses an App
+# Store Connect API key — no Apple ID password involved. Each Apple step
+# no-ops when its secrets are absent, so the pipeline still produces
+# (unsigned) installers on a fresh fork.
 on:
   push:
     tags:
@@ -42,9 +49,51 @@ jobs:
         with:
           targets: ${{ contains(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
+      - name: Import Apple certificate (macOS)
+        if: contains(matrix.platform, 'macos')
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE_BASE64" ]; then
+            echo "APPLE_CERTIFICATE_BASE64 not set — building unsigned."
+            exit 0
+          fi
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          rm "$RUNNER_TEMP/certificate.p12"
+          # Only expose the identity to tauri once the cert is really importable.
+          echo "APPLE_SIGNING_IDENTITY=$APPLE_SIGNING_IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Set up notarization API key (macOS)
+        if: contains(matrix.platform, 'macos')
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE_BASE64" ] || [ -z "$APPLE_API_KEY_BASE64" ] || [ -z "$APPLE_API_ISSUER_ID" ]; then
+            echo "Certificate, API key or issuer not set — skipping notarization."
+            exit 0
+          fi
+          mkdir -p "$HOME/private_keys"
+          echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$HOME/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8"
+          {
+            echo "APPLE_API_KEY=${APPLE_API_KEY_ID}"
+            echo "APPLE_API_ISSUER=${APPLE_API_ISSUER_ID}"
+            echo "APPLE_API_KEY_PATH=$HOME/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8"
+          } >> "$GITHUB_ENV"
+
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
@@ -61,13 +110,8 @@ jobs:
           # Updater signing (from `make keygen`; store in repo secrets).
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # macOS code signing + notarization (optional; unset ⇒ ad-hoc / unsigned).
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # APPLE_SIGNING_IDENTITY / APPLE_API_KEY* arrive via GITHUB_ENV from
+          # the two steps above, and only when their secrets exist.
         with:
           projectPath: apps/desktop
           tauriScript: pnpm tauri

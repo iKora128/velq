@@ -71,7 +71,7 @@
   "plugins": {
     "updater": {
       "endpoints": ["https://github.com/iKora128/velq/releases/latest/download/latest.json"],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzNDE2NDMzOTg1MTI2RTEKUldUaEpsR1lNMlJCMHlhR004blVCK3lwT2Q1UmY0NGF1OXdCZE0yMFV1emlwR1NUbHVOeVQ4dGgK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM0NkQzNjBCMzI2MDI1RUUKUldUdUpXQXlDelp0TkNsL29FL3pKQzNLNWdNczE0ek42cFltQzV6YSt6L2lWVnJsRHVXOTVLVUMK"
     }
   }
 }
