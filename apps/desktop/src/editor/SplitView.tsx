@@ -23,6 +23,16 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
     [reportChange],
   );
 
+  // A text tweak made on the rendered preview (W6): push the rewritten source into
+  // the uncontrolled editor. Its update listener then runs `onChange`, and the
+  // debounced `setPreviewSource` lands on the string the iframe already shows — so
+  // PreviewPane's round-trip guard skips the rewrite and the caret stays put.
+  const onPreviewEdit = useCallback((next: string) => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
+  }, []);
+
   const font = doc.language === "html" || !proseFont ? "mono" : "prose";
 
   return (
@@ -41,7 +51,13 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
         />
       </div>
       <div className="split__pane split__preview">
-        <PreviewPane source={previewSource} language={doc.language} viewRef={viewRef} />
+        <PreviewPane
+          source={previewSource}
+          language={doc.language}
+          viewRef={viewRef}
+          editable={doc.language === "html"}
+          onEdit={onPreviewEdit}
+        />
       </div>
     </div>
   );

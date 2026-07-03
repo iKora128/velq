@@ -68,9 +68,9 @@ export const ja: Dict = {
   "settings.files.columns": "カラム",
   "settings.packaging": "パッケージ",
   "settings.packaging.desc": "HTML を持ち運べる .velq にする方法。",
-  "settings.autoPackage": "開いたときに HTML を自動パッケージ",
+  "settings.autoPackage": "「このアプリで開く」の HTML を自動パッケージ",
   "settings.autoPackage.hint":
-    "HTML ファイルを開くと、依存関係をたどって .velq を Documents/Velq に保存します（編集はしません）。",
+    "Velq の外（OS の「このアプリで開く」）から HTML を開いたとき、依存関係をたどって .velq を Documents/Velq に保存します。Velq の中で開いたファイルは常に編集できます。",
 
   // ---- コマンド / メニューの操作名 ----
   "action.newDoc": "新規ドキュメント",
@@ -193,6 +193,7 @@ export const ja: Dict = {
   "contextmenu.revealMac": "Finder で表示",
   "contextmenu.revealOther": "エクスプローラーで表示",
   "contextmenu.trash": "ゴミ箱に入れる",
+  "contextmenu.deleteN": "{count} 件をゴミ箱に入れる",
 
   // ---- クイックルック ----
   "quicklook.close": "プレビューを閉じる",
@@ -254,6 +255,8 @@ export const ja: Dict = {
   "toast.cantRename": "名前を変更できませんでした: {error}",
   "toast.cantDelete": "削除できませんでした: {error}",
   "toast.cantMove": "移動できませんでした: {error}",
+  "toast.deletedMany": "{count} 件をゴミ箱に入れました",
+  "toast.renamedMany": "{count} 件の名前を変更しました",
   "toast.dropOpenFolderFirst": "先にフォルダを開いてから、ファイルをドロップしてください。",
   "toast.cantAdd": "{name} を追加できませんでした: {error}",
   "toast.addedOne": "1 件を {vault} に追加しました",
@@ -282,6 +285,36 @@ export const ja: Dict = {
   "undo.delete": "{name} の削除",
   "undo.duplicate": "複製",
   "undo.move": "移動",
+  "undo.deleteMany": "{count} 件の削除",
+  "undo.moveMany": "{count} 件の移動",
+  "undo.newFolderFromSelection": "選択 {count} 件から新規フォルダ",
+  "undo.renameMany": "{count} 件の名前変更",
+
+  // ---- 複数選択のアクションバー ----
+  "selection.count": "{count} 件を選択",
+  "selection.newFolder": "新規フォルダ",
+  "selection.newFolder.title": "選択項目から新規フォルダ",
+  "selection.rename": "名前を変更…",
+  "selection.delete": "削除",
+  "selection.clear": "選択を解除",
+
+  // ---- 一括リネームダイアログ ----
+  "batch.title": "{count} 件の名前を変更",
+  "batch.aria": "一括リネーム",
+  "batch.mode.replace": "検索して置換",
+  "batch.mode.add": "テキストを追加",
+  "batch.mode.number": "連番",
+  "batch.find": "検索",
+  "batch.replace": "置換後",
+  "batch.prefix": "接頭辞",
+  "batch.suffix": "接尾辞",
+  "batch.baseName": "名前",
+  "batch.startAt": "開始番号",
+  "batch.preview": "プレビュー",
+  "batch.apply": "名前を変更",
+  "batch.cancel": "キャンセル",
+  "batch.collision": "{count} 件の名前が重複します。調整してください。",
+  "batch.unchanged": "まだ変更はありません。",
 
   // ---- ネイティブダイアログのタイトル ----
   "dialog.chooseHtml": "パッケージする HTML ファイルを選択",

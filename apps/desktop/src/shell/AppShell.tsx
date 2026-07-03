@@ -5,6 +5,7 @@ import { CommandPalette } from "@/command/CommandPalette";
 import { useShortcuts } from "@/command/useShortcuts";
 import { Toaster } from "@/components/Toaster";
 import { useAutosave } from "@/editor/useAutosave";
+import { BatchRenameDialog } from "@/filemanager/BatchRenameDialog";
 import { QuickLook } from "@/filemanager/QuickLook";
 import { useT } from "@/i18n/useT";
 import { PluginsPanel } from "@/plugins/PluginsPanel";
@@ -65,6 +66,7 @@ export function AppShell() {
       <CommandPalette />
       <Cheatsheet />
       <PluginsPanel />
+      <BatchRenameDialog />
       <Toaster />
       {dragging && (
         <div className="dropzone" aria-hidden="true">

@@ -1,0 +1,159 @@
+.batch-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgba(0, 0, 0, 0.3);
+}
+.batch {
+  width: min(560px, 92vw);
+  max-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.batch__title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+.batch__modes {
+  align-self: flex-start;
+}
+.batch__controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.batch__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.batch__label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.batch__input {
+  height: 30px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+.batch__input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.batch__input--num {
+  width: 96px;
+}
+.batch__preview-head {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.batch__preview {
+  flex: 1;
+  min-height: 88px;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  background: var(--bg-subtle);
+}
+.batch__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px var(--space-2);
+  font-size: var(--text-sm);
+}
+.batch__old,
+.batch__new {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+.batch__old {
+  flex: 1;
+}
+.batch__new {
+  flex: 1;
+}
+.batch__new.is-changed {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+.batch__arrow {
+  flex: none;
+  color: var(--text-muted);
+}
+.batch__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.batch__status {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.batch__spacer {
+  flex: 1;
+}
+
+/* Multi-selection action bar (bottom of the explorer body). */
+.selbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  flex: none;
+  padding: 0 var(--space-3);
+  background: var(--surface-elevated);
+  border-top: 1px solid var(--border-subtle);
+}
+.selbar__count {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+}
+.selbar__spacer {
+  flex: 1;
+}
+.selbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+.selbar__btn:hover {
+  background: var(--surface-active);
+}
+.selbar__btn--icon {
+  padding: 0 var(--space-2);
+  background: none;
+  color: var(--text-secondary);
+}
+.selbar__btn--danger:hover {
+  background: var(--danger-subtle, color-mix(in srgb, var(--danger, #e5484d) 14%, transparent));
+  color: var(--danger, #e5484d);
+}

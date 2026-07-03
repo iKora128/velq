@@ -127,3 +127,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Drag-and-drop: a folder row as a drop target (matches the tree's accent ring). */
+.filelist-folder.is-drop {
+  background: var(--accent-subtle);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}

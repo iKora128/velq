@@ -1,9 +1,10 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronRight, Copy, FilePlus, FolderPlus, Pencil, Trash2 } from "lucide-react";
-import { type DragEvent, useMemo, useRef, useState } from "react";
+import { type MouseEvent, useMemo, useRef, useState } from "react";
 import { useT } from "@/i18n/useT";
 import type { FileNode } from "@/ipc/types";
 import { revealInOs } from "@/ipc/vault";
+import { useBatchRename } from "@/store/batchRename";
 import { useDoc } from "@/store/doc";
 import { flattenTree, type TreeRow, useFiles } from "@/store/files";
 import { cn } from "@/util/cn";
@@ -11,26 +12,24 @@ import { isMac } from "@/util/platform";
 import { ContextMenu, type MenuEntry } from "./ContextMenu";
 import { FileGlyph } from "./FileGlyph";
 import { RenameInput } from "./RenameInput";
+import { clickSelect } from "./selectionClick";
+import { useFileDnd } from "./useFileDnd";
 import "./tree.css";
 
 const ROW_H = 28;
-
-// Drag source path (dataTransfer can't be read during dragover, so we stash it).
-let dragSrc: string | null = null;
 
 export function Tree() {
   const t = useT();
   const rootPath = useFiles((s) => s.rootPath);
   const childrenByPath = useFiles((s) => s.childrenByPath);
   const expanded = useFiles((s) => s.expanded);
-  const selectedPath = useFiles((s) => s.selected?.path ?? null);
+  const selection = useFiles((s) => s.selection);
   const renaming = useFiles((s) => s.renaming);
   const files = useFiles;
   const openFile = useDoc((s) => s.openFile);
   const parentRef = useRef<HTMLDivElement>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const { dropTarget, dragProps, dropProps } = useFileDnd();
   const [menu, setMenu] = useState<{ x: number; y: number; node: FileNode | null } | null>(null);
-  const springTimer = useRef(0);
 
   const rows = useMemo(
     () => (rootPath ? flattenTree(rootPath, childrenByPath, expanded) : []),
@@ -44,40 +43,45 @@ export function Tree() {
     overscan: 14,
   });
 
-  const onRowClick = (row: TreeRow) => {
-    files.getState().select(row.node);
+  const onRowClick = (e: MouseEvent, row: TreeRow) => {
+    // A modifier-click only changes the selection; a plain click also navigates/opens.
+    if (
+      !clickSelect(
+        e,
+        row.node,
+        rows.map((r) => r.node),
+      )
+    )
+      return;
     if (row.node.kind === "dir") void files.getState().toggle(row.node.path);
     else void openFile(row.node, { preview: true });
   };
 
-  const clearDrop = () => {
-    setDropTarget(null);
-    window.clearTimeout(springTimer.current);
-  };
-
-  const onDragOverFolder = (e: DragEvent, node: FileNode) => {
-    if (!dragSrc || dragSrc === node.path || node.path.startsWith(`${dragSrc}/`)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = e.altKey ? "copy" : "move";
-    if (dropTarget !== node.path) {
-      setDropTarget(node.path);
-      window.clearTimeout(springTimer.current);
-      if (!expanded[node.path]) {
-        springTimer.current = window.setTimeout(() => void files.getState().expand(node.path), 600);
-      }
-    }
-  };
-
-  const onDropFolder = (e: DragEvent, node: FileNode) => {
-    e.preventDefault();
-    const src = dragSrc;
-    clearDrop();
-    if (!src) return;
-    if (e.altKey) void files.getState().copyNode(src, node.path);
-    else void files.getState().moveNode(src, node.path);
-  };
-
   const menuEntries = (node: FileNode | null): MenuEntry[] => {
+    const sel = files.getState().selection;
+    // Right-clicking one of several selected items → bulk actions.
+    if (node && sel.size > 1 && sel.has(node.path)) {
+      const count = sel.size;
+      return [
+        {
+          label: t("selection.newFolder.title"),
+          icon: <FolderPlus size={15} />,
+          onClick: () => void files.getState().newFolderFromSelection(),
+        },
+        {
+          label: t("batch.title", { count }),
+          icon: <Pencil size={15} />,
+          onClick: () => useBatchRename.getState().open(files.getState().selectedNodes()),
+        },
+        { separator: true },
+        {
+          label: t("contextmenu.deleteN", { count }),
+          icon: <Trash2 size={15} />,
+          danger: true,
+          onClick: () => void files.getState().removeSelected(),
+        },
+      ];
+    }
     const target = node ? (node.kind === "dir" ? node.path : undefined) : rootPath;
     const entries: MenuEntry[] = [];
     if (node?.kind === "file") {
@@ -149,10 +153,13 @@ export function Tree() {
             <button
               type="button"
               key={node.path}
-              draggable={!isRenaming}
+              {...dragProps(node, isRenaming)}
+              {...(isDir
+                ? dropProps(node.path, () => void files.getState().expand(node.path))
+                : {})}
               className={cn(
                 "tree-row",
-                selectedPath === node.path && "tree-row--selected",
+                selection.has(node.path) && "tree-row--selected",
                 dropTarget === node.path && "tree-row--drop",
               )}
               style={{
@@ -165,14 +172,15 @@ export function Tree() {
                 paddingLeft: 6 + depth * 14,
               }}
               title={node.name}
-              onClick={() => !isRenaming && onRowClick(row)}
+              onClick={(e) => !isRenaming && onRowClick(e, row)}
               onDoubleClick={() =>
                 !isRenaming && node.kind === "file" && openFile(node, { preview: false })
               }
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                files.getState().select(node);
+                // Keep a multi-selection if this row is part of it.
+                if (!files.getState().selection.has(node.path)) files.getState().select(node);
                 setMenu({ x: e.clientX, y: e.clientY, node });
               }}
               onKeyDown={(e) => {
@@ -181,18 +189,6 @@ export function Tree() {
                   files.getState().startRename(node.path);
                 }
               }}
-              onDragStart={(e) => {
-                dragSrc = node.path;
-                e.dataTransfer.effectAllowed = "copyMove";
-                e.dataTransfer.setData("text/plain", node.path);
-              }}
-              onDragEnd={() => {
-                dragSrc = null;
-                clearDrop();
-              }}
-              onDragOver={isDir ? (e) => onDragOverFolder(e, node) : undefined}
-              onDragLeave={isDir ? () => dropTarget === node.path && clearDrop() : undefined}
-              onDrop={isDir ? (e) => onDropFolder(e, node) : undefined}
             >
               <span className="tree-row__caret">
                 {isDir && (

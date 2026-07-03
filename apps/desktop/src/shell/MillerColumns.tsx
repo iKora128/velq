@@ -1,6 +1,9 @@
 import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileGlyph } from "@/filemanager/FileGlyph";
+import { clickSelect } from "@/filemanager/selectionClick";
+import { useFileDnd } from "@/filemanager/useFileDnd";
+import { useSelectionKeys } from "@/filemanager/useSelectionKeys";
 import { useT } from "@/i18n/useT";
 import type { FileNode } from "@/ipc/types";
 import { useDoc } from "@/store/doc";
@@ -11,6 +14,8 @@ import { cn } from "@/util/cn";
  * column to its right. Single-click selects, double-click opens a document. */
 export function MillerColumns() {
   const t = useT();
+  const dnd = useFileDnd();
+  const selection = useFiles((s) => s.selection);
   const rootPath = useFiles((s) => s.rootPath);
   const childrenByPath = useFiles((s) => s.childrenByPath);
   const [trail, setTrail] = useState<string[]>([]);
@@ -24,6 +29,9 @@ export function MillerColumns() {
       if (!childrenByPath[dir]) void useFiles.getState().loadDir(dir);
     }
   }, [columns, childrenByPath]);
+
+  // The deepest column's items — the focus for Cmd/Ctrl+A.
+  useSelectionKeys(childrenByPath[columns[columns.length - 1]] ?? []);
 
   if (!rootPath) {
     return (
@@ -61,8 +69,19 @@ export function MillerColumns() {
                     <button
                       type="button"
                       key={node.path}
-                      className={cn("miller__row", active && "is-active")}
-                      onClick={() => (isDir ? openFolder(i, node) : selectFile(node))}
+                      {...dnd.dragProps(node)}
+                      {...(isDir ? dnd.dropProps(node.path, () => openFolder(i, node)) : {})}
+                      className={cn(
+                        "miller__row",
+                        active && "is-active",
+                        selection.has(node.path) && "is-selected",
+                        dnd.dropTarget === node.path && "is-drop",
+                      )}
+                      onClick={(e) => {
+                        if (!clickSelect(e, node, items ?? [])) return;
+                        if (isDir) openFolder(i, node);
+                        else selectFile(node);
+                      }}
                       onDoubleClick={() => {
                         if (!isDir) void useDoc.getState().openFile(node, { preview: false });
                       }}

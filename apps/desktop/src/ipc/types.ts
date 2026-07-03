@@ -66,7 +66,8 @@ export interface Settings {
   lastVault: string | null;
   /** Folder the last export was saved to — the Save dialog starts here next time. */
   lastExportDir: string | null;
-  /** Opening an HTML file auto-packages it into Documents/Velq instead of editing. */
+  /** HTML opened via the OS "Open with" auto-packages into Documents/Velq instead of
+   * editing. Files opened inside Velq's own browser are always editable. */
   autoPackageHtml: boolean;
   /** Most-recently-opened documents, newest first (for the Home "Recents"). */
   recentDocs: RecentDoc[];
@@ -83,7 +84,7 @@ export const DEFAULT_SETTINGS: Settings = {
   locale: "system",
   lastVault: null,
   lastExportDir: null,
-  autoPackageHtml: true,
+  autoPackageHtml: false,
   recentDocs: [],
 };
 

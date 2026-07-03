@@ -9,6 +9,9 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileGlyph } from "@/filemanager/FileGlyph";
+import { clickSelect } from "@/filemanager/selectionClick";
+import { useFileDnd } from "@/filemanager/useFileDnd";
+import { useSelectionKeys } from "@/filemanager/useSelectionKeys";
 import { useT } from "@/i18n/useT";
 import type { FileNode, RecentDoc } from "@/ipc/types";
 import { recentlyAdded } from "@/ipc/vault";
@@ -40,10 +43,11 @@ function recentNode(r: RecentDoc): FileNode {
  * across the top say exactly where you are; folders come first, then files. */
 export function GridBrowser() {
   const t = useT();
+  const dnd = useFileDnd();
   const rootPath = useFiles((s) => s.rootPath);
   const rootName = useVault((s) => s.root?.name) ?? t("explorer.defaultName");
   const childrenByPath = useFiles((s) => s.childrenByPath);
-  const selectedPath = useFiles((s) => s.selected?.path ?? null);
+  const selection = useFiles((s) => s.selection);
   const recentDocs = useSettings((s) => s.recentDocs);
   const [cwd, setCwd] = useState<string | null>(rootPath);
   const [added, setAdded] = useState<FileNode[]>([]);
@@ -75,6 +79,13 @@ export function GridBrowser() {
     };
   }, [rootPath, atRoot]);
 
+  const items = here ? childrenByPath[here] : undefined;
+  const folders = items?.filter((n) => n.kind === "dir") ?? [];
+  const files = items?.filter((n) => n.kind === "file") ?? [];
+  // Visible order for Shift-range selection + Cmd/Ctrl+A (folders first, then files).
+  const gridOrdered = [...folders, ...files];
+  useSelectionKeys(gridOrdered);
+
   if (!rootPath || !here) {
     return (
       <div className="grid-browser">
@@ -86,10 +97,6 @@ export function GridBrowser() {
       </div>
     );
   }
-
-  const items = childrenByPath[here];
-  const folders = items?.filter((n) => n.kind === "dir") ?? [];
-  const files = items?.filter((n) => n.kind === "file") ?? [];
 
   // Home-only "Recents". "Recently added" earns its space by surfacing files buried
   // in subfolders, so drop ones already visible here at root (and any already shown
@@ -145,7 +152,13 @@ export function GridBrowser() {
               {i > 0 && <ChevronRight size={14} className="crumbs__sep" />}
               <button
                 type="button"
-                className={cn("crumbs__btn", i === crumbs.length - 1 && "is-current")}
+                // Ancestor crumbs are drop targets — drag a file onto one to move it up.
+                {...(i < crumbs.length - 1 ? dnd.dropProps(c.path) : {})}
+                className={cn(
+                  "crumbs__btn",
+                  i === crumbs.length - 1 && "is-current",
+                  dnd.dropTarget === c.path && "is-drop-target",
+                )}
                 onClick={() => setCwd(c.path)}
               >
                 {i === 0 && <House size={14} className="crumbs__home" />}
@@ -202,7 +215,7 @@ export function GridBrowser() {
                     <Tile
                       key={`ro:${n.path}`}
                       node={n}
-                      selected={selectedPath === n.path}
+                      selected={selection.has(n.path)}
                       onOpen={open}
                     />
                   );
@@ -220,7 +233,7 @@ export function GridBrowser() {
                   <Tile
                     key={`ra:${n.path}`}
                     node={n}
-                    selected={selectedPath === n.path}
+                    selected={selection.has(n.path)}
                     onOpen={open}
                   />
                 ))}
@@ -232,7 +245,14 @@ export function GridBrowser() {
               <div className="grid-group">{t("common.folders")}</div>
               <div className="tilegrid">
                 {folders.map((n) => (
-                  <Tile key={n.path} node={n} selected={selectedPath === n.path} onOpen={open} />
+                  <Tile
+                    key={n.path}
+                    node={n}
+                    selected={selection.has(n.path)}
+                    onOpen={open}
+                    ordered={gridOrdered}
+                    dnd={dnd}
+                  />
                 ))}
               </div>
             </>
@@ -242,7 +262,14 @@ export function GridBrowser() {
               <div className="grid-group">{t("common.files")}</div>
               <div className="tilegrid">
                 {files.map((n) => (
-                  <Tile key={n.path} node={n} selected={selectedPath === n.path} onOpen={open} />
+                  <Tile
+                    key={n.path}
+                    node={n}
+                    selected={selection.has(n.path)}
+                    onOpen={open}
+                    ordered={gridOrdered}
+                    dnd={dnd}
+                  />
                 ))}
               </div>
             </>
@@ -257,22 +284,29 @@ function Tile({
   node,
   selected,
   onOpen,
+  ordered,
+  dnd,
 }: {
   node: FileNode;
   selected: boolean;
   onOpen: (n: FileNode) => void;
+  ordered?: FileNode[];
+  dnd?: ReturnType<typeof useFileDnd>;
 }) {
   const isDir = node.kind === "dir";
   return (
     <button
       type="button"
-      className={cn("tile", selected && "is-selected")}
+      {...(dnd ? dnd.dragProps(node) : {})}
+      {...(isDir && dnd ? dnd.dropProps(node.path) : {})}
+      className={cn("tile", selected && "is-selected", dnd?.dropTarget === node.path && "is-drop")}
       title={node.name}
-      onClick={() => useFiles.getState().select(node)}
+      onClick={(e) => (ordered ? clickSelect(e, node, ordered) : useFiles.getState().select(node))}
       onDoubleClick={() => onOpen(node)}
       onContextMenu={(e) => {
         e.preventDefault();
-        useFiles.getState().select(node);
+        // Keep a multi-selection if the right-clicked tile is part of it.
+        if (!useFiles.getState().selection.has(node.path)) useFiles.getState().select(node);
       }}
     >
       <span className="tile__art">

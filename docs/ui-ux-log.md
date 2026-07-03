@@ -624,3 +624,109 @@ Rust command **error strings** (surfaced verbatim in toasts), the **`velq-vcs` v
 descriptions, and the seed `Welcome.md` / default file names (real on-disk names — deliberately left).
 Backend (menu, locale persistence) needs a `tauri dev` **restart** to take effect in an
 already-running instance; the webview switch is live via HMR.
+
+## M24 — Drag-and-drop in every file view
+
+The sidebar tree already shipped a nicely-built internal drag-and-drop (move / Alt-copy / spring-load /
+undo / self-and-descendant guards), but the **icon grid, list and columns views had none** — so the
+default beginner view (icons) couldn't rearrange files by dragging. Extended it to all of them.
+
+- **One shared hook `filemanager/useFileDnd.ts`.** Lifted the tree's logic into `dragProps(node)` +
+  `dropProps(dir, onSpring?)` getters that any view spreads onto its rows/tiles. Drag a file or folder
+  onto a folder to **move** it; hold **Alt/Option to copy**. Reuses the store's undoable
+  `moveNode`/`copyNode` and the `move_path` command — **zero backend change**. A `canDrop` guard blocks
+  dropping onto itself, into its own descendant, or into the folder it already lives in.
+- **Refactored the tree onto the hook** (one implementation, not two) — behaviour preserved, plus the
+  new no-op-move guard.
+- **Icon grid**: folder tiles are drop targets, every tile is a drag source, and **ancestor breadcrumbs
+  accept drops** — drag a file onto a crumb to move it up a level (the one direction a single-folder grid
+  otherwise can't express).
+- **List**: folder rows are drop targets, cards are drag sources.
+- **Columns**: folder rows are drop targets with **spring-load** — hover a folder mid-drag and its column
+  opens so you can drop deeper, Finder-style.
+- Drop target gets the same **accent ring** as the tree (`--accent-subtle` + inset accent border), added
+  as a shared style so every view reads identically.
+
+Multi-select drag is intentionally out of scope (needs multi-select first — proposals **D14**); this is
+single-item drag, matching what the tree already did.
+
+**Gates:** tsc · `vite build` · Biome (114 files) · Vitest **25/25** — all green. No Rust touched.
+
+## M25 — Open HTML to edit + tweak text on the rendered preview (W6 prototype)
+
+Two things the user asked for: (1) opening an HTML file should let you **edit** it, not silently package
+it; (2) for small wording changes, edit the text **on the rendered result** — big/structural/design
+changes stay in code (or, later, AI). This is the first slice of proposals **W6** (§3.2), built on the
+insight that the preview iframe is **same-origin**, so the parent can drive it directly — no script runs
+inside it, the sandbox is intact.
+
+- **Open-to-edit (the prerequisite, "B").** `openFile` (Velq's own file browser) no longer auto-packages
+  HTML — opening always edits. Packaging stays an **explicit** action (command palette *Open HTML &
+  package*, the Welcome tile, *Export to .velq*). `autoPackageHtml` now applies **only** to the OS
+  *"Open with"* path and defaults **off**; en/ja copy updated to say so. HTML then lands in **Split**
+  (existing default), so you get source-left / rendered-right.
+- **The heart: `preview/htmlTextMap.ts` (pure, 18 tests).** Walks the source once and records every run
+  of between-tags text with its **source offsets + raw slice + decoded value**, in document order. The
+  iframe's text nodes come out in the same order, so the *n*-th node maps to the *n*-th run — which is
+  what lets an edit write back to the **right** place instead of a blind string replace (a second
+  identical word can't be clobbered). `extractBodyTextRuns` scopes to `<body>` so `<head>` whitespace
+  (which browsers drop from the DOM) can't desync the counts. `rebuildHtml` keeps an unchanged run's raw
+  bytes verbatim (entities/spacing survive) and only re-encodes runs that actually changed.
+- **`PreviewPane` editable mode (HTML only).** Sets `contenteditable` on the iframe body and, on `input`,
+  recomputes the source via the map and calls back. If the live text-node count no longer matches the
+  runs, the edit was **structural** (node added/removed) — we leave the source alone rather than guess,
+  so "tweak the wording" stays safe and structure edits go through the code pane.
+- **`SplitView` wiring, loop-safe.** A preview edit dispatches the rewritten source into the
+  (uncontrolled) left editor; its update listener runs `onChange` and the debounced `setPreviewSource`
+  lands on the string the iframe **already shows**, so a **round-trip guard** in `PreviewPane`
+  (`source === liveSource`) skips the rewrite — no infinite left↔right loop, and the reader's caret never
+  jumps. Edits mark the doc dirty → autosave + save-history pick them up unchanged.
+
+### Honest gaps (prototype scope, documented)
+
+- Each preview keystroke dispatches a **full-document replace** into the editor — correct, but coarse
+  undo granularity; coalescing is a follow-up.
+- **HTML fragments** (no `<body>`) aren't preview-editable yet (edit on the left); Markdown preview
+  editing is **not** attempted (needs rendered-DOM→Markdown, a harder inverse — deferred as noted in W6).
+- Hand-rolled scan, not a full parser: a literal `>` inside a quoted attribute can end a tag early
+  (rare; acceptable for tweak-scope).
+- Not yet done: a visual `cargo tauri dev` pass, and the mode UX cleanup (HTML's Live→Split swap) that
+  W6 is the natural moment to fix — left for the next UI loop.
+
+**Gates:** `tsc --noEmit` green · `vite build` green · Biome clean (touched files) · Vitest **43/43**
+(new `preview/htmlTextMap` suite, 18) — all green. **No Rust touched.**
+
+## M26 — Multi-select & bulk operations (proposals.md D14)
+
+The file browser could only ever act on one item. D14 makes it Finder-grade: select many, then move /
+rename / delete / group them at once. Built on the M24 drag-and-drop; **no Rust change** — every bulk op
+composes the existing undoable `move_path` / `create` / `rename` / delete-to-Trash commands.
+
+- **Selection model in the store.** `selected` stays the *lead* (drives previews / `targetDir`);
+  a new `selection: Set<string>` holds the multi-selection (the lead is always in it, kept in sync by a
+  `leadState` helper wired through every place that sets a single active item). Actions: `select`
+  (replace), `toggleSelect` (Cmd/Ctrl-click), `rangeSelectTo` (Shift-click, within the view's visible
+  order), `selectAll`, `clearSelection`. Unit-tested (`files.selection.test.ts`, both range directions +
+  the lead invariant).
+- **Every view, one behaviour.** A tiny `selectionClick(e, node, ordered)` helper (Cmd/Ctrl = toggle,
+  Shift = range, plain = select-then-open) drives the tree, icon grid, list and columns identically;
+  each highlights `selection.has(path)`. `useSelectionKeys(ordered)` adds **Cmd/Ctrl+A** (select all),
+  **Esc** (clear) and **Cmd/Ctrl+Delete** (Trash — modifier-guarded so a stray Backspace never deletes).
+- **Bulk operations, each a single undo.** `removeSelected` (captures file contents first, one Cmd+Z
+  restores them all), `moveMany` / `copyMany` (multi-drag — grabbing a selected item drags the whole
+  selection), `newFolderFromSelection` (Finder's "New Folder with Selection" — make a folder, move the
+  selection in, prompt to name), and `renameMany`.
+- **Batch rename with live preview** (`BatchRenameDialog`). Three modes — **Find & Replace**, **Add Text**
+  (prefix/suffix), **Numbering** — operate on the name *stem* and keep each extension. The preview lists
+  every `old → new` and **blocks Apply on any collision** (duplicate outputs, or a clash with a sibling
+  that isn't in the batch); applies as one undoable step.
+- **Discoverable surfaces.** A **selection action bar** slides in under the explorer when 2+ are selected
+  (count · New Folder · Rename… · Delete · clear), and the tree's right-click menu becomes multi-aware
+  (right-clicking one of several keeps the set). Fully bilingual — all new strings went through the
+  `en`/`ja` catalogs.
+
+Scope held to **single-item semantics extended to N**; a marquee (rubber-band) rectangle select is the
+one deliberate follow-up.
+
+**Gates:** tsc · `vite build` · Biome clean (122 files) · Vitest **48/48** (5 new selection tests) — all
+green. **No Rust touched.**

@@ -71,9 +71,9 @@ export const en = {
   "settings.files.columns": "Columns",
   "settings.packaging": "Packaging",
   "settings.packaging.desc": "How HTML becomes a portable .velq.",
-  "settings.autoPackage": "Auto-package HTML on open",
+  "settings.autoPackage": 'Auto-package HTML from "Open with"',
   "settings.autoPackage.hint":
-    "Opening an HTML file traces its dependencies and saves a .velq into Documents/Velq, instead of editing it.",
+    'Opening an HTML file from outside Velq (the OS "Open with") traces its dependencies into a .velq in Documents/Velq. Files you open inside Velq are always editable.',
 
   // ---- Command / menu action titles (command palette rows) ----
   "action.newDoc": "New document",
@@ -195,6 +195,7 @@ export const en = {
   "contextmenu.revealMac": "Reveal in Finder",
   "contextmenu.revealOther": "Reveal in Explorer",
   "contextmenu.trash": "Move to Trash",
+  "contextmenu.deleteN": "Move {count} items to Trash",
 
   // ---- Quick Look ----
   "quicklook.close": "Close preview",
@@ -256,6 +257,8 @@ export const en = {
   "toast.cantRename": "Couldn't rename: {error}",
   "toast.cantDelete": "Couldn't delete: {error}",
   "toast.cantMove": "Couldn't move: {error}",
+  "toast.deletedMany": "Moved {count} items to Trash",
+  "toast.renamedMany": "Renamed {count} items",
   "toast.dropOpenFolderFirst": "Open a folder first, then drop files into it.",
   "toast.cantAdd": "Couldn't add {name}: {error}",
   "toast.addedOne": "Added 1 item to {vault}",
@@ -284,6 +287,36 @@ export const en = {
   "undo.delete": "delete {name}",
   "undo.duplicate": "duplicate",
   "undo.move": "move",
+  "undo.deleteMany": "delete {count} items",
+  "undo.moveMany": "move {count} items",
+  "undo.newFolderFromSelection": "new folder with {count} items",
+  "undo.renameMany": "rename {count} items",
+
+  // ---- Multi-selection action bar ----
+  "selection.count": "{count} selected",
+  "selection.newFolder": "New Folder",
+  "selection.newFolder.title": "New Folder with Selection",
+  "selection.rename": "Rename…",
+  "selection.delete": "Delete",
+  "selection.clear": "Clear selection",
+
+  // ---- Batch rename dialog ----
+  "batch.title": "Rename {count} items",
+  "batch.aria": "Batch rename",
+  "batch.mode.replace": "Find & Replace",
+  "batch.mode.add": "Add Text",
+  "batch.mode.number": "Numbering",
+  "batch.find": "Find",
+  "batch.replace": "Replace with",
+  "batch.prefix": "Prefix",
+  "batch.suffix": "Suffix",
+  "batch.baseName": "Name",
+  "batch.startAt": "Start at",
+  "batch.preview": "Preview",
+  "batch.apply": "Rename",
+  "batch.cancel": "Cancel",
+  "batch.collision": "{count} names would collide — adjust to continue.",
+  "batch.unchanged": "No names change yet.",
 
   // ---- Native dialog titles ----
   "dialog.chooseHtml": "Choose an HTML file to package",

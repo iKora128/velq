@@ -229,3 +229,18 @@
   color: var(--accent-text);
   font-weight: var(--weight-medium);
 }
+
+/* Drag-and-drop: folder tile / column row / ancestor crumb as a drop target
+   (matches the sidebar tree's accent ring). */
+.tile.is-drop,
+.miller__row.is-drop,
+.crumbs__btn.is-drop-target {
+  background: var(--accent-subtle);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+/* Multi-selected column row (distinct from the navigation trail's is-active). */
+.miller__row.is-selected {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}

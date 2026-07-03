@@ -11,6 +11,7 @@ import { FileListPane } from "./FileListPane";
 import { GridBrowser } from "./GridBrowser";
 import { MillerColumns } from "./MillerColumns";
 import { PaneDivider } from "./PaneDivider";
+import { SelectionBar } from "./SelectionBar";
 import { Sidebar } from "./Sidebar";
 
 /** A dedicated, full-window file browser (Finder-like): list mode (tree + previewed
@@ -75,6 +76,7 @@ export function ExplorerView() {
           <GridBrowser />
         )}
       </div>
+      <SelectionBar />
     </div>
   );
 }

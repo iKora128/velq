@@ -160,11 +160,9 @@ export const useDoc = create<DocState>((set, get) => ({
       }
       return;
     }
-    // Opening an HTML file packages it (deps and all) into Documents/Velq.
-    if (isHtmlPath(node.name) && useSettings.getState().autoPackageHtml) {
-      await packageAndStage(node.path);
-      return;
-    }
+    // A file opened from Velq's own browser is always editable — packaging to
+    // `.velq` is an explicit action (command palette / "Package an HTML file" /
+    // Export), never a side effect of opening.
     try {
       const fc = await readFile(node.path);
       get().open(
