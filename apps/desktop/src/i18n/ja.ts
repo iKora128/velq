@@ -34,7 +34,7 @@ export const ja: Dict = {
   "settings.general.desc": "言語と基本の設定。",
   "settings.language": "言語",
   "settings.language.desc": "Velq のメニューやボタンで使う言語。",
-  "settings.language.system": "システムに合わせる",
+  "settings.language.system": "システム",
   "settings.language.en": "English",
   "settings.language.ja": "日本語",
   "settings.appearance": "外観",

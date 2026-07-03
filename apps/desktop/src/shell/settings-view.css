@@ -103,6 +103,7 @@
 /* Segmented control */
 .segmented {
   display: inline-flex;
+  flex: none; /* don't compress the control — let the label column yield instead */
   padding: 2px;
   gap: 2px;
   background: var(--surface-sunken);
@@ -115,6 +116,7 @@
   font-weight: var(--weight-medium);
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
+  white-space: nowrap; /* keep multi-character labels (e.g. アイコン) on one line */
 }
 .segmented__opt:hover {
   color: var(--text);
