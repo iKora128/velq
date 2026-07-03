@@ -218,7 +218,11 @@ pub fn run() {
     }
 
     builder
-        .menu(|app| build_menu(app, &menu_locale(app)))
+        // Build a safe default (English) menu here: the path resolver that
+        // `menu_locale` needs to read the saved language isn't managed yet at
+        // `.menu()` time, so reading settings here panics. The real language is
+        // applied in `.setup()` below (and live-switched via apply_menu_language).
+        .menu(|app| build_menu(app, "en"))
         .on_menu_event(|app, event| on_menu(app, event.id().0.as_str()))
         .manage(commands::watch::WatchState::default())
         .manage(commands::velq::VelqViewers::default())
@@ -280,6 +284,16 @@ pub fn run() {
             commands::bundle::package_html_file,
         ])
         .setup(|app| {
+            // Now that the path resolver is available, localize the menu from the
+            // saved setting (an explicit "ja" starts correct; "system" is resolved
+            // by the frontend on mount via apply_menu_language).
+            let handle = app.handle();
+            let locale = menu_locale(handle);
+            if locale != "en" {
+                if let Ok(menu) = build_menu(handle, &locale) {
+                    let _ = handle.set_menu(menu);
+                }
+            }
             // Test seam: open a .velq viewer on startup when VELQ_OPEN_VELQ is set.
             if let Ok(p) = std::env::var("VELQ_OPEN_VELQ") {
                 if !p.is_empty() {
