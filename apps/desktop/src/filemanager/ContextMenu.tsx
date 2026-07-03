@@ -1,5 +1,6 @@
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useT } from "@/i18n/useT";
 import { cn } from "@/util/cn";
 import "./contextmenu.css";
 
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function ContextMenu({ x, y, entries, onClose }: Props) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x, y });
 
@@ -51,7 +53,7 @@ export function ContextMenu({ x, y, entries, onClose }: Props) {
       className="ctx-menu anim-pop"
       style={{ left: pos.x, top: pos.y }}
       role="menu"
-      aria-label="Context menu"
+      aria-label={t("contextmenu.aria")}
     >
       {entries.map((e, i) =>
         "separator" in e ? (

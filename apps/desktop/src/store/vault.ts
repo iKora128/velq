@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { t } from "@/i18n";
 import type { VaultInfo } from "@/ipc/types";
 import { openVault, pickFolder } from "@/ipc/vault";
 import { initHistory } from "@/ipc/vcs";
@@ -33,7 +34,7 @@ export const useVault = create<VaultState>((set) => ({
       void watchVault(info.path).catch((e) => console.error("watch_vault failed", e));
     } catch (e) {
       console.error("open_vault failed", e);
-      useToast.getState().push(`Couldn't open that folder: ${describeError(e)}`);
+      useToast.getState().push(t("toast.cantOpenFolder", { error: describeError(e) }));
     }
   },
 

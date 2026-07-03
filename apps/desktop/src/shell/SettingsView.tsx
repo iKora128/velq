@@ -1,13 +1,15 @@
 import type { ReactNode } from "react";
-import type { Density, EditorMode, FileView, ThemePref } from "@/ipc/types";
+import type { MsgKey } from "@/i18n";
+import { useT } from "@/i18n/useT";
+import type { Density, EditorMode, FileView, LocalePref, ThemePref } from "@/ipc/types";
 import { useSettings } from "@/store/settings";
 import { cn } from "@/util/cn";
 import "./settings-view.css";
 
-const THEMES: { value: ThemePref; label: string }[] = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
+const THEMES: { value: ThemePref; labelKey: MsgKey }[] = [
+  { value: "light", labelKey: "settings.theme.light" },
+  { value: "dark", labelKey: "settings.theme.dark" },
+  { value: "system", labelKey: "settings.theme.system" },
 ];
 
 /** The full-page settings view (activity bar → gear). Everything writes straight
@@ -15,96 +17,111 @@ const THEMES: { value: ThemePref; label: string }[] = [
 export function SettingsView() {
   const s = useSettings();
   const { update } = s;
+  const t = useT();
 
   return (
     <div className="settings-view">
       <div className="settings-view__inner">
-        <h1 className="settings-view__title">Settings</h1>
+        <h1 className="settings-view__title">{t("settings.title")}</h1>
 
-        <Section title="Appearance" desc="How Velq looks while you write.">
-          <Field label="Theme">
+        <Section title={t("settings.general")} desc={t("settings.general.desc")}>
+          <Field label={t("settings.language")} hint={t("settings.language.desc")}>
+            <Segmented<LocalePref>
+              value={s.locale}
+              onChange={(locale) => update({ locale })}
+              options={[
+                { value: "system", label: t("settings.language.system") },
+                { value: "en", label: t("settings.language.en") },
+                { value: "ja", label: t("settings.language.ja") },
+              ]}
+            />
+          </Field>
+        </Section>
+
+        <Section title={t("settings.appearance")} desc={t("settings.appearance.desc")}>
+          <Field label={t("settings.theme")}>
             <div className="theme-cards">
-              {THEMES.map((t) => (
+              {THEMES.map((th) => (
                 <button
-                  key={t.value}
+                  key={th.value}
                   type="button"
-                  className={cn("theme-card", s.theme === t.value && "is-active")}
-                  aria-pressed={s.theme === t.value}
-                  onClick={() => update({ theme: t.value })}
+                  className={cn("theme-card", s.theme === th.value && "is-active")}
+                  aria-pressed={s.theme === th.value}
+                  onClick={() => update({ theme: th.value })}
                 >
-                  <span className={`theme-card__swatch theme-card__swatch--${t.value}`} />
-                  <span className="theme-card__label">{t.label}</span>
+                  <span className={`theme-card__swatch theme-card__swatch--${th.value}`} />
+                  <span className="theme-card__label">{t(th.labelKey)}</span>
                 </button>
               ))}
             </div>
           </Field>
 
-          <Field label="Density" hint="Row spacing in the file lists and tree.">
+          <Field label={t("settings.density")} hint={t("settings.density.hint")}>
             <Segmented<Density>
               value={s.density}
               onChange={(density) => update({ density })}
               options={[
-                { value: "comfortable", label: "Comfortable" },
-                { value: "compact", label: "Compact" },
+                { value: "comfortable", label: t("settings.density.comfortable") },
+                { value: "compact", label: t("settings.density.compact") },
               ]}
             />
           </Field>
 
           <Toggle
-            label="Reading font"
-            hint="Use a serif typeface for prose."
+            label={t("settings.readingFont")}
+            hint={t("settings.readingFont.hint")}
             checked={s.proseFont}
             onChange={(proseFont) => update({ proseFont })}
           />
         </Section>
 
-        <Section title="Editor" desc="Defaults for the writing surface.">
-          <Field label="Default view">
+        <Section title={t("settings.editor")} desc={t("settings.editor.desc")}>
+          <Field label={t("settings.editor.defaultView")}>
             <Segmented<EditorMode>
               value={s.editorMode}
               onChange={(editorMode) => update({ editorMode })}
               options={[
-                { value: "source", label: "Source" },
-                { value: "split", label: "Split" },
-                { value: "live", label: "Live" },
+                { value: "source", label: t("settings.editor.source") },
+                { value: "split", label: t("settings.editor.split") },
+                { value: "live", label: t("settings.editor.live") },
               ]}
             />
           </Field>
 
           <Toggle
-            label="Line numbers"
+            label={t("settings.lineNumbers")}
             checked={s.showLineNumbers}
             onChange={(showLineNumbers) => update({ showLineNumbers })}
           />
           <Toggle
-            label="Vim mode"
-            hint="Modal editing with a vim keymap."
+            label={t("settings.vim")}
+            hint={t("settings.vim.hint")}
             checked={s.vimMode}
             onChange={(vimMode) => update({ vimMode })}
           />
         </Section>
 
-        <Section title="Files" desc="How the file browser shows your folders.">
+        <Section title={t("settings.files")} desc={t("settings.files.desc")}>
           <Field
-            label="Default view"
-            hint="Icons is the most visual; Columns drills folder by folder."
+            label={t("settings.files.defaultView")}
+            hint={t("settings.files.defaultView.hint")}
           >
             <Segmented<FileView>
               value={s.fileView === "columns" ? "columns" : s.fileView === "list" ? "list" : "grid"}
               onChange={(fileView) => update({ fileView })}
               options={[
-                { value: "grid", label: "Icons" },
-                { value: "list", label: "List" },
-                { value: "columns", label: "Columns" },
+                { value: "grid", label: t("settings.files.icons") },
+                { value: "list", label: t("settings.files.list") },
+                { value: "columns", label: t("settings.files.columns") },
               ]}
             />
           </Field>
         </Section>
 
-        <Section title="Packaging" desc="How HTML becomes a portable .velq.">
+        <Section title={t("settings.packaging")} desc={t("settings.packaging.desc")}>
           <Toggle
-            label="Auto-package HTML on open"
-            hint="Opening an HTML file traces its dependencies and saves a .velq into Documents/Velq, instead of editing it."
+            label={t("settings.autoPackage")}
+            hint={t("settings.autoPackage.hint")}
             checked={s.autoPackageHtml}
             onChange={(autoPackageHtml) => update({ autoPackageHtml })}
           />

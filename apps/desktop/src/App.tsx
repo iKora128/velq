@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { ACTIONS } from "@/command/actions";
 import { routeUndo } from "@/editor/undoRouter";
-import { getOpenedFiles } from "@/ipc/app";
+import { resolveLocale, t } from "@/i18n";
+import { applyMenuLanguage, getOpenedFiles } from "@/ipc/app";
 import { isTauri, listen } from "@/ipc/tauri";
 import { ensureDefaultVault } from "@/ipc/vault";
 import { registerBuiltins } from "@/plugins/builtin";
@@ -13,6 +14,7 @@ import { useToast } from "@/store/toast";
 import { type AppView, useUI } from "@/store/ui";
 import { useVault } from "@/store/vault";
 import { checkForUpdates } from "@/update/updater";
+import { wasSelfWrite } from "@/util/selfWrites";
 
 const MENU_VIEWS: Record<string, AppView> = {
   "view-explorer": "explorer",
@@ -66,12 +68,23 @@ async function openHome() {
     await useVault.getState().openPath(v.path);
   } catch (e) {
     console.error("default vault failed", e);
-    useToast.getState().push(`Couldn't open your Velq folder: ${describeError(e)}`);
+    useToast.getState().push(t("toast.cantOpenHome", { error: describeError(e) }));
   }
 }
 
 export function App() {
   const load = useSettings((s) => s.load);
+  const locale = useSettings((s) => s.locale);
+
+  // Rebuild the native menu in the resolved language on startup and whenever the
+  // language setting changes (the webview resolves "system" from the OS language).
+  useEffect(() => {
+    if (!isTauri()) return;
+    void applyMenuLanguage(resolveLocale(locale)).catch((e) =>
+      console.error("apply_menu_language failed", e),
+    );
+  }, [locale]);
+
   useEffect(() => {
     void (async () => {
       await load();
@@ -128,6 +141,7 @@ export function App() {
       for (const p of paths) {
         const tab = tabs.find((t) => t.doc.path === p);
         if (!tab) continue;
+        if (wasSelfWrite(p)) continue; // our own save/restore echoing back — not an external edit
         if (tab.dirty) flagConflict(p);
         else void reloadTab(p);
       }

@@ -1,11 +1,13 @@
 import { FilePlus, FolderPlus, PanelLeft, Search, X } from "lucide-react";
 import { useRef } from "react";
 import { FileList } from "@/filemanager/FileList";
+import { useT } from "@/i18n/useT";
 import { useFiles } from "@/store/files";
 import { useUI } from "@/store/ui";
 import { useVault } from "@/store/vault";
 
 export function FileListPane() {
+  const t = useT();
   const root = useVault((s) => s.root);
   const searchQuery = useFiles((s) => s.searchQuery);
   const timer = useRef(0);
@@ -33,8 +35,8 @@ export function FileListPane() {
         <button
           type="button"
           className={sidebarCollapsed ? "icon-btn" : "icon-btn icon-btn--active"}
-          title={sidebarCollapsed ? "Show folders" : "Hide folders"}
-          aria-label={sidebarCollapsed ? "Show folders" : "Hide folders"}
+          title={sidebarCollapsed ? t("filelist.showFolders") : t("filelist.hideFolders")}
+          aria-label={sidebarCollapsed ? t("filelist.showFolders") : t("filelist.hideFolders")}
           aria-pressed={!sidebarCollapsed}
           onClick={() => useUI.getState().toggleSidebar()}
         >
@@ -44,7 +46,7 @@ export function FileListPane() {
           <Search size={15} />
           <input
             type="text"
-            placeholder="Search this folder"
+            placeholder={t("filelist.searchPlaceholder")}
             spellCheck={false}
             disabled={!root}
             value={searchQuery}
@@ -54,7 +56,7 @@ export function FileListPane() {
             <button
               type="button"
               className="search__clear"
-              aria-label="Clear search"
+              aria-label={t("common.clearSearch")}
               onClick={() => useFiles.getState().clearSearch()}
             >
               <X size={14} />
@@ -64,8 +66,8 @@ export function FileListPane() {
         <button
           type="button"
           className="icon-btn"
-          title="New document"
-          aria-label="New document"
+          title={t("common.newDoc")}
+          aria-label={t("common.newDoc")}
           onClick={newFile}
         >
           <FilePlus size={16} />
@@ -73,8 +75,8 @@ export function FileListPane() {
         <button
           type="button"
           className="icon-btn"
-          title="New folder"
-          aria-label="New folder"
+          title={t("common.newFolder")}
+          aria-label={t("common.newFolder")}
           onClick={newFolder}
         >
           <FolderPlus size={16} />
@@ -86,7 +88,7 @@ export function FileListPane() {
       ) : (
         <div className="list-scroll">
           <div className="empty">
-            <p className="empty__hint">Your documents will appear here.</p>
+            <p className="empty__hint">{t("filelist.emptyNoRoot")}</p>
           </div>
         </div>
       )}

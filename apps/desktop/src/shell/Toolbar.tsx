@@ -1,4 +1,6 @@
 import { Code, Columns2, Eye, History } from "lucide-react";
+import type { MsgKey } from "@/i18n";
+import { useT } from "@/i18n/useT";
 import type { EditorMode } from "@/ipc/types";
 import { useDoc } from "@/store/doc";
 import { useHistory } from "@/store/history";
@@ -6,13 +8,14 @@ import { useSettings } from "@/store/settings";
 import { cn } from "@/util/cn";
 import { Breadcrumb } from "./Breadcrumb";
 
-const MODES: { id: EditorMode; label: string; icon: typeof Code }[] = [
-  { id: "source", label: "Source", icon: Code },
-  { id: "split", label: "Split", icon: Columns2 },
-  { id: "live", label: "Live", icon: Eye },
+const MODES: { id: EditorMode; label: MsgKey; icon: typeof Code }[] = [
+  { id: "source", label: "settings.editor.source", icon: Code },
+  { id: "split", label: "settings.editor.split", icon: Columns2 },
+  { id: "live", label: "settings.editor.live", icon: Eye },
 ];
 
 export function Toolbar() {
+  const t = useT();
   const editorMode = useSettings((s) => s.editorMode);
   const update = useSettings((s) => s.update);
   const historyOpen = useHistory((s) => s.open);
@@ -21,22 +24,22 @@ export function Toolbar() {
 
   return (
     <div className="editor-toolbar">
-      <nav className="crumbs" aria-label="Location">
+      <nav className="crumbs" aria-label={t("toolbar.locationAria")}>
         <Breadcrumb />
       </nav>
       <div className="editor-toolbar__spacer" />
       <button
         type="button"
         className={cn("icon-btn", historyOpen && "icon-btn--active")}
-        title="Version history"
-        aria-label="Version history"
+        title={t("common.versionHistory")}
+        aria-label={t("common.versionHistory")}
         disabled={!hasDoc}
         onClick={() => useHistory.getState().toggle()}
       >
         <History size={16} />
       </button>
       {!diffing && (
-        <div className="seg" role="group" aria-label="Editor view mode">
+        <div className="seg" role="group" aria-label={t("toolbar.viewModeAria")}>
           {MODES.map((m) => {
             const Icon = m.icon;
             return (
@@ -48,7 +51,7 @@ export function Toolbar() {
                 onClick={() => update({ editorMode: m.id })}
               >
                 <Icon size={13} />
-                {m.label}
+                {t(m.label)}
               </button>
             );
           })}

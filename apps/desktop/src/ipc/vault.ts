@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { invoke, isTauri } from "./tauri";
 import type { FileContent, FileNode, FilePreview, VaultInfo } from "./types";
 
@@ -8,7 +9,7 @@ export async function pickFolder(): Promise<string | null> {
   const picked = await open({
     directory: true,
     multiple: false,
-    title: "Open folder as a Velq vault",
+    title: t("dialog.openVault"),
   });
   return typeof picked === "string" ? picked : null;
 }

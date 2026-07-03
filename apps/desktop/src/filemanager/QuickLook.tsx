@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useT } from "@/i18n/useT";
 import { renderMarkdown } from "@/ipc/render";
 import { readFile } from "@/ipc/vault";
 import { buildPreviewDoc, htmlDocument } from "@/preview/previewStyles";
@@ -16,6 +17,7 @@ function parentOf(p: string): string {
 /** Finder-style Space preview: a floating rendered preview of the selected file.
  * ←/→ step through the folder's files, Enter opens, Space/Esc dismiss. */
 export function QuickLook() {
+  const t = useT();
   const node = useFiles((s) => s.quickLook);
   const setQuickLook = useFiles((s) => s.setQuickLook);
   const previewsByFolder = useFiles((s) => s.previewsByFolder);
@@ -94,7 +96,7 @@ export function QuickLook() {
           <button
             type="button"
             className="icon-btn"
-            aria-label="Close preview"
+            aria-label={t("quicklook.close")}
             onClick={() => setQuickLook(null)}
           >
             <X size={16} />
@@ -103,14 +105,12 @@ export function QuickLook() {
         <iframe
           ref={iframeRef}
           className="ql-frame"
-          title="Quick Look preview"
+          title={t("quicklook.frameTitle")}
           sandbox="allow-same-origin"
         />
         <div className="ql-foot">
-          <span>
-            {idx + 1} of {siblings.length}
-          </span>
-          <span>← → browse · Enter to open · Esc to close</span>
+          <span>{t("quicklook.position", { index: idx + 1, total: siblings.length })}</span>
+          <span>{t("quicklook.footer")}</span>
         </div>
       </div>
     </div>,

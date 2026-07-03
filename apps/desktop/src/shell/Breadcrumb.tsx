@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import { Fragment } from "react";
+import { useT } from "@/i18n/useT";
 import type { FileNode } from "@/ipc/types";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
@@ -23,6 +24,7 @@ function dirNode(path: string, name: string): FileNode {
 /** Always-on "you are here" cue (plan §9.4): clickable path from the vault root to
  * the open document; clicking a folder navigates the file list there. */
 export function Breadcrumb() {
+  const t = useT();
   const root = useVault((s) => s.root);
   const doc = useDoc((s) => s.doc);
   const dirty = useDoc((s) => s.dirty);
@@ -58,7 +60,7 @@ export function Breadcrumb() {
             {isLast ? (
               <span className={cn("crumbs__item", "crumbs__item--current")}>
                 {s.name}
-                {dirty && <span className="crumbs__dirty" title="Unsaved changes" />}
+                {dirty && <span className="crumbs__dirty" title={t("breadcrumb.unsaved")} />}
               </span>
             ) : (
               <button

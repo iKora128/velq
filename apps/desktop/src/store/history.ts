@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { t } from "@/i18n";
 import type { Version } from "@/ipc/types";
 import { listVersions, restoreVersion, versionContent } from "@/ipc/vcs";
 import { useDoc } from "./doc";
@@ -86,10 +87,10 @@ export const useHistory = create<HistoryState>((set, get) => ({
       set({ selected: null, baseContent: null });
       await get().load();
       useToast.getState().push(
-        "Restored an earlier version.",
+        t("toast.restored"),
         prevLatest
           ? {
-              label: "Undo",
+              label: t("common.undo"),
               run: () => void get().restore(prevLatest),
             }
           : undefined,

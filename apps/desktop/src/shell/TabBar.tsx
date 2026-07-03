@@ -1,8 +1,10 @@
 import { X } from "lucide-react";
+import { useT } from "@/i18n/useT";
 import { useDoc } from "@/store/doc";
 import { cn } from "@/util/cn";
 
 export function TabBar() {
+  const tr = useT();
   const tabs = useDoc((s) => s.tabs);
   const activeId = useDoc((s) => s.activeId);
   const activate = useDoc((s) => s.activate);
@@ -26,7 +28,7 @@ export function TabBar() {
           <button
             type="button"
             className={cn("tab__close", t.dirty && "tab__close--dirty")}
-            aria-label={`Close ${t.doc.name}`}
+            aria-label={tr("tab.close", { name: t.doc.name })}
             onClick={(e) => {
               e.stopPropagation();
               close(t.doc.id);

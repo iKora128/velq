@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { packageHtmlFile } from "@/ipc/bundle";
 import { pickHtmlFile } from "@/ipc/dialog";
 import { openVelqViewer } from "@/ipc/velq";
@@ -9,18 +10,23 @@ const baseName = (p: string) => p.split(/[/\\]/).pop() ?? p;
  * `.velq` in Documents/Velq, then offer to open it. (plan §6; user workflow.) */
 export async function packageAndStage(htmlPath: string): Promise<void> {
   const name = baseName(htmlPath);
-  useToast.getState().push(`Packaging ${name}…`);
+  useToast.getState().push(t("toast.packaging", { name }));
   try {
     const r = await packageHtmlFile(htmlPath);
-    const skipped = r.failed ? ` · ${r.failed} link${r.failed === 1 ? "" : "s"} skipped` : "";
-    useToast.getState().push(`Saved to Documents/Velq · ${r.collected} files${skipped}`, {
-      label: "Open",
+    const n = r.failed;
+    const skipped = n
+      ? n === 1
+        ? t("toast.linksSkippedOne", { count: n })
+        : t("toast.linksSkippedMany", { count: n })
+      : "";
+    useToast.getState().push(t("toast.savedToVelq", { count: r.collected, skipped }), {
+      label: t("common.open"),
       run: () => void openVelqViewer(r.outPath),
     });
   } catch (e) {
     console.error("package_html_file failed", e);
     const msg = e instanceof Error ? e.message : String(e);
-    useToast.getState().push(`Couldn't package ${name}: ${msg}`);
+    useToast.getState().push(t("toast.cantPackageNamed", { name, error: msg }));
   }
 }
 

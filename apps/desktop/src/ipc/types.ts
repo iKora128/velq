@@ -49,6 +49,9 @@ export type ThemePref = "light" | "dark" | "system";
 export type Density = "comfortable" | "compact";
 export type EditorMode = "source" | "split" | "live";
 export type FileView = "grid" | "list" | "columns" | "tree";
+/** UI language preference; "system" follows the OS language. Resolved to a concrete
+ * locale by `resolveLocale` in `@/i18n`. */
+export type LocalePref = "system" | "en" | "ja";
 
 export interface Settings {
   theme: ThemePref;
@@ -58,6 +61,8 @@ export interface Settings {
   vimMode: boolean;
   showLineNumbers: boolean;
   proseFont: boolean;
+  /** UI language. */
+  locale: LocalePref;
   lastVault: string | null;
   /** Folder the last export was saved to — the Save dialog starts here next time. */
   lastExportDir: string | null;
@@ -75,6 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
   vimMode: false,
   showLineNumbers: false,
   proseFont: true,
+  locale: "system",
   lastVault: null,
   lastExportDir: null,
   autoPackageHtml: true,

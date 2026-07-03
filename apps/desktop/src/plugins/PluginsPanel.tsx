@@ -1,6 +1,7 @@
 import { Puzzle, X } from "lucide-react";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useT } from "@/i18n/useT";
 import { usePalette } from "@/store/palette";
 import { cn } from "@/util/cn";
 import { usePlugins } from "./runtime";
@@ -12,6 +13,7 @@ export function PluginsPanel() {
   const registry = usePlugins((s) => s.registry);
   const enabled = usePlugins((s) => s.enabled);
   const setEnabled = usePlugins((s) => s.setEnabled);
+  const t = useT();
 
   useEffect(() => {
     if (!open) return;
@@ -30,13 +32,18 @@ export function PluginsPanel() {
         className="plugins anim-pop"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Plugins"
+        aria-label={t("plugins.title")}
       >
         <div className="plugins__head">
           <span className="plugins__title">
-            <Puzzle size={16} /> Plugins
+            <Puzzle size={16} /> {t("plugins.title")}
           </span>
-          <button type="button" className="icon-btn" aria-label="Close" onClick={toggle}>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={t("common.close")}
+            onClick={toggle}
+          >
             <X size={16} />
           </button>
         </div>
@@ -60,7 +67,9 @@ export function PluginsPanel() {
           ))}
         </div>
         <p className="plugins__foot">
-          Plugins are CodeMirror extensions. They render in <b>Live</b> mode.
+          {t("plugins.footerPre")}
+          <b>{t("plugins.footerLive")}</b>
+          {t("plugins.footerPost")}
         </p>
       </div>
     </div>,

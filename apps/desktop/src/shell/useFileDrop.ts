@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { t } from "@/i18n";
 import { isTauri } from "@/ipc/tauri";
 import { importFile } from "@/ipc/vault";
 import { describeError } from "@/store/doc";
@@ -14,7 +15,7 @@ function baseName(p: string): string {
 async function importDropped(paths: string[]) {
   const vault = useVault.getState().root;
   if (!vault) {
-    useToast.getState().push("Open a folder first, then drop files into it.");
+    useToast.getState().push(t("toast.dropOpenFolderFirst"));
     return;
   }
   let added = 0;
@@ -24,7 +25,7 @@ async function importDropped(paths: string[]) {
       added += 1;
     } catch (e) {
       console.error("import failed", p, e);
-      useToast.getState().push(`Couldn't add ${baseName(p)}: ${describeError(e)}`);
+      useToast.getState().push(t("toast.cantAdd", { name: baseName(p), error: describeError(e) }));
     }
   }
   if (added > 0) {
@@ -32,7 +33,9 @@ async function importDropped(paths: string[]) {
     useToast
       .getState()
       .push(
-        added === 1 ? `Added 1 item to ${vault.name}` : `Added ${added} items to ${vault.name}`,
+        added === 1
+          ? t("toast.addedOne", { vault: vault.name })
+          : t("toast.addedMany", { count: added, vault: vault.name }),
       );
   }
 }

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileGlyph } from "@/filemanager/FileGlyph";
+import { useT } from "@/i18n/useT";
 import type { FileNode, RecentDoc } from "@/ipc/types";
 import { recentlyAdded } from "@/ipc/vault";
 import { useDoc } from "@/store/doc";
@@ -38,8 +39,9 @@ function recentNode(r: RecentDoc): FileNode {
  * double-click to open — like Finder's icon view or the Files app. Breadcrumbs
  * across the top say exactly where you are; folders come first, then files. */
 export function GridBrowser() {
+  const t = useT();
   const rootPath = useFiles((s) => s.rootPath);
-  const rootName = useVault((s) => s.root?.name ?? "Files");
+  const rootName = useVault((s) => s.root?.name) ?? t("explorer.defaultName");
   const childrenByPath = useFiles((s) => s.childrenByPath);
   const selectedPath = useFiles((s) => s.selected?.path ?? null);
   const recentDocs = useSettings((s) => s.recentDocs);
@@ -78,7 +80,7 @@ export function GridBrowser() {
       <div className="grid-browser">
         <div className="grid-scroll">
           <div className="empty">
-            <p className="empty__hint">Open a folder to browse it here.</p>
+            <p className="empty__hint">{t("grid.emptyNoFolder")}</p>
           </div>
         </div>
       </div>
@@ -130,14 +132,14 @@ export function GridBrowser() {
         <button
           type="button"
           className="icon-btn"
-          title="Back"
-          aria-label="Back"
+          title={t("grid.back")}
+          aria-label={t("grid.back")}
           disabled={here === rootPath}
           onClick={goUp}
         >
           <ChevronLeft size={16} />
         </button>
-        <nav className="crumbs" aria-label="Location">
+        <nav className="crumbs" aria-label={t("grid.location")}>
           {crumbs.map((c, i) => (
             <span className="crumbs__seg" key={c.path}>
               {i > 0 && <ChevronRight size={14} className="crumbs__sep" />}
@@ -156,8 +158,8 @@ export function GridBrowser() {
         <button
           type="button"
           className="icon-btn"
-          title="New document"
-          aria-label="New document"
+          title={t("common.newDoc")}
+          aria-label={t("common.newDoc")}
           onClick={() => void useFiles.getState().newFile(here)}
         >
           <FilePlus size={16} />
@@ -165,8 +167,8 @@ export function GridBrowser() {
         <button
           type="button"
           className="icon-btn"
-          title="New folder"
-          aria-label="New folder"
+          title={t("common.newFolder")}
+          aria-label={t("common.newFolder")}
           onClick={() => void useFiles.getState().newFolder(here)}
         >
           <FolderPlus size={16} />
@@ -176,14 +178,14 @@ export function GridBrowser() {
       {!items ? (
         <div className="grid-scroll">
           <div className="empty">
-            <p className="empty__hint">Loading…</p>
+            <p className="empty__hint">{t("common.loading")}</p>
           </div>
         </div>
       ) : folders.length === 0 && files.length === 0 && !hasRecents ? (
         <div className="grid-scroll">
           <div className="empty">
-            <div className="empty__title">This folder is empty</div>
-            <p className="empty__hint">Use the + buttons above to add a document or a folder.</p>
+            <div className="empty__title">{t("grid.emptyTitle")}</div>
+            <p className="empty__hint">{t("grid.emptyHint")}</p>
           </div>
         </div>
       ) : (
@@ -191,7 +193,7 @@ export function GridBrowser() {
           {atRoot && recentDocs.length > 0 && (
             <>
               <div className="grid-group">
-                <Clock size={12} /> Recently opened
+                <Clock size={12} /> {t("grid.recentlyOpened")}
               </div>
               <div className="tilegrid">
                 {recentDocs.slice(0, 8).map((r) => {
@@ -211,7 +213,7 @@ export function GridBrowser() {
           {addedFiltered.length > 0 && (
             <>
               <div className="grid-group">
-                <Sparkles size={12} /> Recently added
+                <Sparkles size={12} /> {t("grid.recentlyAdded")}
               </div>
               <div className="tilegrid">
                 {addedFiltered.map((n) => (
@@ -227,7 +229,7 @@ export function GridBrowser() {
           )}
           {folders.length > 0 && (
             <>
-              <div className="grid-group">Folders</div>
+              <div className="grid-group">{t("common.folders")}</div>
               <div className="tilegrid">
                 {folders.map((n) => (
                   <Tile key={n.path} node={n} selected={selectedPath === n.path} onOpen={open} />
@@ -237,7 +239,7 @@ export function GridBrowser() {
           )}
           {files.length > 0 && (
             <>
-              <div className="grid-group">Files</div>
+              <div className="grid-group">{t("common.files")}</div>
               <div className="tilegrid">
                 {files.map((n) => (
                   <Tile key={n.path} node={n} selected={selectedPath === n.path} onOpen={open} />

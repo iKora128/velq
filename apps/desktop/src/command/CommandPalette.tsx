@@ -2,6 +2,8 @@ import { FileText, Hash, Search } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { editorBus } from "@/editor/editorBus";
+import type { MsgKey } from "@/i18n";
+import { useT } from "@/i18n/useT";
 import { searchFilenames } from "@/ipc/search";
 import { useDoc } from "@/store/doc";
 import { usePalette } from "@/store/palette";
@@ -29,17 +31,17 @@ function modeOf(query: string): Mode {
   return "file";
 }
 
-const PLACEHOLDER: Record<Mode, string> = {
-  file: "Search files…  ( > commands · @ headings · : line )",
-  cmd: "Run a command…",
-  head: "Jump to a heading…",
-  line: "Go to line…",
+const PLACEHOLDER_KEY: Record<Mode, MsgKey> = {
+  file: "palette.placeholder.file",
+  cmd: "palette.placeholder.cmd",
+  head: "palette.placeholder.head",
+  line: "palette.placeholder.line",
 };
-const MODE_LABEL: Record<Mode, string> = {
-  file: "Files",
-  cmd: "Commands",
-  head: "Headings",
-  line: "Line",
+const MODE_KEY: Record<Mode, MsgKey> = {
+  file: "palette.mode.file",
+  cmd: "palette.mode.cmd",
+  head: "palette.mode.head",
+  line: "palette.mode.line",
 };
 
 export function CommandPalette() {
@@ -51,6 +53,7 @@ export function CommandPalette() {
   const [fileItems, setFileItems] = useState<Item[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const tr = useT();
 
   useEffect(() => {
     if (open) {
@@ -71,7 +74,7 @@ export function CommandPalette() {
         useDoc.getState().tabs.map((t) => ({
           id: t.doc.id,
           label: t.doc.name,
-          sub: t.doc.path ?? "Unsaved",
+          sub: t.doc.path ?? tr("palette.unsaved"),
           icon: <FileText size={16} />,
           run: () => useDoc.getState().activate(t.doc.id),
         })),
@@ -98,14 +101,14 @@ export function CommandPalette() {
       );
     }, 120);
     return () => clearTimeout(h);
-  }, [open, mode, term]);
+  }, [open, mode, term, tr]);
 
   const items: Item[] = useMemo(() => {
     if (mode === "cmd") {
-      const t = term.toLowerCase();
-      return ACTIONS.filter((a) => a.title.toLowerCase().includes(t)).map((a) => ({
+      const q = term.toLowerCase();
+      return ACTIONS.filter((a) => tr(a.titleKey).toLowerCase().includes(q)).map((a) => ({
         id: a.id,
-        label: a.title,
+        label: tr(a.titleKey),
         icon: a.icon ? <a.icon size={16} /> : undefined,
         hint: a.hint ? fmtShortcut(a.hint) : undefined,
         run: a.run,
@@ -130,14 +133,14 @@ export function CommandPalette() {
       return [
         {
           id: "goto",
-          label: `Go to line ${n}`,
+          label: tr("palette.goToLine", { line: n }),
           icon: <Hash size={16} />,
           run: () => editorBus.goToLine(n),
         },
       ];
     }
     return fileItems;
-  }, [mode, term, fileItems]);
+  }, [mode, term, fileItems, tr]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset highlight when the result set changes.
   useEffect(() => setSel(0), [items]);
@@ -163,7 +166,7 @@ export function CommandPalette() {
         className="palette anim-pop"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Command palette"
+        aria-label={tr("palette.aria")}
       >
         <div className="palette__input-row">
           <Search size={16} className="palette__icon" />
@@ -171,7 +174,7 @@ export function CommandPalette() {
             ref={inputRef}
             className="palette__input"
             value={query}
-            placeholder={PLACEHOLDER[mode]}
+            placeholder={tr(PLACEHOLDER_KEY[mode])}
             spellCheck={false}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -190,11 +193,11 @@ export function CommandPalette() {
               }
             }}
           />
-          <span className="palette__mode">{MODE_LABEL[mode]}</span>
+          <span className="palette__mode">{tr(MODE_KEY[mode])}</span>
         </div>
         <div className="palette__list" ref={listRef}>
           {items.length === 0 ? (
-            <div className="palette__empty">No results</div>
+            <div className="palette__empty">{tr("palette.noResults")}</div>
           ) : (
             items.map((it, i) => (
               <button

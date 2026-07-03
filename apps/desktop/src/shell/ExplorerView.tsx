@@ -1,5 +1,6 @@
 import { Columns3, LayoutGrid, List } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { useT } from "@/i18n/useT";
 import { useDoc } from "@/store/doc";
 import { useSettings } from "@/store/settings";
 import { useUI } from "@/store/ui";
@@ -15,6 +16,7 @@ import { Sidebar } from "./Sidebar";
 /** A dedicated, full-window file browser (Finder-like): list mode (tree + previewed
  * cards) or column mode (Miller columns). Opening a document jumps to the editor. */
 export function ExplorerView() {
+  const t = useT();
   const fileView = useSettings((s) => s.fileView);
   const update = useSettings((s) => s.update);
   const root = useVault((s) => s.root);
@@ -35,7 +37,7 @@ export function ExplorerView() {
   return (
     <div className="explorer">
       <div className="explorer__toolbar">
-        <span className="explorer__title">{root ? root.name : "Files"}</span>
+        <span className="explorer__title">{root ? root.name : t("explorer.defaultName")}</span>
         <div className="explorer__spacer" />
         <div className="seg">
           <button
@@ -44,7 +46,7 @@ export function ExplorerView() {
             aria-pressed={fileView !== "columns" && fileView !== "list"}
             onClick={() => update({ fileView: "grid" })}
           >
-            <LayoutGrid size={14} /> Icons
+            <LayoutGrid size={14} /> {t("explorer.view.grid")}
           </button>
           <button
             type="button"
@@ -52,7 +54,7 @@ export function ExplorerView() {
             aria-pressed={fileView === "list"}
             onClick={() => update({ fileView: "list" })}
           >
-            <List size={14} /> List
+            <List size={14} /> {t("explorer.view.list")}
           </button>
           <button
             type="button"
@@ -60,7 +62,7 @@ export function ExplorerView() {
             aria-pressed={fileView === "columns"}
             onClick={() => update({ fileView: "columns" })}
           >
-            <Columns3 size={14} /> Columns
+            <Columns3 size={14} /> {t("explorer.view.columns")}
           </button>
         </div>
       </div>

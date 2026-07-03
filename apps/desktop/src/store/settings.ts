@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { resolveLocale, setActiveLocale } from "@/i18n";
 import { getSettings, setSettings } from "@/ipc/app";
 import { DEFAULT_SETTINGS, type Settings } from "@/ipc/types";
 
@@ -22,6 +23,7 @@ function pickSettings(s: SettingsState): Settings {
     vimMode: s.vimMode,
     showLineNumbers: s.showLineNumbers,
     proseFont: s.proseFont,
+    locale: s.locale,
     lastVault: s.lastVault,
     lastExportDir: s.lastExportDir,
     autoPackageHtml: s.autoPackageHtml,
@@ -45,10 +47,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
     try {
       const s = await getSettings();
       applyChrome(s);
+      setActiveLocale(resolveLocale(s.locale));
       set({ ...s, loaded: true });
     } catch (e) {
       console.error("failed to load settings, using defaults", e);
       applyChrome(DEFAULT_SETTINGS);
+      setActiveLocale(resolveLocale(DEFAULT_SETTINGS.locale));
       set({ loaded: true });
     }
   },
@@ -57,6 +61,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     set(patch);
     const next = pickSettings(get());
     applyChrome(next);
+    setActiveLocale(resolveLocale(next.locale));
     void setSettings(next).catch((e) => console.error("failed to persist settings", e));
   },
 

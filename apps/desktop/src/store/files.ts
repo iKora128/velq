@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { t } from "@/i18n";
 import { searchFilenames } from "@/ipc/search";
 import type { FileNode, FilePreview } from "@/ipc/types";
 import {
@@ -150,7 +151,7 @@ export const useFiles = create<FilesState>((set, get) => ({
       console.error("read_dir failed", path, e);
       set((s) => ({ childrenByPath: { ...s.childrenByPath, [path]: [] } }));
       if (path === get().rootPath) {
-        useToast.getState().push(`Couldn't read that folder: ${describeError(e)}`);
+        useToast.getState().push(t("toast.cantReadFolder", { error: describeError(e) }));
       }
     }
   },
@@ -193,7 +194,7 @@ export const useFiles = create<FilesState>((set, get) => ({
     await get().loadDir(parentPath);
     set({ selected: node, renaming: node.path });
     get().pushUndo({
-      label: "new file",
+      label: t("undo.newFile"),
       undo: async () => {
         await deletePath(node.path);
         await get().loadDir(parentPath);
@@ -214,7 +215,7 @@ export const useFiles = create<FilesState>((set, get) => ({
     await get().loadDir(parentPath);
     set({ selected: node, renaming: node.path });
     get().pushUndo({
-      label: "new folder",
+      label: t("undo.newFolder"),
       undo: async () => {
         await deletePath(node.path);
         await get().loadDir(parentPath);
@@ -245,7 +246,7 @@ export const useFiles = create<FilesState>((set, get) => ({
       const dest = renamed.path;
       const parent = parentOf(from);
       get().pushUndo({
-        label: `rename to ${renamed.name}`,
+        label: t("undo.rename", { name: renamed.name }),
         undo: async () => {
           const back = await renamePath(dest, from);
           await get().loadDir(parent);
@@ -261,7 +262,7 @@ export const useFiles = create<FilesState>((set, get) => ({
       });
     } catch (e) {
       console.error("rename failed", e);
-      useToast.getState().push(`Couldn't rename: ${describeError(e)}`);
+      useToast.getState().push(t("toast.cantRename", { error: describeError(e) }));
     }
   },
 
@@ -282,7 +283,7 @@ export const useFiles = create<FilesState>((set, get) => ({
       if (node.kind === "file" && captured !== null) {
         const content = captured;
         get().pushUndo({
-          label: `delete ${node.name}`,
+          label: t("undo.delete", { name: node.name }),
           undo: async () => {
             const created = await createFile(parent, node.name);
             await writeFileContent(created.path, content);
@@ -297,7 +298,7 @@ export const useFiles = create<FilesState>((set, get) => ({
       }
     } catch (e) {
       console.error("delete failed", e);
-      useToast.getState().push(`Couldn't delete: ${describeError(e)}`);
+      useToast.getState().push(t("toast.cantDelete", { error: describeError(e) }));
     }
   },
 
@@ -313,7 +314,7 @@ export const useFiles = create<FilesState>((set, get) => ({
       set({ selected: created });
       const dupPath = created.path;
       get().pushUndo({
-        label: "duplicate",
+        label: t("undo.duplicate"),
         undo: async () => {
           await deletePath(dupPath);
           await get().loadDir(parent);
@@ -343,7 +344,7 @@ export const useFiles = create<FilesState>((set, get) => ({
       set({ selected: moved });
       useDoc.getState().renameDoc(fromPath, moved.path, moved.name);
       get().pushUndo({
-        label: "move",
+        label: t("undo.move"),
         undo: async () => {
           const back = await movePath(moved.path, fromPath);
           await get().loadDir(toParentPath);
@@ -361,7 +362,7 @@ export const useFiles = create<FilesState>((set, get) => ({
       });
     } catch (e) {
       console.error("move failed", e);
-      useToast.getState().push(`Couldn't move: ${describeError(e)}`);
+      useToast.getState().push(t("toast.cantMove", { error: describeError(e) }));
     }
   },
 
@@ -384,16 +385,16 @@ export const useFiles = create<FilesState>((set, get) => ({
     const stack = get().undoStack;
     const entry = stack[stack.length - 1];
     if (!entry) {
-      useToast.getState().push("Nothing to undo");
+      useToast.getState().push(t("toast.nothingToUndo"));
       return;
     }
     try {
       await entry.undo();
       set((s) => ({ undoStack: s.undoStack.slice(0, -1), redoStack: [...s.redoStack, entry] }));
-      useToast.getState().push(`Undid: ${entry.label}`);
+      useToast.getState().push(t("toast.undid", { label: entry.label }));
     } catch (e) {
       console.error("undo failed", e);
-      useToast.getState().push(`Couldn't undo: ${describeError(e)}`);
+      useToast.getState().push(t("toast.cantUndo", { error: describeError(e) }));
     }
   },
 
@@ -404,10 +405,10 @@ export const useFiles = create<FilesState>((set, get) => ({
     try {
       await entry.redo();
       set((s) => ({ redoStack: s.redoStack.slice(0, -1), undoStack: [...s.undoStack, entry] }));
-      useToast.getState().push(`Redid: ${entry.label}`);
+      useToast.getState().push(t("toast.redid", { label: entry.label }));
     } catch (e) {
       console.error("redo failed", e);
-      useToast.getState().push(`Couldn't redo: ${describeError(e)}`);
+      useToast.getState().push(t("toast.cantRedo", { error: describeError(e) }));
     }
   },
 }));

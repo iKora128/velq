@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { bundleHtmlToVelq } from "@/ipc/bundle";
 import { dirOf, pickSaveFile } from "@/ipc/dialog";
 import { renderMarkdown } from "@/ipc/render";
@@ -45,7 +46,7 @@ async function exportMarkdown() {
   if (!out) return;
   rememberExportDir(out);
   await writeFileContent(out, content);
-  useToast.getState().push(`Exported ${baseName()}.md`);
+  useToast.getState().push(t("toast.exportedMd", { name: baseName() }));
 }
 
 async function exportHtml() {
@@ -54,7 +55,7 @@ async function exportHtml() {
   if (!out) return;
   rememberExportDir(out);
   await writeFileContent(out, await toStandaloneHtml());
-  useToast.getState().push(`Exported ${baseName()}.html`);
+  useToast.getState().push(t("toast.exportedHtml", { name: baseName() }));
 }
 
 async function exportVelq() {
@@ -69,16 +70,19 @@ async function exportVelq() {
     : (useVault.getState().root?.path ?? null);
   try {
     const report = await bundleHtmlToVelq(html, out, baseDir, doc.language === "html");
-    const note = report.failed.length
-      ? ` (${report.failed.length} link${report.failed.length === 1 ? "" : "s"} skipped)`
+    const n = report.failed.length;
+    const note = n
+      ? n === 1
+        ? t("toast.linksSkippedOne", { count: n })
+        : t("toast.linksSkippedMany", { count: n })
       : "";
-    useToast.getState().push(`Packaged ${baseName()}.velq${note}`, {
-      label: "Open",
+    useToast.getState().push(t("toast.packaged", { name: baseName(), note }), {
+      label: t("common.open"),
       run: () => void openVelqViewer(out),
     });
   } catch (e) {
     console.error("export .velq failed", e);
-    useToast.getState().push("Couldn't package the .velq.");
+    useToast.getState().push(t("toast.cantPackageVelq"));
   }
 }
 

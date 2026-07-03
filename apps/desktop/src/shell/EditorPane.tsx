@@ -3,6 +3,7 @@ import { SplitView } from "@/editor/SplitView";
 import { openHtmlAndPackage } from "@/export/htmlPackage";
 import { DiffBar } from "@/history/DiffBar";
 import { DiffView } from "@/history/DiffView";
+import { useT } from "@/i18n/useT";
 import { useDoc } from "@/store/doc";
 import { useHistory } from "@/store/history";
 import { useSettings } from "@/store/settings";
@@ -52,35 +53,37 @@ export function EditorPane() {
 function Welcome() {
   const openVault = useVault((s) => s.open);
   const openScratch = useDoc((s) => s.openScratch);
+  const t = useT();
 
   return (
     <div className="welcome anim-fade">
       <div className="welcome__mark" aria-hidden />
-      <h1 className="welcome__title">Welcome to Velq</h1>
+      <h1 className="welcome__title">{t("welcome.title")}</h1>
       <p className="welcome__sub">
-        A calm place to write Markdown and HTML — and package documents, dependencies and all, into
-        a single offline <code>.velq</code> file.
+        {t("welcome.subtitlePre")}
+        <code>.velq</code>
+        {t("welcome.subtitlePost")}
       </p>
       <div className="welcome__actions">
         <button type="button" className="btn btn--primary" onClick={openScratch}>
-          New document
+          {t("welcome.newDoc")}
         </button>
         <button type="button" className="btn" onClick={openVault}>
-          Open a folder
+          {t("welcome.openFolder")}
         </button>
         <button type="button" className="btn" onClick={() => void openHtmlAndPackage()}>
-          Package an HTML file
+          {t("welcome.packageHtml")}
         </button>
       </div>
       <div className="welcome__hints">
         <div className="welcome__hint">
-          <span className="kbd">{fmtShortcut("Mod+K")}</span> Command palette
+          <span className="kbd">{fmtShortcut("Mod+K")}</span> {t("welcome.hint.palette")}
         </div>
         <div className="welcome__hint">
-          <span className="kbd">{fmtShortcut("Mod+P")}</span> Quick open a file
+          <span className="kbd">{fmtShortcut("Mod+P")}</span> {t("welcome.hint.quickOpen")}
         </div>
         <div className="welcome__hint">
-          <span className="kbd">Space</span> Preview the selected file
+          <span className="kbd">Space</span> {t("welcome.hint.preview")}
         </div>
       </div>
     </div>

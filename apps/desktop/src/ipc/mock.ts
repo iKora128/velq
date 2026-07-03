@@ -37,6 +37,7 @@ function loadSettings(): Settings {
 }
 
 registerMock("get_settings", () => loadSettings());
+registerMock("apply_menu_language", () => null);
 registerMock("set_settings", ({ settings }: { settings: Settings }) => {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   return null;

@@ -1,10 +1,12 @@
 import { FilePlus, FolderOpen, FolderPlus, PanelLeft } from "lucide-react";
 import { Tree } from "@/filemanager/Tree";
+import { useT } from "@/i18n/useT";
 import { useFiles } from "@/store/files";
 import { useUI } from "@/store/ui";
 import { useVault } from "@/store/vault";
 
 export function Sidebar() {
+  const t = useT();
   const root = useVault((s) => s.root);
   const open = useVault((s) => s.open);
 
@@ -18,8 +20,8 @@ export function Sidebar() {
         <button
           type="button"
           className="icon-btn"
-          title="Toggle sidebar"
-          aria-label="Toggle sidebar"
+          title={t("common.toggleSidebar")}
+          aria-label={t("common.toggleSidebar")}
           onClick={() => useUI.getState().toggleSidebar()}
         >
           <PanelLeft size={16} />
@@ -32,6 +34,7 @@ export function Sidebar() {
 }
 
 function VaultPane({ name }: { name: string }) {
+  const t = useT();
   const newFile = () => {
     const f = useFiles.getState();
     void f.newFile(f.targetDir());
@@ -51,8 +54,8 @@ function VaultPane({ name }: { name: string }) {
           <button
             type="button"
             className="icon-btn"
-            title="New document"
-            aria-label="New document"
+            title={t("common.newDoc")}
+            aria-label={t("common.newDoc")}
             onClick={newFile}
           >
             <FilePlus size={15} />
@@ -60,8 +63,8 @@ function VaultPane({ name }: { name: string }) {
           <button
             type="button"
             className="icon-btn"
-            title="New folder"
-            aria-label="New folder"
+            title={t("common.newFolder")}
+            aria-label={t("common.newFolder")}
             onClick={newFolder}
           >
             <FolderPlus size={15} />
@@ -74,16 +77,15 @@ function VaultPane({ name }: { name: string }) {
 }
 
 function SidebarEmpty({ onOpen }: { onOpen: () => void }) {
+  const t = useT();
   return (
     <div className="sidebar__scroll">
       <div className="empty">
         <FolderOpen className="empty__icon" size={28} strokeWidth={1.5} />
-        <div className="empty__title">No folder open</div>
-        <p className="empty__hint">
-          Choose a folder for your writing — it&rsquo;s just a folder on your computer.
-        </p>
+        <div className="empty__title">{t("sidebar.emptyTitle")}</div>
+        <p className="empty__hint">{t("sidebar.emptyHint")}</p>
         <button type="button" className="btn btn--primary" onClick={onOpen}>
-          Open folder
+          {t("common.openFolder")}
         </button>
       </div>
     </div>

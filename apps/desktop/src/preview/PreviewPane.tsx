@@ -1,6 +1,7 @@
 import type { EditorView } from "@codemirror/view";
 import { type RefObject, useEffect, useRef } from "react";
 import { linkEditorToPreview } from "@/editor/scrollSync";
+import { useT } from "@/i18n/useT";
 import { renderMarkdown } from "@/ipc/render";
 import { useResolvedDark } from "@/util/theme";
 import { buildPreviewDoc, htmlDocument } from "./previewStyles";
@@ -22,6 +23,7 @@ interface Props {
  * the document (it owns its own <head>/styles).
  */
 export function PreviewPane({ source, language, viewRef }: Props) {
+  const t = useT();
   const dark = useResolvedDark();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const initialized = useRef(false);
@@ -82,7 +84,7 @@ export function PreviewPane({ source, language, viewRef }: Props) {
     <iframe
       ref={iframeRef}
       className="preview-iframe"
-      title="Preview"
+      title={t("preview.frameTitle")}
       sandbox="allow-same-origin"
     />
   );

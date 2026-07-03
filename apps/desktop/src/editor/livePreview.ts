@@ -8,6 +8,7 @@ import {
   type ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
+import { t } from "@/i18n";
 import "./livePreview.css";
 
 /**
@@ -47,7 +48,7 @@ class CheckboxWidget extends WidgetType {
     box.type = "checkbox";
     box.checked = this.checked;
     box.className = "cm-live-task";
-    box.setAttribute("aria-label", "Toggle task");
+    box.setAttribute("aria-label", t("editor.toggleTask"));
     box.addEventListener("mousedown", (e) => {
       e.preventDefault();
       view.dispatch({

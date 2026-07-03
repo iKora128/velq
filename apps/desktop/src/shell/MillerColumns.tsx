@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileGlyph } from "@/filemanager/FileGlyph";
+import { useT } from "@/i18n/useT";
 import type { FileNode } from "@/ipc/types";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
@@ -9,6 +10,7 @@ import { cn } from "@/util/cn";
 /** Finder's column view (Miller columns): each folder you click opens the next
  * column to its right. Single-click selects, double-click opens a document. */
 export function MillerColumns() {
+  const t = useT();
   const rootPath = useFiles((s) => s.rootPath);
   const childrenByPath = useFiles((s) => s.childrenByPath);
   const [trail, setTrail] = useState<string[]>([]);
@@ -26,7 +28,7 @@ export function MillerColumns() {
   if (!rootPath) {
     return (
       <div className="empty">
-        <p className="empty__hint">Open a folder to browse it here.</p>
+        <p className="empty__hint">{t("grid.emptyNoFolder")}</p>
       </div>
     );
   }
@@ -50,7 +52,7 @@ export function MillerColumns() {
           <div className="miller__col" key={`${dir}:${i}`}>
             {items ? (
               items.length === 0 ? (
-                <div className="miller__empty">Empty</div>
+                <div className="miller__empty">{t("miller.empty")}</div>
               ) : (
                 items.map((node) => {
                   const isDir = node.kind === "dir";

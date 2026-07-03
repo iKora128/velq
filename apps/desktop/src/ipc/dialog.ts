@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { isTauri } from "./tauri";
 
 /** Native "Save As" dialog (browser mode returns a stub path). When `dir` is
@@ -29,7 +30,7 @@ export async function pickHtmlFile(): Promise<string | null> {
   const picked = await open({
     multiple: false,
     directory: false,
-    title: "Choose an HTML file to package",
+    title: t("dialog.chooseHtml"),
     filters: [{ name: "HTML", extensions: ["html", "htm"] }],
   });
   return typeof picked === "string" ? picked : null;

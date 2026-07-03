@@ -36,14 +36,41 @@ fn get_opened_files(state: tauri::State<OpenedFilesState>) -> Vec<String> {
     state.paths.lock().unwrap().clone()
 }
 
+/// Pick a menu label for the given locale ("ja" → Japanese, anything else →
+/// English). Same house rule as the webview: no git vocabulary — "version",
+/// "save history", "what changed", not commit/branch/merge.
+fn ml(locale: &str, en: &'static str, ja: &'static str) -> &'static str {
+    if locale == "ja" {
+        ja
+    } else {
+        en
+    }
+}
+
+/// Best-effort initial menu language from the saved setting. "system" can't be
+/// resolved here (no OS-locale API in this layer), so it starts English and the
+/// frontend corrects it on mount via `apply_menu_language` (which resolves the OS
+/// language from the webview). Explicit en/ja start correct, avoiding a flash.
+fn menu_locale(app: &tauri::AppHandle) -> String {
+    match commands::app::get_settings(app.clone()) {
+        Ok(s) if s.locale == "ja" => "ja".into(),
+        _ => "en".into(),
+    }
+}
+
 /// The native app menu (File / Edit / View / Window / Help). Custom items carry
 /// the same ids as the frontend command actions; the menu-event handler emits a
-/// `menu` event so the webview runs them. Standard Edit/Window items are predefined.
-fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+/// `menu` event so the webview runs them. Standard Edit/Window items are predefined
+/// (the OS localizes those automatically). Rebuilt on language change via
+/// `apply_menu_language`.
+fn build_menu(
+    app: &tauri::AppHandle,
+    locale: &str,
+) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let app_menu = SubmenuBuilder::new(app, "Velq")
         .about(None)
         .separator()
-        .text("view-settings", "Settings…")
+        .text("view-settings", ml(locale, "Settings…", "設定…"))
         .separator()
         .hide()
         .hide_others()
@@ -52,18 +79,27 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::
         .quit()
         .build()?;
 
-    let file_menu = SubmenuBuilder::new(app, "File")
-        .text("new-doc", "New Document")
-        .text("new-folder", "New Folder")
+    let file_menu = SubmenuBuilder::new(app, ml(locale, "File", "ファイル"))
+        .text("new-doc", ml(locale, "New Document", "新規ドキュメント"))
+        .text("new-folder", ml(locale, "New Folder", "新規フォルダ"))
         .separator()
-        .text("open-folder", "Open Folder…")
-        .text("package-html", "Open HTML & Package…")
+        .text("open-folder", ml(locale, "Open Folder…", "フォルダを開く…"))
+        .text(
+            "package-html",
+            ml(locale, "Open HTML & Package…", "HTML を開いてパッケージ…"),
+        )
         .separator()
-        .text("save", "Save")
+        .text("save", ml(locale, "Save", "保存"))
         .separator()
-        .text("export-velq", "Export to .velq")
-        .text("export-html", "Export to HTML")
-        .text("export-pdf", "Export to PDF")
+        .text(
+            "export-velq",
+            ml(locale, "Export to .velq", ".velq に書き出す"),
+        )
+        .text(
+            "export-html",
+            ml(locale, "Export to HTML", "HTML に書き出す"),
+        )
+        .text("export-pdf", ml(locale, "Export to PDF", "PDF に書き出す"))
         .separator()
         .close_window()
         .build()?;
@@ -71,13 +107,13 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::
     // Custom Undo/Redo (not the predefined ones): they carry ⌘Z but forward to the
     // webview, which routes to the focused surface — the editor (CodeMirror) when the
     // cursor is in it, else the file manager. This is how VSCode et al. behave.
-    let undo = MenuItemBuilder::with_id("menu-undo", "Undo")
+    let undo = MenuItemBuilder::with_id("menu-undo", ml(locale, "Undo", "元に戻す"))
         .accelerator("CmdOrCtrl+Z")
         .build(app)?;
-    let redo = MenuItemBuilder::with_id("menu-redo", "Redo")
+    let redo = MenuItemBuilder::with_id("menu-redo", ml(locale, "Redo", "やり直す"))
         .accelerator("CmdOrCtrl+Shift+Z")
         .build(app)?;
-    let edit_menu = SubmenuBuilder::new(app, "Edit")
+    let edit_menu = SubmenuBuilder::new(app, ml(locale, "Edit", "編集"))
         .item(&undo)
         .item(&redo)
         .separator()
@@ -87,27 +123,36 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::
         .select_all()
         .build()?;
 
-    let view_menu = SubmenuBuilder::new(app, "View")
-        .text("view-explorer", "Files")
-        .text("view-editor", "Editor")
+    let view_menu = SubmenuBuilder::new(app, ml(locale, "View", "表示"))
+        .text("view-explorer", ml(locale, "Files", "ファイル"))
+        .text("view-editor", ml(locale, "Editor", "エディタ"))
         .separator()
-        .text("view-source", "Source")
-        .text("view-split", "Split")
-        .text("view-live", "Live Preview")
+        .text("view-source", ml(locale, "Source", "ソース"))
+        .text("view-split", ml(locale, "Split", "分割"))
+        .text("view-live", ml(locale, "Live Preview", "ライブプレビュー"))
         .separator()
-        .text("toggle-sidebar", "Toggle Sidebar")
-        .text("toggle-theme", "Toggle Dark / Light")
+        .text(
+            "toggle-sidebar",
+            ml(locale, "Toggle Sidebar", "サイドバーを切り替え"),
+        )
+        .text(
+            "toggle-theme",
+            ml(locale, "Toggle Dark / Light", "ダーク / ライトを切り替え"),
+        )
         .build()?;
 
-    let window_menu = SubmenuBuilder::new(app, "Window")
+    let window_menu = SubmenuBuilder::new(app, ml(locale, "Window", "ウインドウ"))
         .minimize()
         .separator()
         .fullscreen()
         .build()?;
 
-    let help_menu = SubmenuBuilder::new(app, "Help")
-        .text("help-github", "Velq on GitHub")
-        .text("help-plugins", "Plugin API")
+    let help_menu = SubmenuBuilder::new(app, ml(locale, "Help", "ヘルプ"))
+        .text(
+            "help-github",
+            ml(locale, "Velq on GitHub", "GitHub で Velq を見る"),
+        )
+        .text("help-plugins", ml(locale, "Plugin API", "プラグイン API"))
         .build()?;
 
     MenuBuilder::new(app)
@@ -120,6 +165,16 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::
             &help_menu,
         ])
         .build()
+}
+
+/// Rebuild the native menu in a new language. Called by the frontend on startup
+/// (once it has resolved the OS/user language) and whenever the language setting
+/// changes — so the menu switches live, no restart needed.
+#[tauri::command]
+fn apply_menu_language(app: tauri::AppHandle, locale: String) -> Result<(), String> {
+    let menu = build_menu(&app, &locale).map_err(|e| e.to_string())?;
+    app.set_menu(menu).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// Route a menu click: open links in Rust, forward everything else to the webview.
@@ -163,7 +218,7 @@ pub fn run() {
     }
 
     builder
-        .menu(build_menu)
+        .menu(|app| build_menu(app, &menu_locale(app)))
         .on_menu_event(|app, event| on_menu(app, event.id().0.as_str()))
         .manage(commands::watch::WatchState::default())
         .manage(commands::velq::VelqViewers::default())
@@ -191,6 +246,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_opened_files,
+            apply_menu_language,
             commands::app::get_settings,
             commands::app::set_settings,
             commands::render::render_markdown,

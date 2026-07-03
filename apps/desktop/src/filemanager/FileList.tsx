@@ -1,5 +1,6 @@
 import { ChevronRight, Inbox, Search } from "lucide-react";
 import { useEffect } from "react";
+import { useT } from "@/i18n/useT";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { cn } from "@/util/cn";
@@ -14,6 +15,7 @@ function parentOf(p: string): string {
  * current folder, each with a title + body snippet. Folders sit at the top to
  * navigate within. When a search is active, shows ranked filename matches. */
 export function FileList() {
+  const t = useT();
   const selected = useFiles((s) => s.selected);
   const rootPath = useFiles((s) => s.rootPath);
   const previewsByFolder = useFiles((s) => s.previewsByFolder);
@@ -37,7 +39,7 @@ export function FileList() {
         <div className="filelist">
           <div className="empty">
             <Search className="empty__icon" size={24} strokeWidth={1.5} />
-            <p className="empty__hint">No files match “{searchQuery}”.</p>
+            <p className="empty__hint">{t("filelist.noMatch", { query: searchQuery })}</p>
           </div>
         </div>
       );
@@ -73,7 +75,7 @@ export function FileList() {
     return (
       <div className="filelist">
         <div className="empty">
-          <p className="empty__hint">Loading…</p>
+          <p className="empty__hint">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -83,8 +85,8 @@ export function FileList() {
       <div className="filelist">
         <div className="empty">
           <Inbox className="empty__icon" size={26} strokeWidth={1.5} />
-          <div className="empty__title">Nothing here yet</div>
-          <p className="empty__hint">Press + or just start typing to create your first document.</p>
+          <div className="empty__title">{t("filelist.emptyTitle")}</div>
+          <p className="empty__hint">{t("filelist.emptyHint")}</p>
         </div>
       </div>
     );

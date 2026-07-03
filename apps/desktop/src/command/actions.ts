@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { exportActive } from "@/export/exporters";
 import { openHtmlAndPackage } from "@/export/htmlPackage";
+import type { MsgKey } from "@/i18n";
 import { revealInOs } from "@/ipc/vault";
 import { saveVersion } from "@/ipc/vcs";
 import { useDoc } from "@/store/doc";
@@ -34,7 +35,7 @@ import { checkForUpdates } from "@/update/updater";
 
 export interface Action {
   id: string;
-  title: string;
+  titleKey: MsgKey; // i18n key; the palette translates it at render (reactive to language)
   hint?: string; // logical shortcut, e.g. "Mod+S"
   icon?: LucideIcon;
   run: () => void;
@@ -48,7 +49,10 @@ async function saveActive() {
   if (!doc?.path || !root) return;
   try {
     await saveVersion(root, doc.path, content); // writes + records a version
-    markSaved();
+    // Only clear "Editing" if nothing changed while the save was in flight and
+    // we're still on the same document — otherwise edits typed during the save (or
+    // another tab's) would be stranded as "saved" and never written.
+    if (useDoc.getState().content === content) markSaved();
   } catch (e) {
     console.error("save failed", e);
   }
@@ -65,10 +69,10 @@ function newDocument() {
 }
 
 export const ACTIONS: Action[] = [
-  { id: "new-doc", title: "New document", hint: "Mod+N", icon: FilePlus, run: newDocument },
+  { id: "new-doc", titleKey: "action.newDoc", hint: "Mod+N", icon: FilePlus, run: newDocument },
   {
     id: "new-folder",
-    title: "New folder",
+    titleKey: "action.newFolder",
     hint: "Mod+Shift+N",
     icon: FolderPlus,
     run: () => {
@@ -78,65 +82,65 @@ export const ACTIONS: Action[] = [
   },
   {
     id: "open-folder",
-    title: "Open folder…",
+    titleKey: "action.openFolder",
     icon: FolderOpen,
     run: () => void useVault.getState().open(),
   },
-  { id: "save", title: "Save", hint: "Mod+S", icon: Save, run: () => void saveActive() },
+  { id: "save", titleKey: "action.save", hint: "Mod+S", icon: Save, run: () => void saveActive() },
   {
     id: "undo-file",
-    title: "Undo file change",
+    titleKey: "action.undoFile",
     hint: "Mod+Z",
     icon: Undo2,
     run: () => void useFiles.getState().undo(),
   },
   {
     id: "redo-file",
-    title: "Redo file change",
+    titleKey: "action.redoFile",
     hint: "Mod+Shift+Z",
     icon: Redo2,
     run: () => void useFiles.getState().redo(),
   },
   {
     id: "view-source",
-    title: "View: Source",
+    titleKey: "action.viewSource",
     icon: Code,
     run: () => useSettings.getState().update({ editorMode: "source" }),
   },
   {
     id: "view-split",
-    title: "View: Split",
+    titleKey: "action.viewSplit",
     icon: Columns2,
     run: () => useSettings.getState().update({ editorMode: "split" }),
   },
   {
     id: "view-live",
-    title: "View: Live preview",
+    titleKey: "action.viewLive",
     icon: Eye,
     run: () => useSettings.getState().update({ editorMode: "live" }),
   },
   {
     id: "toggle-theme",
-    title: "Toggle dark / light",
+    titleKey: "action.toggleTheme",
     icon: Moon,
     run: () => useSettings.getState().toggleTheme(),
   },
   {
     id: "toggle-sidebar",
-    title: "Toggle sidebar",
+    titleKey: "action.toggleSidebar",
     hint: "Mod+\\",
     icon: PanelLeft,
     run: () => useUI.getState().toggleSidebar(),
   },
   {
     id: "toggle-vim",
-    title: "Toggle Vim mode",
+    titleKey: "action.toggleVim",
     icon: Terminal,
     run: () => useSettings.getState().update({ vimMode: !useSettings.getState().vimMode }),
   },
   {
     id: "toggle-density",
-    title: "Toggle density (comfortable / compact)",
+    titleKey: "action.toggleDensity",
     icon: Rows3,
     run: () => {
       const s = useSettings.getState();
@@ -145,7 +149,7 @@ export const ACTIONS: Action[] = [
   },
   {
     id: "reveal",
-    title: "Reveal in Finder",
+    titleKey: "action.reveal",
     icon: FolderOpen,
     run: () => {
       const p = useDoc.getState().doc?.path;
@@ -154,35 +158,45 @@ export const ACTIONS: Action[] = [
   },
   {
     id: "search-all",
-    title: "Search all files…",
+    titleKey: "action.searchAll",
     hint: "Mod+Shift+F",
     icon: Search,
     run: () => usePalette.getState().openWith(""),
   },
   {
     id: "package-html",
-    title: "Open HTML & package to .velq…",
+    titleKey: "action.packageHtml",
     icon: Package,
     run: () => void openHtmlAndPackage(),
   },
-  { id: "export-velq", title: "Export to .velq", icon: Package, run: () => exportActive("velq") },
-  { id: "export-html", title: "Export to HTML", icon: FileDown, run: () => exportActive("html") },
+  {
+    id: "export-velq",
+    titleKey: "action.exportVelq",
+    icon: Package,
+    run: () => exportActive("velq"),
+  },
+  {
+    id: "export-html",
+    titleKey: "action.exportHtml",
+    icon: FileDown,
+    run: () => exportActive("html"),
+  },
   {
     id: "export-md",
-    title: "Export to Markdown",
+    titleKey: "action.exportMd",
     icon: FileDown,
     run: () => exportActive("markdown"),
   },
-  { id: "export-pdf", title: "Export to PDF", icon: Printer, run: () => exportActive("pdf") },
+  { id: "export-pdf", titleKey: "action.exportPdf", icon: Printer, run: () => exportActive("pdf") },
   {
     id: "plugins",
-    title: "Plugins…",
+    titleKey: "action.plugins",
     icon: Puzzle,
     run: () => usePalette.getState().togglePlugins(),
   },
   {
     id: "check-updates",
-    title: "Check for updates…",
+    titleKey: "action.checkUpdates",
     icon: RefreshCw,
     run: () => void checkForUpdates(true),
   },

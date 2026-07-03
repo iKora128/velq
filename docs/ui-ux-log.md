@@ -512,3 +512,115 @@ Three changes so a newcomer can't get lost (the user's "迷わないように"):
   verified in the built `.app` rather than the dev server.
 
 All gates green (lint / tsc+vite / fmt / clippy `-D warnings` / `cargo test --workspace`).
+
+## M22 — Trust & the everyday: autosave, session history, live 文字数 (post-Phase-1, [proposals.md](proposals.md))
+
+First milestone off [proposals.md](proposals.md) — the **信頼と日常 (Trust & the everyday)** theme. Goal:
+make the "All changes saved" promise real (spec §0-4, §4.2) and give the Japanese author a count that
+actually means something. Frontend-only — no change to the git-backed `velq-vcs` crate or any Tauri
+command, so the save→diff→restore round-trip is untouched.
+
+### D1 — Autosave + session-grouped history
+
+- **Autosave (spec §4.2 cadence).** A new `useAutosave` hook (mounted once at the app shell) saves the
+  active document **~2 s after you stop typing**, and **at least every 10 minutes** through one unbroken
+  writing burst. It reuses the existing `save_version` path, so every autosave is a real, restorable
+  version. **⌘S stays** an explicit checkpoint (spec §5.3), and **closing a tab flushes** unsaved edits
+  first (`useDoc.close`) so work is never silently dropped. `saveActive` now clears "Editing" only when
+  nothing changed mid-save (and you're still on the same doc), so keystrokes typed *during* a save
+  aren't stranded as "saved".
+- **Self-write guard — the enabling fix.** The vault watcher echoes our own writes back as `fs:changed`;
+  unguarded that reloaded the editor (a jarring remount) or — once autosave writes every couple of
+  seconds — raised a **false "this file changed on disk" conflict** mid-sentence. New
+  `util/selfWrites.ts`: the vcs IPC wrappers `mark()` the path they're about to write and the
+  `fs:changed` handler `consume()`s it, skipping the reload/conflict for a short (2.5 s) window;
+  `reloadTab` also no-ops on identical bytes. This quietly cures the same remount on a plain ⌘S too.
+- **Session grouping (spec §4.2, "coalesce rapid auto-saves into expandable session groups").** Autosave
+  would otherwise turn the timeline into a keystroke firehose, so the history panel now coalesces a run
+  of saves with no >20-min gap into **one session entry** — its latest state shown, a count pill, and a
+  ▸ to reveal the minute-by-minute snapshots beneath. Purely presentational (`history/sessions.ts`,
+  unit-tested); every version is preserved and individually selectable once expanded, and a lone save
+  still renders as a plain row so nothing regresses for infrequent savers.
+
+Benchmarks: this is Google-Docs-style *session* history (not VS Code's flat per-save Timeline), and it
+holds the spec's **one unified list — never a hidden-by-default filter** rule (sessions expand in
+place; nothing is dropped).
+
+### J1 — A count that speaks the language you're writing in
+
+The status bar read `N words`, meaningless for Japanese (no inter-word spaces). It now shows the metric
+that fits the text: **`1,204 文字`** when the doc is CJK-dominant (≥20 % Han/kana), **`340 words`**
+otherwise — thousands-separated, with the other count one hover away. `countChars` counts code points
+minus whitespace (incl. the ideographic space U+3000), matching Japanese manuscript counting. Pure
+helpers in `util/text.ts`, unit-tested (12 cases).
+
+### Gates
+
+tsc + `vite build` green · Biome clean · Vitest **19/19** (new `text` + `sessions` suites) ·
+`cargo test --workspace` green incl. the `velq-vcs` save→diff→restore round-trip · `velq-desktop`
+compiles. A dev instance was already live on the vite port (HMR-reloaded these changes); I left it
+running rather than fighting for the port. **Honest gap:** no headless-capture harness is wired and the
+dev port was in use, so pixel screenshots into `docs/screenshots/m22/` are the open follow-up — visual
+confirmation for now is the running instance.
+
+### Carried forward (M22 theme, not yet done)
+
+D2 gutter change-bars · D3 version naming + "named only" filter · Q2 Open Recent · Q4 Saved-pulse
+microinteraction · D16 shortcuts in the context menu.
+
+## M23 — Speak the user's language: full JA/EN i18n (proposals.md J2, pulled forward)
+
+The author is Japanese and asked for the app "in both Japanese and English (ideally many languages)."
+That's proposals.md **J2**; done now rather than at M26. **~215 user-facing strings inventoried; the
+whole webview UI + the native menu are now bilingual with a live in-app switch** — no restart.
+
+### The i18n layer (`src/i18n/`)
+
+- **Dictionary-based, zero deps.** `en.ts` is the source of truth (`as const`); `MsgKey = keyof typeof en`
+  and `Dict = Record<MsgKey, string>`, so **`ja.ts` is typed to mirror every key — a missing/renamed key
+  fails `tsc`**. Adding a language is literally one new dictionary file.
+- **Reactive + non-reactive access.** Components use `useT()` (re-renders on language change);
+  stores/actions/transient toasts use the module `t()`, kept in sync by the settings store. `useLocale()`
+  exposes the resolved locale for `Intl`/`toLocale*` date formatting.
+- **`resolveLocale`** maps the `system | en | ja` preference to a concrete locale — "system" follows
+  `navigator.language`. A new **Language** selector sits at the top of Settings.
+- **House rule enforced in JA too:** no git vocabulary in translations — 版 / 保存履歴 / 変更点 / 元に戻す,
+  never コミット/マージ/リポジトリ.
+
+### Coverage
+
+- **Every webview surface**: status bar, toolbar, tabs, breadcrumb, activity bar, sidebar, command
+  palette + `?` cheatsheet, settings, welcome, file browser (icons/list/columns + empty states),
+  right-click menus, Quick Look, version-history panel + diff bar, conflict banner, plugins panel,
+  drop zone, and all toast/notification/error copy. Command titles moved to `Action.titleKey` so the
+  palette translates them live.
+- **Native macOS menu** (File/Edit/View/…): `build_menu(app, locale)` + a new `apply_menu_language`
+  command; the frontend resolves the language and calls it on startup and on every change, so the menu
+  **switches live** (not restart-only). OS-provided items (About/Quit/Cut/Copy…) localize themselves.
+- **`util/time.ts`** now translates "just now / Nm ago / Today / Yesterday" and formats dates/clock in
+  the locale. Fixed a latent coupling: the history panel compared `label === "Today"` against
+  `util/time` output — now it groups by a **stable `dayKey`** ("today"/"yesterday"/ISO) and formats the
+  visible label separately, so day-grouping can never break when the language changes.
+- The `文字 / words` status-bar count stays **document-driven** (J1) — it reflects the language you're
+  *writing*, independent of the UI chrome language.
+
+### How it was built
+
+Catalogs authored by hand (JA quality matters here); the ~150 mechanical string→`t("key")` swaps ran as
+**three parallel agents over disjoint files**, with `tsc` (keys are a typed union) + Biome as the safety
+net. Interface/rich-text/coupled files (actions, palette, cheatsheet, status bar, Welcome, plugins,
+time+history) done by hand.
+
+### Gates
+
+tsc + `vite build` green · Biome clean (113 files) · **Vitest 25/25** (new `i18n` suite asserts JA
+mirrors EN's keys, no empty values, and **`{placeholder}` tokens match across locales**) ·
+`cargo test --workspace` green · `velq-desktop` compiles (menu API `app.set_menu`).
+
+### Honest gaps (English for now, documented)
+
+Rust command **error strings** (surfaced verbatim in toasts), the **`velq-vcs` version summaries**
+("3 added · 1 removed" — needs added/removed counts on the DTO to format on the frontend), plugin
+descriptions, and the seed `Welcome.md` / default file names (real on-disk names — deliberately left).
+Backend (menu, locale persistence) needs a `tauri dev` **restart** to take effect in an
+already-running instance; the webview switch is live via HMR.

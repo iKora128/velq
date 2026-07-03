@@ -1,13 +1,16 @@
 import { create } from "zustand";
 import type { Lang } from "@/editor/extensions";
 import { isHtmlPath, packageAndStage } from "@/export/htmlPackage";
+import { t } from "@/i18n";
 import type { FileNode } from "@/ipc/types";
 import { readFile } from "@/ipc/vault";
+import { saveVersion } from "@/ipc/vcs";
 import { openVelqViewer } from "@/ipc/velq";
 import { countWords } from "@/util/text";
 import { useSettings } from "./settings";
 import { useToast } from "./toast";
 import { useUI } from "./ui";
+import { useVault } from "./vault";
 
 /** Document identity/metadata. The live text lives in its Tab (so switching tabs
  * never drops edits), not here. */
@@ -96,7 +99,7 @@ export function langFromName(name: string): Lang {
 export function describeError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   if (/not permitted|permission denied|os error 1\b/i.test(msg)) {
-    return "macOS is blocking access to that folder. Grant Velq access in System Settings → Privacy & Security → Files and Folders, or pick a folder outside Desktop/Documents/Downloads.";
+    return t("error.macPermission");
   }
   return msg;
 }
@@ -151,7 +154,7 @@ export const useDoc = create<DocState>((set, get) => ({
       try {
         await openVelqViewer(node.path);
         useSettings.getState().recordRecentDoc(node.path, node.name);
-        useToast.getState().push(`Opened ${node.name} in a secure viewer.`);
+        useToast.getState().push(t("toast.openedInViewer", { name: node.name }));
       } catch (e) {
         console.error("open_velq_viewer failed", e);
       }
@@ -171,7 +174,7 @@ export const useDoc = create<DocState>((set, get) => ({
       );
     } catch (e) {
       console.error("read_file failed", node.path, e);
-      useToast.getState().push(`Couldn't open ${node.name}: ${describeError(e)}`);
+      useToast.getState().push(t("toast.cantOpen", { name: node.name, error: describeError(e) }));
     }
   },
 
@@ -181,7 +184,7 @@ export const useDoc = create<DocState>((set, get) => ({
       try {
         await openVelqViewer(path);
         useSettings.getState().recordRecentDoc(path, name);
-        useToast.getState().push(`Opened ${name} in a secure viewer.`);
+        useToast.getState().push(t("toast.openedInViewer", { name }));
       } catch (e) {
         console.error("open_velq_viewer failed", e);
       }
@@ -197,7 +200,7 @@ export const useDoc = create<DocState>((set, get) => ({
       get().open({ id: path, path, name, language: langFromName(name) }, fc.content);
     } catch (e) {
       console.error("openByPath failed", path, e);
-      useToast.getState().push(`Couldn't open ${name}: ${describeError(e)}`);
+      useToast.getState().push(t("toast.cantOpen", { name, error: describeError(e) }));
     }
   },
 
@@ -230,6 +233,14 @@ export const useDoc = create<DocState>((set, get) => ({
   activate: (id) => set((s) => ({ activeId: id, ...mirror(s.tabs, id) })),
 
   close: (id) => {
+    // Flush unsaved edits before the tab (and its in-memory content) disappears —
+    // closing must never silently drop work. Autosave keeps this to a last-moment
+    // save; it also records the closing state in history.
+    const closing = get().tabs.find((t) => t.doc.id === id);
+    if (closing?.dirty && closing.doc.path) {
+      const root = useVault.getState().root?.path;
+      if (root) void saveVersion(root, closing.doc.path, closing.content);
+    }
     set((s) => {
       const idx = s.tabs.findIndex((t) => t.doc.id === id);
       if (idx < 0) return {};
@@ -297,19 +308,21 @@ export const useDoc = create<DocState>((set, get) => ({
     try {
       const fc = await readFile(path);
       set((s) => {
-        const tabs = s.tabs.map((t) =>
-          t.doc.path === path
-            ? {
-                ...t,
-                content: fc.content,
-                rev: t.rev + 1,
-                dirty: false,
-                conflict: false,
-                wordCount: countWords(fc.content),
-                charCount: fc.content.length,
-              }
-            : t,
-        );
+        const tabs = s.tabs.map((t) => {
+          if (t.doc.path !== path) return t;
+          // Identical bytes (e.g. an echoed save that slipped past the self-write
+          // window) → just clear the flags; bumping rev would remount the editor.
+          if (t.content === fc.content) return { ...t, dirty: false, conflict: false };
+          return {
+            ...t,
+            content: fc.content,
+            rev: t.rev + 1,
+            dirty: false,
+            conflict: false,
+            wordCount: countWords(fc.content),
+            charCount: fc.content.length,
+          };
+        });
         return { tabs, ...mirror(tabs, s.activeId) };
       });
     } catch (e) {

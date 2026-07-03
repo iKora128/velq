@@ -25,6 +25,8 @@ pub struct Settings {
     pub vim_mode: bool,
     pub show_line_numbers: bool,
     pub prose_font: bool,
+    /// UI language: "system" | "en" | "ja".
+    pub locale: String,
     pub last_vault: Option<String>,
     pub last_export_dir: Option<String>,
     pub auto_package_html: bool,
@@ -41,6 +43,7 @@ impl Default for Settings {
             vim_mode: false,
             show_line_numbers: false,
             prose_font: true,
+            locale: "system".into(),
             last_vault: None,
             last_export_dir: None,
             auto_package_html: true,

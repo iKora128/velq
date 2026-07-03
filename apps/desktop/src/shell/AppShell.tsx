@@ -4,7 +4,9 @@ import { Cheatsheet } from "@/command/Cheatsheet";
 import { CommandPalette } from "@/command/CommandPalette";
 import { useShortcuts } from "@/command/useShortcuts";
 import { Toaster } from "@/components/Toaster";
+import { useAutosave } from "@/editor/useAutosave";
 import { QuickLook } from "@/filemanager/QuickLook";
+import { useT } from "@/i18n/useT";
 import { PluginsPanel } from "@/plugins/PluginsPanel";
 import { useFiles } from "@/store/files";
 import { useUI } from "@/store/ui";
@@ -17,9 +19,11 @@ import { StatusBar } from "./StatusBar";
 import { useFileDrop } from "./useFileDrop";
 
 export function AppShell() {
+  const t = useT();
   const view = useUI((s) => s.view);
   const dragging = useFileDrop();
   useShortcuts();
+  useAutosave();
 
   // Space previews the selected file (Finder Quick Look), unless typing.
   useEffect(() => {
@@ -66,7 +70,7 @@ export function AppShell() {
         <div className="dropzone" aria-hidden="true">
           <div className="dropzone__card">
             <Download size={28} />
-            <span>Drop to add to your Velq folder</span>
+            <span>{t("dropzone.hint")}</span>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronRight, Copy, FilePlus, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { type DragEvent, useMemo, useRef, useState } from "react";
+import { useT } from "@/i18n/useT";
 import type { FileNode } from "@/ipc/types";
 import { revealInOs } from "@/ipc/vault";
 import { useDoc } from "@/store/doc";
@@ -18,6 +19,7 @@ const ROW_H = 28;
 let dragSrc: string | null = null;
 
 export function Tree() {
+  const t = useT();
   const rootPath = useFiles((s) => s.rootPath);
   const childrenByPath = useFiles((s) => s.childrenByPath);
   const expanded = useFiles((s) => s.expanded);
@@ -79,17 +81,20 @@ export function Tree() {
     const target = node ? (node.kind === "dir" ? node.path : undefined) : rootPath;
     const entries: MenuEntry[] = [];
     if (node?.kind === "file") {
-      entries.push({ label: "Open", onClick: () => void openFile(node, { preview: false }) });
+      entries.push({
+        label: t("contextmenu.open"),
+        onClick: () => void openFile(node, { preview: false }),
+      });
       entries.push({ separator: true });
     }
     if (target) {
       entries.push({
-        label: "New document",
+        label: t("common.newDoc"),
         icon: <FilePlus size={15} />,
         onClick: () => void files.getState().newFile(target),
       });
       entries.push({
-        label: "New folder",
+        label: t("common.newFolder"),
         icon: <FolderPlus size={15} />,
         onClick: () => void files.getState().newFolder(target),
       });
@@ -97,23 +102,23 @@ export function Tree() {
     }
     if (node) {
       entries.push({
-        label: "Rename",
+        label: t("contextmenu.rename"),
         icon: <Pencil size={15} />,
         onClick: () => files.getState().startRename(node.path),
       });
       if (node.kind === "file")
         entries.push({
-          label: "Duplicate",
+          label: t("contextmenu.duplicate"),
           icon: <Copy size={15} />,
           onClick: () => void files.getState().duplicate(node),
         });
       entries.push({
-        label: isMac ? "Reveal in Finder" : "Reveal in Explorer",
+        label: isMac ? t("contextmenu.revealMac") : t("contextmenu.revealOther"),
         onClick: () => void revealInOs(node.path),
       });
       entries.push({ separator: true });
       entries.push({
-        label: "Move to Trash",
+        label: t("contextmenu.trash"),
         icon: <Trash2 size={15} />,
         danger: true,
         onClick: () => void files.getState().remove(node),
