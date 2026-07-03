@@ -340,7 +340,7 @@ fn collect_files(dir: &Path, out: &mut Vec<FileNode>, cap: usize) {
 pub fn recent_files(root: String, limit: Option<usize>) -> Result<Vec<FileNode>, String> {
     let mut files = Vec::new();
     collect_files(Path::new(&root), &mut files, 4000);
-    files.sort_by(|a, b| b.created.cmp(&a.created));
+    files.sort_by_key(|f| std::cmp::Reverse(f.created));
     files.truncate(limit.unwrap_or(12));
     Ok(files)
 }
