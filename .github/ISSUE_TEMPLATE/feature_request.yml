@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that Velq makes hard?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: markdown
+    attributes:
+      value: >
+        Heads-up: [docs/proposals.md](https://github.com/iKora128/velq/blob/main/docs/proposals.md)
+        §5 lists directions we've decided against (graph views, block editors,
+        files-as-containers, …) — worth a skim before proposing.

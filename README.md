@@ -19,6 +19,14 @@ isolated WebView.
 > Positioning: Obsidian's simplicity + HTML packaging as the differentiator.
 > No Notion-style maximalism. The format's reach comes first.
 
+## Status
+
+Velq is **early 0.x**. macOS is the platform we develop and test on daily;
+Windows and Linux installers come out of the same CI but see less real-world
+use yet. Known rough edges are tracked honestly in
+[docs/proposals.md](docs/proposals.md) §6. The app self-updates, so fixes
+reach you fast.
+
 ## Features (Phase 1 — core MVP)
 
 - **Editor / viewer** — Markdown with GFM (tables, task lists, footnotes, code), three
