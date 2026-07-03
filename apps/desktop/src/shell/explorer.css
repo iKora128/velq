@@ -165,10 +165,21 @@
 }
 
 .grid-scroll {
+  position: relative; /* positioning context for the marquee overlay */
   flex: 1;
   overflow-y: auto;
   padding: var(--space-4) var(--space-5) var(--space-7);
   min-height: 0;
+}
+
+/* Rubber-band (marquee) selection rectangle. */
+.marquee {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  border: 1px solid var(--accent);
+  background: var(--accent-subtle);
+  border-radius: 2px;
 }
 .grid-group {
   display: flex;

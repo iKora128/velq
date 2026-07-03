@@ -98,6 +98,8 @@ interface FilesState {
    * given visible order. */
   rangeSelectTo: (node: FileNode, ordered: FileNode[]) => void;
   selectAll: (nodes: FileNode[]) => void;
+  /** Replace the whole selection with exactly these nodes (used by marquee select). */
+  setSelection: (nodes: FileNode[]) => void;
   clearSelection: () => void;
   /** The currently-selected nodes, resolved from loaded folders. */
   selectedNodes: () => FileNode[];
@@ -247,6 +249,12 @@ export const useFiles = create<FilesState>((set, get) => ({
       const selection = new Set(nodes.map((n) => n.path));
       const selected = s.selected && selection.has(s.selected.path) ? s.selected : nodes[0];
       return { selection, selected, anchor: selected.path };
+    }),
+  setSelection: (nodes) =>
+    set(() => {
+      const selection = new Set(nodes.map((n) => n.path));
+      const lead = nodes[nodes.length - 1] ?? null;
+      return { selection, selected: lead, anchor: lead ? lead.path : null };
     }),
   clearSelection: () => set(leadState(null)),
   selectedNodes: () => {

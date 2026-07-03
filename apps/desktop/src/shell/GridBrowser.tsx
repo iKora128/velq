@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { FileGlyph } from "@/filemanager/FileGlyph";
 import { clickSelect } from "@/filemanager/selectionClick";
 import { useFileDnd } from "@/filemanager/useFileDnd";
+import { useMarquee } from "@/filemanager/useMarquee";
 import { useSelectionKeys } from "@/filemanager/useSelectionKeys";
 import { useT } from "@/i18n/useT";
 import type { FileNode, RecentDoc } from "@/ipc/types";
@@ -85,6 +86,8 @@ export function GridBrowser() {
   // Visible order for Shift-range selection + Cmd/Ctrl+A (folders first, then files).
   const gridOrdered = [...folders, ...files];
   useSelectionKeys(gridOrdered);
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
+  const marquee = useMarquee(scrollEl, gridOrdered);
 
   if (!rootPath || !here) {
     return (
@@ -202,7 +205,18 @@ export function GridBrowser() {
           </div>
         </div>
       ) : (
-        <div className="grid-scroll">
+        <div className="grid-scroll" ref={setScrollEl}>
+          {marquee && (
+            <div
+              className="marquee"
+              style={{
+                left: marquee.x,
+                top: marquee.y,
+                width: marquee.w,
+                height: marquee.h,
+              }}
+            />
+          )}
           {atRoot && recentDocs.length > 0 && (
             <>
               <div className="grid-group">
@@ -301,6 +315,7 @@ function Tile({
       {...(isDir && dnd ? dnd.dropProps(node.path) : {})}
       className={cn("tile", selected && "is-selected", dnd?.dropTarget === node.path && "is-drop")}
       title={node.name}
+      data-path={ordered ? node.path : undefined}
       onClick={(e) => (ordered ? clickSelect(e, node, ordered) : useFiles.getState().select(node))}
       onDoubleClick={() => onOpen(node)}
       onContextMenu={(e) => {
