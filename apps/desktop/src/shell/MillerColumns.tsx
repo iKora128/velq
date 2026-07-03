@@ -2,7 +2,9 @@ import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileGlyph } from "@/filemanager/FileGlyph";
 import { clickSelect } from "@/filemanager/selectionClick";
+import { useFileContextMenu } from "@/filemanager/useFileContextMenu";
 import { useFileDnd } from "@/filemanager/useFileDnd";
+import { useMarquee } from "@/filemanager/useMarquee";
 import { useSelectionKeys } from "@/filemanager/useSelectionKeys";
 import { useT } from "@/i18n/useT";
 import type { FileNode } from "@/ipc/types";
@@ -32,6 +34,12 @@ export function MillerColumns() {
 
   // The deepest column's items — the focus for Cmd/Ctrl+A.
   useSelectionKeys(childrenByPath[columns[columns.length - 1]] ?? []);
+  const [millerEl, setMillerEl] = useState<HTMLDivElement | null>(null);
+  const marquee = useMarquee(
+    millerEl,
+    columns.flatMap((dir) => childrenByPath[dir] ?? []),
+  );
+  const { openMenu, contextMenu } = useFileContextMenu();
 
   if (!rootPath) {
     return (
@@ -52,7 +60,17 @@ export function MillerColumns() {
   };
 
   return (
-    <div className="miller">
+    <div
+      className="miller"
+      ref={setMillerEl}
+      onContextMenu={(e) => openMenu(e, null, columns[columns.length - 1])}
+    >
+      {marquee && (
+        <div
+          className="marquee"
+          style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }}
+        />
+      )}
       {columns.map((dir, i) => {
         const items = childrenByPath[dir];
         return (
@@ -71,6 +89,7 @@ export function MillerColumns() {
                       key={node.path}
                       {...dnd.dragProps(node)}
                       {...(isDir ? dnd.dropProps(node.path, () => openFolder(i, node)) : {})}
+                      data-path={node.path}
                       className={cn(
                         "miller__row",
                         active && "is-active",
@@ -85,6 +104,7 @@ export function MillerColumns() {
                       onDoubleClick={() => {
                         if (!isDir) void useDoc.getState().openFile(node, { preview: false });
                       }}
+                      onContextMenu={(e) => openMenu(e, node)}
                     >
                       <FileGlyph
                         ext={node.ext}
@@ -104,6 +124,7 @@ export function MillerColumns() {
           </div>
         );
       })}
+      {contextMenu}
     </div>
   );
 }

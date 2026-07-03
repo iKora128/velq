@@ -35,10 +35,13 @@ export function BatchRenameDialog() {
   const [suffix, setSuffix] = useState("");
   const [base, setBase] = useState("");
   const [start, setStart] = useState(1);
+  const [name, setName] = useState(""); // direct name for a single-file rename
 
   const open = targets.length > 0;
+  const single = targets.length === 1;
   const controlsRef = useRef<HTMLDivElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: seed from the fresh targets on open.
   useEffect(() => {
     if (open) {
       setMode("replace");
@@ -48,6 +51,7 @@ export function BatchRenameDialog() {
       setSuffix("");
       setBase("");
       setStart(1);
+      setName(targets.length === 1 ? splitName(targets[0].name)[0] : "");
     }
   }, [open]);
 
@@ -67,6 +71,12 @@ export function BatchRenameDialog() {
   }, [open, close]);
 
   const rows = useMemo(() => {
+    if (single) {
+      const node = targets[0];
+      const [stem, ext] = splitName(node.name);
+      const newStem = name.trim() || stem;
+      return [{ node, newName: ext ? `${newStem}.${ext}` : newStem }];
+    }
     return targets.map((node, i) => {
       const [stem, ext] = splitName(node.name);
       let newStem = stem;
@@ -77,7 +87,7 @@ export function BatchRenameDialog() {
       const newName = ext ? `${newStem}.${ext}` : newStem;
       return { node, newName };
     });
-  }, [targets, mode, find, replace, prefix, suffix, base, start]);
+  }, [targets, single, name, mode, find, replace, prefix, suffix, base, start]);
 
   const { collisions, changed } = useMemo(() => {
     const files = useFiles.getState();
@@ -119,24 +129,37 @@ export function BatchRenameDialog() {
         aria-label={t("batch.aria")}
         aria-modal="true"
       >
-        <h2 className="batch__title">{t("batch.title", { count: targets.length })}</h2>
+        <h2 className="batch__title">
+          {single ? t("contextmenu.rename") : t("batch.title", { count: targets.length })}
+        </h2>
 
-        <div className="batch__modes segmented" role="group">
-          {MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              className={cn("segmented__opt", mode === m.value && "is-active")}
-              aria-pressed={mode === m.value}
-              onClick={() => setMode(m.value)}
-            >
-              {t(m.key)}
-            </button>
-          ))}
-        </div>
+        {!single && (
+          <div className="batch__modes segmented" role="group">
+            {MODES.map((m) => (
+              <button
+                key={m.value}
+                type="button"
+                className={cn("segmented__opt", mode === m.value && "is-active")}
+                aria-pressed={mode === m.value}
+                onClick={() => setMode(m.value)}
+              >
+                {t(m.key)}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="batch__controls" ref={controlsRef}>
-          {mode === "replace" && (
+          {single && (
+            <Field label={t("batch.baseName")}>
+              <input
+                className="batch__input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </Field>
+          )}
+          {!single && mode === "replace" && (
             <>
               <Field label={t("batch.find")}>
                 <input

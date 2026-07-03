@@ -12,8 +12,9 @@ function isTyping(target: EventTarget | null): boolean {
 /**
  * Selection keyboard for a file view:
  * - **Cmd/Ctrl+A** selects everything in `ordered` (the view's visible items),
- * - **Cmd/Ctrl+Delete/Backspace** moves the selection to Trash (Finder convention —
- *   modifier-guarded so a stray Backspace never deletes files),
+ * - **Delete / Backspace** moves the selection to Trash (deletes go to the OS Trash
+ *   and are undoable, and this only fires in the file browser — never while typing —
+ *   so it's safe without a modifier),
  * - **Esc** clears the selection.
  *
  * Only one file-browser view is mounted at a time, so a single window listener is
@@ -33,7 +34,7 @@ export function useSelectionKeys(ordered: FileNode[]) {
           e.preventDefault();
           files.selectAll(orderedRef.current);
         }
-      } else if (mod && (e.key === "Backspace" || e.key === "Delete")) {
+      } else if (e.key === "Backspace" || e.key === "Delete") {
         if (files.selection.size > 0) {
           e.preventDefault();
           void files.removeSelected();

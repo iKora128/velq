@@ -7,9 +7,10 @@ import {
   House,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 import { FileGlyph } from "@/filemanager/FileGlyph";
 import { clickSelect } from "@/filemanager/selectionClick";
+import { useFileContextMenu } from "@/filemanager/useFileContextMenu";
 import { useFileDnd } from "@/filemanager/useFileDnd";
 import { useMarquee } from "@/filemanager/useMarquee";
 import { useSelectionKeys } from "@/filemanager/useSelectionKeys";
@@ -88,6 +89,7 @@ export function GridBrowser() {
   useSelectionKeys(gridOrdered);
   const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
   const marquee = useMarquee(scrollEl, gridOrdered);
+  const { openMenu, contextMenu } = useFileContextMenu();
 
   if (!rootPath || !here) {
     return (
@@ -205,7 +207,11 @@ export function GridBrowser() {
           </div>
         </div>
       ) : (
-        <div className="grid-scroll" ref={setScrollEl}>
+        <div
+          className="grid-scroll"
+          ref={setScrollEl}
+          onContextMenu={(e) => openMenu(e, null, here ?? undefined)}
+        >
           {marquee && (
             <div
               className="marquee"
@@ -231,6 +237,7 @@ export function GridBrowser() {
                       node={n}
                       selected={selection.has(n.path)}
                       onOpen={open}
+                      onMenu={openMenu}
                     />
                   );
                 })}
@@ -249,6 +256,7 @@ export function GridBrowser() {
                     node={n}
                     selected={selection.has(n.path)}
                     onOpen={open}
+                    onMenu={openMenu}
                   />
                 ))}
               </div>
@@ -266,6 +274,7 @@ export function GridBrowser() {
                     onOpen={open}
                     ordered={gridOrdered}
                     dnd={dnd}
+                    onMenu={openMenu}
                   />
                 ))}
               </div>
@@ -283,6 +292,7 @@ export function GridBrowser() {
                     onOpen={open}
                     ordered={gridOrdered}
                     dnd={dnd}
+                    onMenu={openMenu}
                   />
                 ))}
               </div>
@@ -290,6 +300,7 @@ export function GridBrowser() {
           )}
         </div>
       )}
+      {contextMenu}
     </div>
   );
 }
@@ -300,12 +311,14 @@ function Tile({
   onOpen,
   ordered,
   dnd,
+  onMenu,
 }: {
   node: FileNode;
   selected: boolean;
   onOpen: (n: FileNode) => void;
   ordered?: FileNode[];
   dnd?: ReturnType<typeof useFileDnd>;
+  onMenu?: (e: MouseEvent, node: FileNode) => void;
 }) {
   const isDir = node.kind === "dir";
   return (
@@ -318,11 +331,7 @@ function Tile({
       data-path={ordered ? node.path : undefined}
       onClick={(e) => (ordered ? clickSelect(e, node, ordered) : useFiles.getState().select(node))}
       onDoubleClick={() => onOpen(node)}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        // Keep a multi-selection if the right-clicked tile is part of it.
-        if (!useFiles.getState().selection.has(node.path)) useFiles.getState().select(node);
-      }}
+      onContextMenu={(e) => (onMenu ? onMenu(e, node) : e.preventDefault())}
     >
       <span className="tile__art">
         <FileGlyph

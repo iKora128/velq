@@ -1,4 +1,5 @@
 .filelist {
+  position: relative; /* positioning context for the marquee overlay */
   flex: 1;
   overflow-y: auto;
   padding: var(--space-2);

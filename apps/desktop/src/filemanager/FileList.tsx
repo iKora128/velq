@@ -1,12 +1,14 @@
 import { ChevronRight, Inbox, Search } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "@/i18n/useT";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { cn } from "@/util/cn";
 import { FileGlyph } from "./FileGlyph";
 import { clickSelect } from "./selectionClick";
+import { useFileContextMenu } from "./useFileContextMenu";
 import { useFileDnd } from "./useFileDnd";
+import { useMarquee } from "./useMarquee";
 import { useSelectionKeys } from "./useSelectionKeys";
 import "./filelist.css";
 
@@ -47,6 +49,9 @@ export function FileList() {
       ].map((p) => p.node)
     : [];
   useSelectionKeys(ordered);
+  const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
+  const marquee = useMarquee(listEl, ordered);
+  const { openMenu, contextMenu } = useFileContextMenu();
 
   if (searchQuery.trim()) {
     if (searchResults.length === 0) {
@@ -111,19 +116,31 @@ export function FileList() {
   const files = items.filter((i) => i.node.kind === "file");
 
   return (
-    <div className="filelist">
+    <div
+      className="filelist"
+      ref={setListEl}
+      onContextMenu={(e) => openMenu(e, null, folder ?? undefined)}
+    >
+      {marquee && (
+        <div
+          className="marquee"
+          style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }}
+        />
+      )}
       {folders.map((p) => (
         <button
           type="button"
           key={p.node.path}
           {...dnd.dragProps(p.node)}
           {...dnd.dropProps(p.node.path)}
+          data-path={p.node.path}
           className={cn(
             "filelist-folder",
             selection.has(p.node.path) && "is-selected",
             dnd.dropTarget === p.node.path && "is-drop",
           )}
           onClick={(e) => clickSelect(e, p.node, ordered)}
+          onContextMenu={(e) => openMenu(e, p.node)}
         >
           <FileGlyph kind="dir" ext={null} size={15} className="filelist-folder__icon" />
           <span className="filelist-folder__name">{p.node.name}</span>
@@ -135,15 +152,13 @@ export function FileList() {
           type="button"
           key={p.node.path}
           {...dnd.dragProps(p.node)}
+          data-path={p.node.path}
           className={cn("filelist-card", selection.has(p.node.path) && "is-selected")}
           onClick={(e) => {
             if (clickSelect(e, p.node, ordered)) void openFile(p.node, { preview: true });
           }}
           onDoubleClick={() => void openFile(p.node, { preview: false })}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            if (!useFiles.getState().selection.has(p.node.path)) useFiles.getState().select(p.node);
-          }}
+          onContextMenu={(e) => openMenu(e, p.node)}
         >
           <div className="filelist-card__title">{p.title || p.node.name}</div>
           {p.snippet && <div className="filelist-card__snippet">{p.snippet}</div>}
@@ -153,6 +168,7 @@ export function FileList() {
           </div>
         </button>
       ))}
+      {contextMenu}
     </div>
   );
 }

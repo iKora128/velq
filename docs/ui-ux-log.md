@@ -725,12 +725,27 @@ composes the existing undoable `move_path` / `create` / `rename` / delete-to-Tra
   (right-clicking one of several keeps the set). Fully bilingual — all new strings went through the
   `en`/`ja` catalogs.
 
-- **Marquee (rubber-band) select** in the icon grid (`useMarquee`): press on empty space and drag a
-  rectangle — the tiles it touches select **live**, Shift/Cmd **adds** to the current set, and a bare
-  click on empty space **clears**. Tiles carry a `data-path`; the sweep hit-tests their client rects
-  against the rectangle (throttled so it only re-selects when the hit set changes) and a new
-  `setSelection` store action replaces the set wholesale. A small move threshold keeps plain clicks
-  intact, and it never fires on a tile (so the existing item-drag is untouched).
+- **Marquee (rubber-band) select** in the icon grid, **list and columns** (`useMarquee`): press on empty
+  space and drag a rectangle — the rows/tiles it touches select **live**, Shift/Cmd **adds**, a bare
+  click on empty space **clears**. Rows carry a `data-path`; the sweep hit-tests their client rects
+  (throttled so it only re-selects when the hit set changes) and a `setSelection` action replaces the
+  set wholesale. A small move threshold keeps plain clicks intact, and it never fires on a row (the
+  item-drag is untouched).
 
-**Gates:** tsc · `vite build` · Biome clean (124 files) · Vitest **48/48** (5 selection tests) — all
-green. **No Rust touched.**
+### Follow-up (same milestone): right-click menu everywhere + a plain Delete key
+
+The bulk actions existed but the only way to reach them outside the sidebar tree was the selection bar.
+Two gaps closed:
+
+- **A context menu in every view.** Extracted the tree's menu into a shared `fileMenuEntries(node, t,
+  emptyDir)` + a `useFileContextMenu()` hook (which renders the existing `ContextMenu`, preserving a
+  multi-selection when you right-click one of several). Wired into the **grid, list, columns** (on items
+  *and* the empty area → New Folder / New Document there) and refactored the **tree** onto the same hook
+  — one menu definition, four views. Single-item **Rename** opens the rename dialog with a plain **Name**
+  field (the dialog now has a single-target mode); the tree keeps its fast **F2 / double-click** inline
+  rename.
+- **Delete key.** `Delete` / `Backspace` (no modifier needed) now trashes the selection — but only in the
+  file browser and never while typing, and deletes go to the OS Trash and undo, so it's safe.
+
+**Gates:** tsc · `vite build` · Biome clean (126 files) · Vitest **48/48** — all green. **No Rust
+touched.**
