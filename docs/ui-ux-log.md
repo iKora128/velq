@@ -725,8 +725,12 @@ composes the existing undoable `move_path` / `create` / `rename` / delete-to-Tra
   (right-clicking one of several keeps the set). Fully bilingual — all new strings went through the
   `en`/`ja` catalogs.
 
-Scope held to **single-item semantics extended to N**; a marquee (rubber-band) rectangle select is the
-one deliberate follow-up.
+- **Marquee (rubber-band) select** in the icon grid (`useMarquee`): press on empty space and drag a
+  rectangle — the tiles it touches select **live**, Shift/Cmd **adds** to the current set, and a bare
+  click on empty space **clears**. Tiles carry a `data-path`; the sweep hit-tests their client rects
+  against the rectangle (throttled so it only re-selects when the hit set changes) and a new
+  `setSelection` store action replaces the set wholesale. A small move threshold keeps plain clicks
+  intact, and it never fires on a tile (so the existing item-drag is untouched).
 
-**Gates:** tsc · `vite build` · Biome clean (122 files) · Vitest **48/48** (5 new selection tests) — all
+**Gates:** tsc · `vite build` · Biome clean (124 files) · Vitest **48/48** (5 selection tests) — all
 green. **No Rust touched.**
