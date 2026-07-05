@@ -24,7 +24,9 @@ export function EditorPane() {
   const rev = useDoc((s) => s.rev);
   const conflict = useDoc((s) => s.conflict);
   const hasTabs = useDoc((s) => s.tabs.length > 0);
-  const mode = useSettings((s) => s.editorMode);
+  const globalMode = useSettings((s) => s.editorMode);
+  const tabMode = useDoc((s) => s.tabs.find((t) => t.doc.id === s.activeId)?.mode);
+  const mode = tabMode ?? globalMode;
   const diffVersion = useHistory((s) => s.selected);
   const baseContent = useHistory((s) => s.baseContent);
 

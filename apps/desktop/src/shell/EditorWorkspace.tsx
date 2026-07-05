@@ -1,10 +1,12 @@
 import { type CSSProperties, useState } from "react";
 import { HistoryPanel } from "@/history/HistoryPanel";
+import { useDoc } from "@/store/doc";
 import { useHistory } from "@/store/history";
 import { useUI } from "@/store/ui";
 import { EditorPane } from "./EditorPane";
 import { FileListPane } from "./FileListPane";
 import { PaneDivider } from "./PaneDivider";
+import { SecondPane } from "./SecondPane";
 import { Sidebar } from "./Sidebar";
 
 /** The writing workspace: tree + previewed file list + editor (+ history). */
@@ -13,8 +15,14 @@ export function EditorWorkspace() {
   const [listW, setListW] = useState(280);
   const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
   const historyOpen = useHistory((s) => s.open);
+  const hasSecond = useDoc((s) => !!s.secondaryId);
+  const [secondW, setSecondW] = useState(460);
 
-  const vars = { "--sidebar-w": `${sidebarW}px`, "--list-w": `${listW}px` } as CSSProperties;
+  const vars = {
+    "--sidebar-w": `${sidebarW}px`,
+    "--list-w": `${listW}px`,
+    "--second-w": `${secondW}px`,
+  } as CSSProperties;
 
   return (
     <div className="app-body" style={vars}>
@@ -34,6 +42,12 @@ export function EditorWorkspace() {
         </>
       )}
       <EditorPane />
+      {hasSecond && !historyOpen && (
+        <>
+          <PaneDivider value={secondW} min={320} max={900} onChange={setSecondW} invert />
+          <SecondPane />
+        </>
+      )}
       {historyOpen && <HistoryPanel />}
     </div>
   );

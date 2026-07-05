@@ -123,6 +123,12 @@ export function SettingsView() {
             checked={s.vimMode}
             onChange={(vimMode) => update({ vimMode })}
           />
+          <Toggle
+            label={t("settings.spellcheck")}
+            hint={t("settings.spellcheck.hint")}
+            checked={s.spellcheck}
+            onChange={(spellcheck) => update({ spellcheck })}
+          />
         </Section>
 
         <Section title={t("settings.files")} desc={t("settings.files.desc")}>

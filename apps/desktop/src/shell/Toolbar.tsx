@@ -30,7 +30,10 @@ const TEMPLATES: { id: PreviewTemplate; label: MsgKey }[] = [
 
 export function Toolbar() {
   const t = useT();
-  const editorMode = useSettings((s) => s.editorMode);
+  const globalMode = useSettings((s) => s.editorMode);
+  const activeId = useDoc((s) => s.activeId);
+  const tabMode = useDoc((s) => s.tabs.find((t) => t.doc.id === s.activeId)?.mode);
+  const editorMode = tabMode ?? globalMode;
   const previewTemplate = useSettings((s) => s.previewTemplate);
   const update = useSettings((s) => s.update);
   const historyOpen = useHistory((s) => s.open);
@@ -100,7 +103,12 @@ export function Toolbar() {
                 type="button"
                 className="seg__item"
                 aria-pressed={editorMode === m.id}
-                onClick={() => update({ editorMode: m.id })}
+                onClick={() => {
+                  // A tab with its own view (an OS-opened HTML page) keeps its
+                  // override local; other tabs move the global default.
+                  if (tabMode && activeId) useDoc.getState().setTabMode(activeId, m.id);
+                  else update({ editorMode: m.id });
+                }}
               >
                 <Icon size={13} />
                 {t(label)}

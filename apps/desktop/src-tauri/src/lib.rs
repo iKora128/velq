@@ -259,6 +259,7 @@ pub fn run() {
             commands::vault::preview_dir,
             commands::vault::read_file,
             commands::vault::write_file,
+            commands::vault::write_file_binary,
             commands::vault::create_file,
             commands::vault::create_folder,
             commands::vault::rename_path,

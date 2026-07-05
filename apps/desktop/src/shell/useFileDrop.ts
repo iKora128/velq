@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { editorBus } from "@/editor/editorBus";
 import { isHtmlPath, packageAndStage } from "@/export/htmlPackage";
 import { t } from "@/i18n";
 import { isTauri } from "@/ipc/tauri";
 import { importFile } from "@/ipc/vault";
-import { describeError } from "@/store/doc";
+import { describeError, useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { useSettings } from "@/store/settings";
 import { useToast } from "@/store/toast";
@@ -13,10 +14,36 @@ function baseName(p: string): string {
   return p.split(/[/\\]/).filter(Boolean).pop() ?? p;
 }
 
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|svg|avif)$/i;
+const dirOf = (p: string) => p.slice(0, Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\")));
+
+/** Images dropped ON the editor while a Markdown doc is open: copy into
+ * `attachments/` beside the doc and insert links at the caret (W1). */
+async function importImagesIntoDoc(paths: string[]): Promise<boolean> {
+  const doc = useDoc.getState().doc;
+  if (!doc?.path || doc.language !== "markdown") return false;
+  if (!paths.every((p) => IMAGE_EXT.test(p))) return false;
+  const destDir = `${dirOf(doc.path)}/attachments`;
+  let ok = 0;
+  for (const p of paths) {
+    try {
+      const node = await importFile(p, destDir);
+      editorBus.insertAtCursor(`![](attachments/${node.name})`);
+      ok += 1;
+    } catch (e) {
+      console.error("image import failed", p, e);
+      useToast.getState().push(t("toast.cantAdd", { name: baseName(p), error: describeError(e) }));
+    }
+  }
+  return ok > 0;
+}
+
 /** Dropped HTML (with auto-package on) is packaged from its ORIGINAL folder — its
  * relative css/img/js resolve there; a bare copy into the vault would break them.
  * Everything else is copied into the open vault's root. */
-async function importDropped(paths: string[]) {
+async function importDropped(paths: string[], overEditor: boolean) {
+  // Images aimed at the editor go into the document, not the vault root.
+  if (overEditor && (await importImagesIntoDoc(paths))) return;
   const autoPackage = useSettings.getState().autoPackageHtml;
   const toImport: string[] = [];
   for (const p of paths) {
@@ -70,7 +97,10 @@ export function useFileDrop(): boolean {
         else if (t === "leave") setDragging(false);
         else if (t === "drop") {
           setDragging(false);
-          void importDropped(event.payload.paths);
+          const pos = event.payload.position;
+          const scale = window.devicePixelRatio || 1;
+          const el = document.elementFromPoint(pos.x / scale, pos.y / scale);
+          void importDropped(event.payload.paths, !!el?.closest(".cm-editor"));
         }
       });
       if (cancelled) un();

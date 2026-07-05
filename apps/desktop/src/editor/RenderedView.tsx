@@ -6,11 +6,18 @@ import { useDoc } from "@/store/doc";
  * offsets; structural ones (Enter, ⌘B, deletions, paste) re-serialize the body.
  * Source and Split stay one toggle away in the toolbar. (The one-shot "this is
  * editable" hint lives in EditorPane, so it reaches users in ANY mode.) */
-export function RenderedView({ content }: { content: string }) {
+export function RenderedView({
+  content,
+  onEdit,
+}: {
+  content: string;
+  /** Defaults to editing the ACTIVE tab; the split pane passes its own sink. */
+  onEdit?: (nextSource: string) => void;
+}) {
   const reportChange = useDoc((s) => s.reportChange);
   return (
     <div className="rendered-view">
-      <PreviewPane source={content} language="html" editable onEdit={reportChange} />
+      <PreviewPane source={content} language="html" editable onEdit={onEdit ?? reportChange} />
     </div>
   );
 }

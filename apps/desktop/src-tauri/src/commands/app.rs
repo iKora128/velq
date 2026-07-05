@@ -15,6 +15,17 @@ pub struct RecentDoc {
     pub opened_at: i64,
 }
 
+/// One open tab, persisted so a restart lands where you left off (W5).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SessionTab {
+    pub path: String,
+    pub preview: bool,
+    pub pinned: bool,
+    /// Per-tab view override ("live"/"split"/"source"), if the tab has one.
+    pub mode: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
@@ -25,6 +36,7 @@ pub struct Settings {
     pub vim_mode: bool,
     pub show_line_numbers: bool,
     pub prose_font: bool,
+    pub spellcheck: bool,
     /// Markdown preview template — one of the ids in `previewStyles.ts`
     /// ("paper" | "docs" | "note" | "magazine" | "tech" | "sky" | "glass").
     pub preview_template: String,
@@ -38,6 +50,10 @@ pub struct Settings {
     pub last_export_dir: Option<String>,
     pub auto_package_html: bool,
     pub recent_docs: Vec<RecentDoc>,
+    /// Open tabs from the last session (W5); restored after the vault loads.
+    pub session_tabs: Vec<SessionTab>,
+    pub session_active: Option<String>,
+    pub session_secondary: Option<String>,
 }
 
 impl Default for Settings {
@@ -50,6 +66,7 @@ impl Default for Settings {
             vim_mode: false,
             show_line_numbers: false,
             prose_font: true,
+            spellcheck: false,
             preview_template: "paper".into(),
             locale: "system".into(),
             velq_open_in: "tab".into(),
@@ -58,6 +75,9 @@ impl Default for Settings {
             last_export_dir: None,
             auto_package_html: true,
             recent_docs: Vec::new(),
+            session_tabs: Vec::new(),
+            session_active: None,
+            session_secondary: None,
         }
     }
 }

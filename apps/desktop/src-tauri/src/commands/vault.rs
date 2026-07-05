@@ -230,6 +230,21 @@ pub fn write_file(path: String, content: String) -> Result<i64, String> {
     Ok(mtime_millis(&meta))
 }
 
+/// Write raw bytes (base64 from the frontend — pasted/dropped images, W1),
+/// creating parent folders as needed. Returns the written byte count.
+#[tauri::command]
+pub fn write_file_binary(path: String, data_base64: String) -> Result<usize, String> {
+    use base64::Engine as _;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(data_base64.as_bytes())
+        .map_err(|e| e.to_string())?;
+    if let Some(dir) = std::path::Path::new(&path).parent() {
+        fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    fs::write(&path, &bytes).map_err(|e| e.to_string())?;
+    Ok(bytes.len())
+}
+
 // ---- CRUD (plan §9.3) ----
 
 fn split_name(name: &str) -> (String, String) {

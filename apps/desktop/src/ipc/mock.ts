@@ -304,6 +304,7 @@ registerMock("delete_path", ({ path }: { path: string }) => {
 registerMock("reveal_in_os", () => null);
 registerMock("watch_vault", () => null);
 registerMock("unwatch_vault", () => null);
+registerMock("write_file_binary", () => 0);
 registerMock("open_velq_viewer", () => null);
 registerMock(
   "stage_velq",

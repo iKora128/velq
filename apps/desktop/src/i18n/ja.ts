@@ -79,9 +79,11 @@ export const ja: Dict = {
   "settings.files.columns": "カラム",
   "settings.packaging": "パッケージ",
   "settings.packaging.desc": "HTML を持ち運べる .velq にする方法。",
-  "settings.autoPackage": "「このアプリで開く」の HTML を自動パッケージ",
+  "settings.autoPackage": "ドロップした HTML を自動で .velq に梱包",
   "settings.autoPackage.hint":
-    "Velq の外（OS の「このアプリで開く」やウィンドウへのドロップ）から HTML を受け取ったとき、依存関係をたどって .velq を Documents/Velq に保存します。Velq の中で開いたファイルは常に編集できます。",
+    "ウィンドウに HTML をドロップすると、依存関係をたどって Documents/Velq に .velq を作ります。ファイルを開く操作は（Finder からでも）常に閲覧・編集です。",
+  "settings.spellcheck": "スペルチェック",
+  "settings.spellcheck.hint": "入力中に誤字へ下線を表示します。",
   "settings.velqOpenIn": ".velq の開き方",
   "settings.velqOpenIn.hint":
     "タブなら作業場所を離れません。ウィンドウなら文書に専用の場所を与えます。",
@@ -182,7 +184,18 @@ export const ja: Dict = {
 
   // ---- 初回ヒント ----
   "hint.renderedEdit":
-    "HTML は「見たまま」でページのまま編集できます — 右上の切替(ソース / 分割 / 見たまま)で選べます。",
+    "HTML は「見たまま」でページのまま編集できます — 右上で切替。⌥クリックで要素を選んで削除・複製もできます。",
+  "toast.imageAdded": "画像を {rel} に保存しました",
+  "toast.imageNeedsSavedDoc":
+    "先にドキュメントを保存してください — 画像は隣の attachments フォルダに入ります。",
+  "tab.pin": "タブをピン留め",
+  "tab.unpin": "ピン留めを解除",
+  "tab.splitRight": "右に並べて開く",
+  "tab.closeSplit": "分割を閉じる",
+  "split.closeAria": "分割ペインを閉じる",
+  "split.previewBadge": "プレビュー",
+  "elsel.delete": "削除",
+  "elsel.duplicate": "複製",
 
   // ---- パンくず ----
   "breadcrumb.unsaved": "未保存の変更",

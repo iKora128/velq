@@ -9,6 +9,7 @@ import { CodeMirror } from "./CodeMirror";
 export function SplitView({ doc, content }: { doc: Doc; content: string }) {
   const reportChange = useDoc((s) => s.reportChange);
   const vimMode = useSettings((s) => s.vimMode);
+  const spellcheck = useSettings((s) => s.spellcheck);
   const proseFont = useSettings((s) => s.proseFont);
   const [previewSource, setPreviewSource] = useState(content);
   const viewRef = useRef<EditorView | null>(null);
@@ -43,6 +44,7 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
           language={doc.language}
           vimMode={vimMode}
           live={false}
+          spellcheck={spellcheck}
           font={font}
           onChange={onChange}
           onReady={(v) => {

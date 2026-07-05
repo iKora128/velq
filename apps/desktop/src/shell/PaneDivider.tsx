@@ -7,13 +7,15 @@ interface Props {
   max: number;
   onChange: (value: number) => void;
   label?: string;
+  /** For a pane on the RIGHT of the divider: dragging left grows it. */
+  invert?: boolean;
 }
 
 const STEP = 16;
 
 /** A 1px draggable column separator with a generous invisible hit area.
  * Keyboard-operable: focus it and use arrow keys to resize. */
-export function PaneDivider({ value, min, max, onChange, label }: Props) {
+export function PaneDivider({ value, min, max, onChange, label, invert = false }: Props) {
   const t = useT();
   const resolvedLabel = label ?? t("panedivider.label");
   const [dragging, setDragging] = useState(false);
@@ -28,15 +30,17 @@ export function PaneDivider({ value, min, max, onChange, label }: Props) {
   };
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!dragging) return;
-    onChange(clamp(start.current.v + (e.clientX - start.current.x)));
+    const delta = e.clientX - start.current.x;
+    onChange(clamp(start.current.v + (invert ? -delta : delta)));
   };
   const onUp = (e: PointerEvent<HTMLDivElement>) => {
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     setDragging(false);
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "ArrowLeft") onChange(clamp(value - STEP));
-    else if (e.key === "ArrowRight") onChange(clamp(value + STEP));
+    const dir = invert ? -1 : 1;
+    if (e.key === "ArrowLeft") onChange(clamp(value - STEP * dir));
+    else if (e.key === "ArrowRight") onChange(clamp(value + STEP * dir));
     else return;
     e.preventDefault();
   };

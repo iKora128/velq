@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { saveActive } from "@/command/actions";
+import { saveVersion } from "@/ipc/vcs";
 import { useDoc } from "@/store/doc";
+import { useVault } from "@/store/vault";
 
 /** Save ~2s after the writer stops typing. */
 const IDLE_MS = 2000;
@@ -27,8 +29,22 @@ export function useAutosave() {
     let saving = false;
 
     const flush = () => {
-      const { dirty, doc } = useDoc.getState();
-      if (saving || !dirty || !doc?.path) return;
+      if (saving) return;
+      const { dirty, doc, tabs, activeId } = useDoc.getState();
+      const root = useVault.getState().root?.path;
+      // Non-active dirty tabs (edited in the split pane, W3) save too.
+      const others = tabs.filter((t) => t.dirty && t.doc.path && t.doc.id !== activeId);
+      if (root) {
+        for (const t of others) {
+          const id = t.doc.id;
+          const content = t.content;
+          void saveVersion(root, t.doc.path as string, content).then(() => {
+            const cur = useDoc.getState().tabs.find((x) => x.doc.id === id);
+            if (cur && cur.content === content) useDoc.getState().markTabSaved(id);
+          });
+        }
+      }
+      if (!dirty || !doc?.path) return;
       saving = true;
       lastSaveAt = Date.now();
       void saveActive().finally(() => {

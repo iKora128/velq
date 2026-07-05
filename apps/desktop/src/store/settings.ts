@@ -23,6 +23,7 @@ function pickSettings(s: SettingsState): Settings {
     vimMode: s.vimMode,
     showLineNumbers: s.showLineNumbers,
     proseFont: s.proseFont,
+    spellcheck: s.spellcheck,
     previewTemplate: s.previewTemplate,
     velqOpenIn: s.velqOpenIn,
     hintedRenderedEdit: s.hintedRenderedEdit,
@@ -31,6 +32,9 @@ function pickSettings(s: SettingsState): Settings {
     lastExportDir: s.lastExportDir,
     autoPackageHtml: s.autoPackageHtml,
     recentDocs: s.recentDocs,
+    sessionTabs: s.sessionTabs,
+    sessionActive: s.sessionActive,
+    sessionSecondary: s.sessionSecondary,
   };
 }
 

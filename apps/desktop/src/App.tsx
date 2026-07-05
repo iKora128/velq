@@ -9,6 +9,7 @@ import { registerBuiltins } from "@/plugins/builtin";
 import { AppShell } from "@/shell/AppShell";
 import { describeError, useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
+import { restoreSession, startSessionPersist } from "@/store/session";
 import { useSettings } from "@/store/settings";
 import { useToast } from "@/store/toast";
 import { type AppView, useUI } from "@/store/ui";
@@ -56,12 +57,16 @@ async function openAssociatedFiles(paths: string[]) {
 /** Open the user's home: their last vault, or the default `Documents/Velq` (created
  * and seeded on first run) — so launching never dead-ends on a folder picker. */
 async function openHome() {
-  // A normal launch (no file was double-clicked) always lands on the file browser.
+  // A normal launch lands on the file browser — unless yesterday's tabs can be
+  // brought back (W5), in which case we resume right where the writer stopped.
   useUI.getState().setView("explorer");
   const last = useSettings.getState().lastVault;
   if (last) {
     await useVault.getState().openPath(last);
-    if (useVault.getState().root) return; // opened cleanly; otherwise it was moved/deleted
+    if (useVault.getState().root) {
+      await restoreSession();
+      return; // opened cleanly; otherwise it was moved/deleted
+    }
   }
   try {
     const v = await ensureDefaultVault();
@@ -111,6 +116,9 @@ export function App() {
       await openHome();
     })();
   }, [load]);
+
+  // Persist the open-tab session (W5) for the next launch.
+  useEffect(() => startSessionPersist(), []);
 
   // A file opened while Velq is already running (macOS emits this at runtime).
   useEffect(() => {

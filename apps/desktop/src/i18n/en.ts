@@ -82,9 +82,11 @@ export const en = {
   "settings.files.columns": "Columns",
   "settings.packaging": "Packaging",
   "settings.packaging.desc": "How HTML becomes a portable .velq.",
-  "settings.autoPackage": 'Auto-package HTML from "Open with"',
+  "settings.autoPackage": "Auto-package dropped HTML",
   "settings.autoPackage.hint":
-    'Opening an HTML file from outside Velq (the OS "Open with" or a drop onto the window) traces its dependencies into a .velq in Documents/Velq. Files you open inside Velq are always editable.',
+    "Dropping an HTML file onto the window traces its dependencies into a .velq in Documents/Velq. Opening a file — from Finder or inside Velq — always views and edits it.",
+  "settings.spellcheck": "Spellcheck",
+  "settings.spellcheck.hint": "Native spelling underlines while you type.",
   "settings.velqOpenIn": "Open .velq files",
   "settings.velqOpenIn.hint":
     "A tab keeps you in your workspace; a window gives the document its own space.",
@@ -184,7 +186,18 @@ export const en = {
 
   // ---- One-shot hints ----
   "hint.renderedEdit":
-    "HTML edits as the page itself in Rendered view — pick Source / Split / Rendered at the top right.",
+    "HTML edits as the page itself in Rendered view — switch at the top right. ⌥-click grabs an element to delete or duplicate it.",
+  "toast.imageAdded": "Image saved to {rel}",
+  "toast.imageNeedsSavedDoc":
+    "Save the document first — images live in an attachments folder beside it.",
+  "tab.pin": "Pin tab",
+  "tab.unpin": "Unpin tab",
+  "tab.splitRight": "Open to the side",
+  "tab.closeSplit": "Close split",
+  "split.closeAria": "Close the side pane",
+  "split.previewBadge": "Preview",
+  "elsel.delete": "Delete",
+  "elsel.duplicate": "Duplicate",
 
   // ---- Breadcrumb ----
   "breadcrumb.unsaved": "Unsaved changes",

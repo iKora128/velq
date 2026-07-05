@@ -6,6 +6,7 @@ import { renderMarkdown } from "@/ipc/render";
 import { useSettings } from "@/store/settings";
 import { isMac } from "@/util/platform";
 import { useResolvedDark } from "@/util/theme";
+import { attachElementSelect } from "./elementSelect";
 import { extractBodyTextRuns, rebuildHtml, replaceBodyHtml } from "./htmlTextMap";
 import { buildPreviewDoc, htmlDocument } from "./previewStyles";
 import "./preview.css";
@@ -64,7 +65,7 @@ function attachEditable(
   const body = idoc?.body;
   if (!idoc || !body) return () => {};
   body.contentEditable = "true";
-  body.spellcheck = false;
+  body.spellcheck = useSettings.getState().spellcheck;
 
   // IME (Japanese and friends): don't write half-composed text back to the
   // source — hold until compositionend commits it.
@@ -86,7 +87,10 @@ function attachEditable(
         next = null;
       }
     } else {
-      next = replaceBodyHtml(liveSource.current, body.innerHTML);
+      const inner = body.innerHTML
+        .replaceAll(' data-velq-hover=""', "")
+        .replaceAll(' data-velq-sel=""', "");
+      next = replaceBodyHtml(liveSource.current, inner);
     }
     if (next == null || next === liveSource.current) return;
     liveSource.current = next;
@@ -128,7 +132,9 @@ function attachEditable(
   body.addEventListener("compositionstart", onCompositionStart);
   body.addEventListener("compositionend", onCompositionEnd);
   idoc.addEventListener("keydown", onKeyDown, true);
+  const detachElementSelect = attachElementSelect(iframe, writeBack);
   return () => {
+    detachElementSelect();
     body.removeEventListener("input", writeBack);
     body.removeEventListener("compositionstart", onCompositionStart);
     body.removeEventListener("compositionend", onCompositionEnd);

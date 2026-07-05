@@ -968,3 +968,37 @@ to the macOS Big Sur grid (824 px artwork centered on a 1024 canvas, so it sits 
 size as neighboring Dock icons) → `cargo tauri icon` regenerated the whole `src-tauri/icons/` set
 (icns / ico / pngs). Swapping to the runner-up **a-duo** later = rerun the same two steps with its
 PNG.
+
+## M33 — The editor backlog, cleared: images, links, split, spellcheck, sessions, element grabbing — and Velq as an HTML viewer
+
+The user's directive on the editor column of the backlog: 全部やりきって. Six proposals shipped in
+one batch, plus the repositioning that ties them together: **opening an HTML file — from Finder or
+anywhere — is now a VIEWING act** (the rendered page, via a per-tab view override), and packaging
+happens only when you ask (drop / palette / export). `fileAssociations` already declared html/htm,
+so Velq can be chosen as the system-default HTML app; the OS-open path no longer hijacks a
+double-click into a .velq.
+
+- **W1 image paste.** ⌘V an image into Markdown → bytes land in `attachments/` beside the doc
+  (created on demand, binary write over base64), `![](attachments/…)` inserted at the caret. Image
+  FILES dropped over the editor take the same path (window drop hit-tests the drop position);
+  in-webview image drags too. Plain files on disk, as always.
+- **W2 internal links.** Type `[[` → filename completion (backed by the M9 search command) →
+  inserts a **plain relative Markdown link** `[Title](sub/dir.md)` — nothing wiki-flavored on disk.
+- **W3 split + pins.** Right-click a tab → **右に並べて開く**: a second full editor pane (its own
+  width, divider inverted correctly) bound to that tab via `reportChangeFor`; dirty state and
+  autosave now cover **every** dirty tab, not just the active one. Pin from the same menu — pinned
+  tabs can't be swallowed by the preview slot.
+- **W4 spellcheck.** One toggle (設定 → エディタ), applied through a CM compartment AND the
+  rendered-page contenteditable.
+- **W5 session restore.** Tabs (path, preview, pin, per-tab mode), the active tab and the split
+  are snapshotted into settings (debounced) and restored on a plain launch; a launch-by-double-click
+  still wins. Missing files skip silently. Scroll positions: not yet, noted.
+- **W7 element grabbing.** In rendered editing, **⌥-hover outlines, ⌥-click selects** — a floating
+  chip (tag name · 削除 · 複製) acts on the live DOM and the body serialization writes it back.
+  No source mapping was needed: the DOM is already authoritative (M27). Marker attributes are
+  stripped from every serialization; the overlay lives outside `<body>`.
+- **E3 (CLI): deliberately parked** — user call ("CLI 入らないかも"); recorded in proposals.
+
+**Gates:** tsc · Vitest · cargo test workspace · clippy · Biome — run at the end of the batch (see
+commit). Playwright spot-checks on the mock: split pane, [[ completion, spellcheck attribute,
+session snapshot shape.

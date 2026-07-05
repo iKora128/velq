@@ -18,6 +18,12 @@ export const editorBus = {
   clear(v: EditorView) {
     if (view === v) view = null;
   },
+  /** Insert text at the caret of the active editor (image drops, W1). */
+  insertAtCursor(text: string) {
+    if (!view) return;
+    view.dispatch(view.state.replaceSelection(text));
+    view.focus();
+  },
   goToLine(lineNumber: number) {
     if (!view) return;
     const total = view.state.doc.lines;

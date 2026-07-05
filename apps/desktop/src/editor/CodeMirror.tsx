@@ -5,12 +5,15 @@ import { pluginsCompartment } from "@/plugins/runtime";
 import { editorBus } from "./editorBus";
 import {
   coreExtensions,
+  extraCompartment,
   keymapModeCompartment,
   type Lang,
   langCompartment,
   langExtension,
   liveCompartment,
   liveExtension,
+  spellcheckCompartment,
+  spellcheckExtension,
   vimExtension,
 } from "./extensions";
 
@@ -20,9 +23,12 @@ interface Props {
   language: Lang;
   vimMode: boolean;
   live: boolean;
+  spellcheck?: boolean;
   font: "prose" | "mono";
   /** Enabled plugin extensions (live mode only) — reconfigured on toggle. */
   pluginExt?: Extension;
+  /** Doc-scoped extras (image paste, [[ link completion) — reconfigured on change. */
+  extraExt?: Extension;
   onChange?: (text: string) => void;
   onReady?: (view: EditorView) => void;
 }
@@ -39,8 +45,10 @@ export function CodeMirror({
   language,
   vimMode,
   live,
+  spellcheck = false,
   font,
   pluginExt,
+  extraExt,
   onChange,
   onReady,
 }: Props) {
@@ -62,9 +70,11 @@ export function CodeMirror({
       doc: initialDoc,
       extensions: [
         keymapModeCompartment.of(vimExtension(vimMode)),
+        spellcheckCompartment.of(spellcheckExtension(spellcheck)),
         langCompartment.of(langExtension(language)),
         liveCompartment.of(liveExtension(live, language)),
         pluginsCompartment.of(pluginExt ?? []),
+        extraCompartment.of(extraExt ?? []),
         ...coreExtensions(),
         listener,
       ],
@@ -100,12 +110,24 @@ export function CodeMirror({
     });
   }, [vimMode]);
 
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: spellcheckCompartment.reconfigure(spellcheckExtension(spellcheck)),
+    });
+  }, [spellcheck]);
+
   // Plugins toggled on/off → reconfigure, no view recreation.
   useEffect(() => {
     viewRef.current?.dispatch({
       effects: pluginsCompartment.reconfigure(pluginExt ?? []),
     });
   }, [pluginExt]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: extraCompartment.reconfigure(extraExt ?? []),
+    });
+  }, [extraExt]);
 
   const style = {
     height: "100%",

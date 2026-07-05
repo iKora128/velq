@@ -23,6 +23,8 @@ export const langCompartment = new Compartment();
 export const keymapModeCompartment = new Compartment(); // vim on/off
 export const liveCompartment = new Compartment(); // live-preview decorations on/off
 export const themeCompartment = new Compartment(); // reserved for editor themes (M18)
+export const spellcheckCompartment = new Compartment(); // native spellcheck on/off (W4)
+export const extraCompartment = new Compartment(); // doc-scoped extras (image paste W1, [[ links W2)
 
 // "velq" tabs never reach CodeMirror (EditorPane shows the package viewer),
 // but they live in the same Doc type.
@@ -44,6 +46,15 @@ export function vimExtension(enabled: boolean): Extension {
 }
 
 /** Everything that doesn't change at runtime. */
+/** Native browser spellcheck on the editing surface (W4). */
+export function spellcheckExtension(on: boolean): Extension {
+  return EditorView.contentAttributes.of({
+    spellcheck: on ? "true" : "false",
+    autocorrect: on ? "on" : "off",
+    autocapitalize: "off",
+  });
+}
+
 export function coreExtensions(): Extension[] {
   return [
     history(),

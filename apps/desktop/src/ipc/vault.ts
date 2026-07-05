@@ -20,6 +20,9 @@ export const previewDir = (path: string) => invoke<FilePreview[]>("preview_dir",
 export const readFile = (path: string) => invoke<FileContent>("read_file", { path });
 export const writeFileContent = (path: string, content: string) =>
   invoke<number>("write_file", { path, content });
+/** Raw bytes (images from paste/drop, W1) — parent folders are created. */
+export const writeFileBinary = (path: string, dataBase64: string) =>
+  invoke<number>("write_file_binary", { path, dataBase64 });
 export const createFile = (parentPath: string, name: string) =>
   invoke<FileNode>("create_file", { parentPath, name });
 export const createFolder = (parentPath: string, name: string) =>

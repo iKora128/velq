@@ -52,6 +52,14 @@ export type EditorMode = "source" | "split" | "live";
 export type PreviewTemplate = "paper" | "docs" | "note" | "magazine" | "tech" | "sky" | "glass";
 /** Where a .velq opens: a tab in the main window, or its own window. */
 export type VelqOpenIn = "tab" | "window";
+
+/** One open tab persisted for session restore (W5). */
+export interface SessionTab {
+  path: string;
+  preview: boolean;
+  pinned: boolean;
+  mode?: EditorMode | null;
+}
 export type FileView = "grid" | "list" | "columns" | "tree";
 /** UI language preference; "system" follows the OS language. Resolved to a concrete
  * locale by `resolveLocale` in `@/i18n`. */
@@ -65,6 +73,7 @@ export interface Settings {
   vimMode: boolean;
   showLineNumbers: boolean;
   proseFont: boolean;
+  spellcheck: boolean;
   /** Template for rendered Markdown: preview, Quick Look, HTML/PDF export. */
   previewTemplate: PreviewTemplate;
   velqOpenIn: VelqOpenIn;
@@ -75,11 +84,15 @@ export interface Settings {
   lastVault: string | null;
   /** Folder the last export was saved to — the Save dialog starts here next time. */
   lastExportDir: string | null;
-  /** HTML opened via the OS "Open with" auto-packages into Documents/Velq instead of
-   * editing. Files opened inside Velq's own browser are always editable. */
+  /** HTML dropped onto the window auto-packages into Documents/Velq. Opening —
+   * from the OS or inside Velq — always views/edits; packaging never rides along. */
   autoPackageHtml: boolean;
   /** Most-recently-opened documents, newest first (for the Home "Recents"). */
   recentDocs: RecentDoc[];
+  /** Open tabs from the last session (W5), restored on a plain launch. */
+  sessionTabs: SessionTab[];
+  sessionActive: string | null;
+  sessionSecondary: string | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -90,6 +103,7 @@ export const DEFAULT_SETTINGS: Settings = {
   vimMode: false,
   showLineNumbers: false,
   proseFont: true,
+  spellcheck: false,
   previewTemplate: "paper",
   velqOpenIn: "tab",
   hintedRenderedEdit: false,
@@ -98,6 +112,9 @@ export const DEFAULT_SETTINGS: Settings = {
   lastExportDir: null,
   autoPackageHtml: false,
   recentDocs: [],
+  sessionTabs: [],
+  sessionActive: null,
+  sessionSecondary: null,
 };
 
 /** A point in a file's save history. No git vocabulary leaks here. */

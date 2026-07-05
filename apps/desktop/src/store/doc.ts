@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import type { Lang } from "@/editor/extensions";
-import { isHtmlPath, packageAndStage } from "@/export/htmlPackage";
 import { t } from "@/i18n";
-import type { FileNode } from "@/ipc/types";
+import type { EditorMode, FileNode } from "@/ipc/types";
 import { readFile } from "@/ipc/vault";
 import { saveVersion } from "@/ipc/vcs";
 import { openVelqViewer } from "@/ipc/velq";
@@ -31,6 +30,9 @@ interface Tab {
   wordCount: number;
   charCount: number;
   preview: boolean; // unpinned "preview" tab — replaced on the next single-click open
+  pinned: boolean; // W3: survives preview replacement; shown with a pin glyph
+  /** W3/viewer: per-tab view override; unset tabs follow the global setting. */
+  mode?: EditorMode;
   rev: number; // bumped to remount the editor after an external reload
   conflict: boolean; // file changed on disk while this tab had unsaved edits
 }
@@ -38,6 +40,8 @@ interface Tab {
 interface DocState {
   tabs: Tab[];
   activeId: string | null;
+  /** W3: a second tab shown side-by-side to the right (null = no split). */
+  secondaryId: string | null;
   // ---- mirror of the active tab (keeps the simple selector API) ----
   doc: Doc | null;
   content: string;
@@ -47,7 +51,11 @@ interface DocState {
   rev: number;
   conflict: boolean;
   // ---- actions ----
-  open: (doc: Doc, content: string, opts?: { preview?: boolean }) => void;
+  open: (
+    doc: Doc,
+    content: string,
+    opts?: { preview?: boolean; pinned?: boolean; mode?: EditorMode },
+  ) => void;
   openFile: (node: FileNode, opts?: { preview?: boolean }) => Promise<void>;
   /** Open an absolute path (e.g. a file association / "Open with"). */
   openByPath: (path: string) => Promise<void>;
@@ -57,9 +65,16 @@ interface DocState {
   openSamplePlugins: () => void;
   activate: (id: string) => void;
   close: (id: string) => void;
+  togglePin: (id: string) => void;
+  setTabMode: (id: string, mode: EditorMode | null) => void;
+  /** W3: show `id` beside the active tab (null closes the split). */
+  setSecondary: (id: string | null) => void;
   renameDoc: (oldId: string, newPath: string, newName: string) => void;
   reportChange: (text: string) => void;
+  /** Edit an arbitrary tab (the W3 secondary pane edits a non-active tab). */
+  reportChangeFor: (id: string, text: string) => void;
   markSaved: () => void;
+  markTabSaved: (id: string) => void;
   reloadTab: (path: string) => Promise<void>;
   flagConflict: (path: string) => void;
   keepMine: (path: string) => void;
@@ -80,14 +95,20 @@ function mirror(tabs: Tab[], activeId: string | null) {
     : { doc: null, content: "", dirty: false, wordCount: 0, charCount: 0, rev: 0, conflict: false };
 }
 
-function makeTab(doc: Doc, content: string, preview: boolean): Tab {
+function makeTab(
+  doc: Doc,
+  content: string,
+  opts: { preview: boolean; pinned?: boolean; mode?: EditorMode },
+): Tab {
   return {
     doc,
     content,
     dirty: false,
     wordCount: countWords(content),
     charCount: content.length,
-    preview,
+    preview: opts.preview && !opts.pinned,
+    pinned: opts.pinned ?? false,
+    mode: opts.mode,
     rev: 0,
     conflict: false,
   };
@@ -150,6 +171,7 @@ let scratchSeq = 0;
 export const useDoc = create<DocState>((set, get) => ({
   tabs: [],
   activeId: null,
+  secondaryId: null,
   doc: null,
   content: "",
   dirty: false,
@@ -172,7 +194,7 @@ export const useDoc = create<DocState>((set, get) => ({
             : s.tabs;
         return { tabs, activeId: doc.id, ...mirror(tabs, doc.id) };
       }
-      const tab = makeTab(doc, content, preview);
+      const tab = makeTab(doc, content, { preview, pinned: opts?.pinned, mode: opts?.mode });
       let tabs: Tab[];
       if (preview) {
         const idx = s.tabs.findIndex((t) => t.preview);
@@ -217,14 +239,18 @@ export const useDoc = create<DocState>((set, get) => ({
       await openVelq(path);
       return;
     }
-    if (isHtmlPath(name) && useSettings.getState().autoPackageHtml) {
-      await packageAndStage(path);
-      return;
-    }
     try {
       const fc = await readFile(path);
-      // Pinned (not preview): a file the user explicitly asked the OS to open.
-      get().open({ id: path, path, name, language: langFromName(name) }, fc.content);
+      const language = langFromName(name);
+      // Velq is a default viewer for HTML: a double-clicked page opens AS the
+      // page (per-tab "live" override), like a browser that can also edit.
+      // Packaging is an explicit gesture (drop / palette / export) — never a
+      // side effect of opening. Not preview: the user asked the OS for it.
+      get().open(
+        { id: path, path, name, language },
+        fc.content,
+        language === "html" ? { mode: "live" } : undefined,
+      );
     } catch (e) {
       console.error("openByPath failed", path, e);
       useToast.getState().push(t("toast.cantOpen", { name, error: describeError(e) }));
@@ -277,7 +303,8 @@ export const useDoc = create<DocState>((set, get) => ({
         const next = tabs[idx] ?? tabs[idx - 1] ?? null;
         activeId = next ? next.doc.id : null;
       }
-      return { tabs, activeId, ...mirror(tabs, activeId) };
+      const secondaryId = s.secondaryId === id ? null : s.secondaryId;
+      return { tabs, activeId, secondaryId, ...mirror(tabs, activeId) };
     });
     // Closing your last document takes you home to the file browser (not a blank editor).
     if (get().tabs.length === 0 && useUI.getState().view === "editor") {
@@ -303,14 +330,41 @@ export const useDoc = create<DocState>((set, get) => ({
           : t,
       );
       const activeId = s.activeId === oldId ? newPath : s.activeId;
-      return { tabs, activeId, ...mirror(tabs, activeId) };
+      const secondaryId = s.secondaryId === oldId ? newPath : s.secondaryId;
+      return { tabs, activeId, secondaryId, ...mirror(tabs, activeId) };
     }),
 
-  reportChange: (text) =>
+  togglePin: (id) =>
+    set((s) => {
+      const tabs = s.tabs.map((t) =>
+        t.doc.id === id ? { ...t, pinned: !t.pinned, preview: false } : t,
+      );
+      return { tabs, ...mirror(tabs, s.activeId) };
+    }),
+
+  setTabMode: (id, mode) =>
+    set((s) => {
+      const tabs = s.tabs.map((t) => (t.doc.id === id ? { ...t, mode: mode ?? undefined } : t));
+      return { tabs, ...mirror(tabs, s.activeId) };
+    }),
+
+  setSecondary: (id) =>
+    set((s) => {
+      if (id !== null && !s.tabs.some((t) => t.doc.id === id)) return {};
+      // Splitting a tab pins it — a throwaway preview shouldn't hold a pane.
+      const tabs = id
+        ? s.tabs.map((t) => (t.doc.id === id ? { ...t, preview: false } : t))
+        : s.tabs;
+      return { tabs, secondaryId: id, ...mirror(tabs, s.activeId) };
+    }),
+
+  reportChange: (text) => get().reportChangeFor(get().activeId ?? "", text),
+
+  reportChangeFor: (id, text) =>
     set((s) => {
       // Editing pins the tab (no longer a throwaway preview).
       const tabs = s.tabs.map((t) =>
-        t.doc.id === s.activeId
+        t.doc.id === id
           ? {
               ...t,
               content: text,
@@ -324,9 +378,11 @@ export const useDoc = create<DocState>((set, get) => ({
       return { tabs, ...mirror(tabs, s.activeId) };
     }),
 
-  markSaved: () =>
+  markSaved: () => get().markTabSaved(get().activeId ?? ""),
+
+  markTabSaved: (id) =>
     set((s) => {
-      const tabs = s.tabs.map((t) => (t.doc.id === s.activeId ? { ...t, dirty: false } : t));
+      const tabs = s.tabs.map((t) => (t.doc.id === id ? { ...t, dirty: false } : t));
       return { tabs, ...mirror(tabs, s.activeId) };
     }),
 
