@@ -1,0 +1,279 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { GITHUB, RELEASES, type Copy } from "../data/copy";
+import { icons, githubPath } from "../data/icons";
+
+interface Props {
+  t: Copy;
+}
+const { t } = Astro.props;
+
+const ic = (name: string, size = 18) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] ?? ""}</svg>`;
+const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="${githubPath}"/></svg>`;
+---
+
+<BaseLayout lang={t.lang} title={t.meta.title} description={t.meta.description} ogImage={t.meta.ogImage}>
+  <nav class="nav">
+    <div class="wrap nav__inner">
+      <a class="brand" href={t.lang === "ja" ? "/ja/" : "/"}>
+        <img src="/brand/favicon-64.png" alt="" width="27" height="27" />
+        <span>Velq</span>
+      </a>
+      <div class="nav__links">
+        <a href="#features">{t.nav.features}</a>
+        <a href="#velq">{t.nav.velq}</a>
+        <a href="#download">{t.nav.download}</a>
+        <a href="#faq">{t.nav.faq}</a>
+      </div>
+      <div class="nav__actions">
+        <a class="lang" href={t.nav.lang.href} title={t.nav.lang.title}>
+          <span set:html={ic("languages", 15)} />{t.nav.lang.label}
+        </a>
+        <a class="nav__gh" href={GITHUB} aria-label="GitHub" set:html={gh} />
+        <a class="btn btn--primary btn--sm" href={RELEASES}>{t.nav.cta}</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero__glow" aria-hidden="true"></div>
+    <div class="wrap">
+      <h1 data-reveal>
+        <span>{t.hero.h1a}</span>
+        <span class="hero__accent">{t.hero.h1b}</span>
+      </h1>
+      <p class="lede" data-reveal set:html={t.hero.lede} />
+      <div class="hero__cta" data-reveal>
+        <a class="btn btn--primary btn--lg" href={RELEASES}>
+          <span set:html={ic("download", 18)} />{t.hero.ctaPrimary}
+        </a>
+        <a class="btn btn--lg" href={GITHUB}><span set:html={gh} />{t.hero.ctaSecondary}</a>
+      </div>
+      <p class="hero__note" data-reveal>{t.hero.note}</p>
+    </div>
+    <div class="wrap wrap--wide" data-reveal>
+      <figure class="window window--hero">
+        <figcaption class="window__bar" aria-hidden="true">
+          <span class="tl"></span><span class="tl"></span><span class="tl"></span>
+        </figcaption>
+        <img src={t.hero.shot} alt={t.hero.alt} width="1440" height="900" loading="eager" fetchpriority="high" />
+      </figure>
+    </div>
+  </header>
+
+  <section class="block block--why" id="why">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="kicker">{t.why.kicker}</p>
+        <h2>{t.why.title}</h2>
+      </div>
+      <div class="qa-grid">
+        {
+          t.why.items.map((w) => (
+            <article class="qa" data-reveal>
+              <span class="qa__ic" set:html={ic(w.icon, 19)} />
+              <h3>{w.q}</h3>
+              <p>{w.a}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="features">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>{t.pillars.title}</h2>
+        <p>{t.pillars.sub}</p>
+      </div>
+      <div class="pillars">
+        {
+          t.pillars.items.map((p) => (
+            <article class="pillar" data-reveal>
+              <span class="pillar__ic" set:html={ic(p.icon, 20)} />
+              <h3>{p.title}</h3>
+              <p>{p.body}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="block block--zig">
+    <div class="wrap">
+      {
+        t.features.map((f, i) => (
+          <div class={`feature${i % 2 === 1 ? " feature--flip" : ""}`} data-reveal>
+            <div class="feature__text">
+              <p class="kicker">{f.kicker}</p>
+              <h3 set:html={f.title} />
+              <p class="feature__body" set:html={f.body} />
+              <ul class="checks">
+                {f.points.map((pt) => (
+                  <li>
+                    <span class="check" set:html={ic("check", 13)} />
+                    <span set:html={pt} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <figure class="window window--feature">
+              <figcaption class="window__bar" aria-hidden="true">
+                <span class="tl" /><span class="tl" /><span class="tl" />
+              </figcaption>
+              <img src={f.shot} alt={f.alt} loading="lazy" />
+            </figure>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="velq" id="velq">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="kicker">{t.velq.kicker}</p>
+        <h2>{t.velq.title}</h2>
+        <p>{t.velq.sub}</p>
+      </div>
+
+      <figure class="velq__illo" data-reveal>
+        <img src="/illust/pack.webp" alt={t.velq.illoAlt} width="1024" height="688" />
+      </figure>
+
+      <div class="steps" data-reveal>
+        {
+          t.velq.steps.map((s, i) => (
+            <article class="step">
+              <div class="step__head">
+                <span class="step__n">{i + 1}</span>
+                <span class="step__ic" set:html={ic(s.icon, 18)} />
+              </div>
+              <h3>{s.title}</h3>
+              <p>{s.body}</p>
+            </article>
+          ))
+        }
+      </div>
+
+      <div class="velq__lower">
+        <div class="zipcard" data-reveal>
+          <div class="tree" aria-hidden="true">
+            <b>{t.velq.treeTitle}</b>
+            <span>├─ manifest.json</span>
+            <span>├─ <b>index.html</b></span>
+            <span>└─ assets/</span>
+            <span class="tree__sub">├─ css/ ─ js/</span>
+            <span class="tree__sub">└─ img/ ─ fonts/</span>
+          </div>
+          <div>
+            <h3>{t.velq.zip.title}</h3>
+            <p set:html={t.velq.zip.body} />
+          </div>
+        </div>
+        <div class="sandboxcard" data-reveal>
+          <img src="/illust/offline.webp" alt={t.velq.sandboxAlt} width="512" height="344" />
+          <div>
+            <h3>{t.velq.sandbox.title}</h3>
+            <p>{t.velq.sandbox.body}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>{t.details.title}</h2>
+        <p>{t.details.sub}</p>
+      </div>
+      <div class="detail-grid" data-reveal>
+        {
+          t.details.items.map((d) => (
+            <article class="detail">
+              <span class="detail__ic" set:html={ic(d.icon, 17)} />
+              <div>
+                <h3>{d.title}</h3>
+                <p>{d.body}</p>
+              </div>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="block block--dl" id="download">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2>{t.download.title}</h2>
+        <p>{t.download.sub}</p>
+      </div>
+      <div class="downloads" data-reveal>
+        {
+          t.download.cards.map((c, i) => (
+            <article class={`dl${i === 0 ? " dl--primary" : ""}`}>
+              <h3>{c.os}</h3>
+              <p>{c.meta}</p>
+              <a class={`btn btn--sm${i === 0 ? " btn--primary" : ""}`} href={RELEASES}>
+                {c.cta}
+              </a>
+            </article>
+          ))
+        }
+      </div>
+      <p class="dl__note" data-reveal>{t.download.note}</p>
+    </div>
+  </section>
+
+  <section class="block" id="faq">
+    <div class="wrap wrap--narrow">
+      <div class="section-head" data-reveal>
+        <h2>{t.faq.title}</h2>
+      </div>
+      <div class="faq" data-reveal>
+        {
+          t.faq.items.map((f) => (
+            <details>
+              <summary>
+                {f.q}
+                <span class="faq__plus" aria-hidden="true" />
+              </summary>
+              <p>{f.a}</p>
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="finale">
+    <div class="wrap" data-reveal>
+      <img class="finale__mark" src="/brand/icon-256.png" alt="" width="88" height="88" />
+      <p class="finale__line">{t.cta.line}</p>
+      <div class="hero__cta">
+        <a class="btn btn--primary btn--lg" href={RELEASES}>
+          <span set:html={ic("download", 18)} />{t.cta.button}
+        </a>
+        <a class="btn btn--lg" href={GITHUB}><span set:html={gh} />{t.cta.secondary}</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap footer__inner">
+      <div class="footer__brand">
+        <img src="/brand/favicon-64.png" alt="" width="20" height="20" />
+        <span>{t.footer.legal}</span>
+      </div>
+      <div class="footer__links">
+        {t.footer.links.map((l) => <a href={l.href}>{l.label}</a>)}
+        <a href={t.nav.lang.href}>{t.nav.lang.label}</a>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>
