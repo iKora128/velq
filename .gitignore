@@ -20,6 +20,13 @@ apps/desktop/src-tauri/target
 # Screenshots are committed; scratch renders are not
 docs/screenshots/**/*.tmp.png
 
+# Brand explorations (icon candidates, raw generations) — local only; the
+# chosen marks live in apps/desktop/src-tauri/icons/ and lp/public/brand/
+docs/brand/
+
+# Astro cache
+lp/.astro/
+
 # OS / editor
 .DS_Store
 Thumbs.db
