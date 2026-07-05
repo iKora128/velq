@@ -19,6 +19,9 @@ export interface Doc {
   path: string | null;
   name: string;
   language: Lang;
+  /** For a freshly packaged .velq tab: the source HTML it was built from, so the
+   * viewer can offer "edit the original". Session-only provenance. */
+  origin?: string;
 }
 
 interface Tab {
@@ -91,7 +94,45 @@ function makeTab(doc: Doc, content: string, preview: boolean): Tab {
 }
 
 export function langFromName(name: string): Lang {
+  if (/\.velq$/i.test(name)) return "velq";
   return /\.html?$/i.test(name) ? "html" : "markdown";
+}
+
+/** Open a `.velq` the way the user prefers: a read-only tab in the main window
+ * (default), or the standalone isolated viewer window. */
+export async function openVelq(
+  path: string,
+  opts?: { forceWindow?: boolean; preview?: boolean; origin?: string },
+): Promise<void> {
+  const name = path.split(/[/\\]/).pop() ?? path;
+  if (opts?.forceWindow || useSettings.getState().velqOpenIn === "window") {
+    try {
+      await openVelqViewer(path);
+      useSettings.getState().recordRecentDoc(path, name);
+      useToast.getState().push(t("toast.openedInViewer", { name }));
+    } catch (e) {
+      console.error("open_velq_viewer failed", e);
+      useToast.getState().push(t("toast.cantOpen", { name, error: describeError(e) }));
+    }
+    return;
+  }
+  // Content lives behind the velq:// scheme; the tab itself carries no text.
+  useDoc.getState().open({ id: path, path, name, language: "velq", origin: opts?.origin }, "", {
+    preview: opts?.preview ?? false,
+  });
+}
+
+/** Open a file for EDITING, bypassing the auto-package rule — the explicit
+ * "edit the original HTML" path from a package tab. */
+export async function openPathForEdit(path: string): Promise<void> {
+  const name = path.split(/[/\\]/).pop() ?? path;
+  try {
+    const fc = await readFile(path);
+    useDoc.getState().open({ id: path, path, name, language: langFromName(name) }, fc.content);
+  } catch (e) {
+    console.error("openPathForEdit failed", path, e);
+    useToast.getState().push(t("toast.cantOpen", { name, error: describeError(e) }));
+  }
 }
 
 /** Turn a backend error (a string from a Tauri command) into a human message,
@@ -149,15 +190,9 @@ export const useDoc = create<DocState>((set, get) => ({
   },
 
   openFile: async (node, opts) => {
-    // A .velq opens in its own isolated viewer, not as editable text.
+    // A .velq is a sealed package — viewed (in a tab by default), not edited.
     if (/\.velq$/i.test(node.name)) {
-      try {
-        await openVelqViewer(node.path);
-        useSettings.getState().recordRecentDoc(node.path, node.name);
-        useToast.getState().push(t("toast.openedInViewer", { name: node.name }));
-      } catch (e) {
-        console.error("open_velq_viewer failed", e);
-      }
+      await openVelq(node.path, { preview: opts?.preview ?? true });
       return;
     }
     // A file opened from Velq's own browser is always editable — packaging to
@@ -179,13 +214,7 @@ export const useDoc = create<DocState>((set, get) => ({
   openByPath: async (path) => {
     const name = path.split(/[/\\]/).pop() ?? path;
     if (/\.velq$/i.test(name)) {
-      try {
-        await openVelqViewer(path);
-        useSettings.getState().recordRecentDoc(path, name);
-        useToast.getState().push(t("toast.openedInViewer", { name }));
-      } catch (e) {
-        console.error("open_velq_viewer failed", e);
-      }
+      await openVelq(path);
       return;
     }
     if (isHtmlPath(name) && useSettings.getState().autoPackageHtml) {

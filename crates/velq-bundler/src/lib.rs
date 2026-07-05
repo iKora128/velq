@@ -195,6 +195,152 @@ fn first_srcset_url(srcset: &str) -> Vec<String> {
         .collect()
 }
 
+// ---- Script-referenced assets -------------------------------------------------
+//
+// Pages that build their DOM in JavaScript (`img.src = "cat.png"`, or a template
+// literal like `velq-${k}-1024.png`) have no static <img> for the passes above to
+// see. We can't rewrite JS safely, so these are handled differently: scan every
+// script's text for path-looking tokens, expand `${…}` holes into `*` globs, and
+// collect whatever actually exists on disk **at its original relative path** — the
+// runtime-computed reference then resolves inside the package unchanged. Existence
+// on disk is the real filter, so a stray `foo.png` in a comment costs nothing.
+
+/// Extensions worth collecting when a script mentions them.
+const SCRIPT_ASSET_EXTS: &[&str] = &[
+    "png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "ico", "css", "js", "mjs", "json", "woff",
+    "woff2", "ttf", "otf", "mp3", "mp4", "webm", "wasm", "pdf", "txt",
+];
+
+/// How many files one `${…}` glob may pull in before we call it a mistake.
+const GLOB_CAP: usize = 300;
+
+fn is_token_char(c: char) -> bool {
+    c.is_alphanumeric() || matches!(c, '_' | '-' | '.' | '/' | '$' | '{' | '}')
+}
+
+/// Maximal path-looking tokens in script text. `src="velq-${k}-1024.png"` yields
+/// `velq-${k}-1024.png` — the quotes around it break the run, so this works even
+/// deep inside a multiline template literal of HTML.
+fn scan_script_tokens(script: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut cur = String::new();
+    for c in script.chars() {
+        if is_token_char(c) {
+            cur.push(c);
+        } else if !cur.is_empty() {
+            tokens.push(std::mem::take(&mut cur));
+        }
+    }
+    if !cur.is_empty() {
+        tokens.push(cur);
+    }
+    tokens
+}
+
+/// Does this token end in a collectible extension and stay safely relative?
+fn looks_like_asset(s: &str) -> bool {
+    if s.is_empty() || s.len() > 260 || s.starts_with('/') {
+        return false;
+    }
+    if s.split('/').any(|seg| seg == ".." || seg.is_empty()) {
+        return false;
+    }
+    match s.rsplit_once('.') {
+        Some((stem, ext)) if !stem.is_empty() && !stem.ends_with('/') => {
+            SCRIPT_ASSET_EXTS.iter().any(|e| ext.eq_ignore_ascii_case(e))
+        }
+        _ => false,
+    }
+}
+
+/// `velq-${k}-1024.png` → `velq-*-1024.png`; None if the token has no `${…}` hole
+/// (or unbalanced braces).
+fn template_to_glob(token: &str) -> Option<String> {
+    if !token.contains("${") {
+        return None;
+    }
+    let mut out = String::new();
+    let mut rest = token;
+    while let Some(open) = rest.find("${") {
+        out.push_str(&rest[..open]);
+        out.push('*');
+        let after = &rest[open + 2..];
+        let close = after.find('}')?;
+        rest = &after[close + 1..];
+    }
+    if rest.contains('{') || rest.contains('}') || out.contains('{') {
+        return None;
+    }
+    out.push_str(rest);
+    Some(out)
+}
+
+/// Segment-level `*` wildcard match (no `**`, no `?`).
+fn seg_match(pat: &str, name: &str) -> bool {
+    let parts: Vec<&str> = pat.split('*').collect();
+    if parts.len() == 1 {
+        return pat == name;
+    }
+    let mut pos = 0;
+    for (i, part) in parts.iter().enumerate() {
+        if part.is_empty() {
+            continue;
+        }
+        if i == 0 {
+            if !name.starts_with(part) {
+                return false;
+            }
+            pos = part.len();
+        } else if i == parts.len() - 1 {
+            return name.len() >= pos + part.len() && name.ends_with(part);
+        } else {
+            match name[pos..].find(part) {
+                Some(k) => pos += k + part.len(),
+                None => return false,
+            }
+        }
+    }
+    true
+}
+
+/// Files under `base` matching a relative glob like `img/velq-*-1024.png`.
+/// Returns (relative path with `/`, absolute path); results are capped by callers.
+fn glob_collect(base: &Path, pattern: &str) -> Vec<(String, PathBuf)> {
+    let segs: Vec<&str> = pattern.split('/').collect();
+    let mut hits = Vec::new();
+    fn walk(dir: &Path, segs: &[&str], rel: &str, hits: &mut Vec<(String, PathBuf)>) {
+        let Some((seg, rest)) = segs.split_first() else {
+            return;
+        };
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if !seg_match(seg, &name) {
+                continue;
+            }
+            let child_rel = if rel.is_empty() {
+                name.to_string()
+            } else {
+                format!("{rel}/{name}")
+            };
+            let p = entry.path();
+            if rest.is_empty() {
+                if p.is_file() {
+                    hits.push((child_rel, p));
+                }
+            } else if p.is_dir() {
+                walk(&p, rest, &child_rel, hits);
+            }
+        }
+    }
+    walk(base, &segs, "", &mut hits);
+    hits.sort();
+    hits
+}
+
 /// Bundle `html` (with assets resolved relative to `base_dir`) into an offline package.
 /// Network fetches are async; the caller drives them on its own runtime.
 pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResult {
@@ -205,9 +351,11 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
         .build()
         .unwrap_or_default();
 
-    // Pass 1 — collect references.
+    // Pass 1 — collect references (and every inline script's text, for the
+    // script-referenced asset scan below).
     let refs: RefCell<Vec<(String, Kind)>> = RefCell::new(Vec::new());
     let style_buf = RefCell::new(String::new());
+    let scripts_text = RefCell::new(String::new());
     let collect_settings = RewriteStrSettings::new()
         .append_element_content_handler(element!("link[href]", |el| {
             if let Some(h) = el.get_attribute("href") {
@@ -249,6 +397,13 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
                     refs.borrow_mut().push((u, k));
                 }
                 style_buf.borrow_mut().clear();
+            }
+            Ok(())
+        }))
+        .append_element_content_handler(text!("script", |t| {
+            scripts_text.borrow_mut().push_str(t.as_str());
+            if t.last_in_text_node() {
+                scripts_text.borrow_mut().push('\n');
             }
             Ok(())
         }));
@@ -302,6 +457,14 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
                     }
                     bytes = rewrite_css(&css, &css_map).into_bytes();
                 }
+                // Local JS may build DOM at runtime — scan its text too (refs in
+                // JS resolve against the *document*, so base_dir stays the base).
+                if kind == Kind::Js && matches!(source, Source::Local(_)) {
+                    scripts_text
+                        .borrow_mut()
+                        .push_str(&String::from_utf8_lossy(&bytes));
+                    scripts_text.borrow_mut().push('\n');
+                }
                 let p = asset_path(kind, &url, &bytes);
                 report.bytes += bytes.len() as u64;
                 report.collected += 1;
@@ -309,6 +472,48 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
                 assets.push(Asset { path: p, bytes });
             }
             Err(reason) => report.failed.push(FailedUrl { url, reason }),
+        }
+    }
+
+    // Script-referenced assets: tokens like `cat.png` or `velq-${k}-1024.png` in
+    // any script. Stored at their ORIGINAL relative paths (JS can't be rewritten,
+    // so the runtime reference must keep resolving); existence on disk decides.
+    let mut seen_original = std::collections::BTreeSet::new();
+    let scripts = scripts_text.into_inner();
+    for token in scan_script_tokens(&scripts) {
+        let matches: Vec<(String, PathBuf)> = match template_to_glob(&token) {
+            Some(glob) if looks_like_asset(&glob) => {
+                let hits = glob_collect(base_dir, &glob);
+                if hits.len() > GLOB_CAP {
+                    report.failed.push(FailedUrl {
+                        url: token.clone(),
+                        reason: format!("matched {} files (cap {GLOB_CAP})", hits.len()),
+                    });
+                    continue;
+                }
+                hits
+            }
+            Some(_) => continue,
+            None if looks_like_asset(&token) => {
+                let p = base_dir.join(&token);
+                if p.is_file() {
+                    vec![(token.clone(), p)]
+                } else {
+                    Vec::new()
+                }
+            }
+            None => continue,
+        };
+        for (rel, abs) in matches {
+            if rel == "index.html" || rel.ends_with(".velq") || !seen_original.insert(rel.clone())
+            {
+                continue;
+            }
+            if let Ok(bytes) = std::fs::read(&abs) {
+                report.bytes += bytes.len() as u64;
+                report.collected += 1;
+                assets.push(Asset { path: rel, bytes });
+            }
         }
     }
 
@@ -483,5 +688,81 @@ mod tests {
         assert_eq!(res.report.failed.len(), 1);
         assert!(res.index_html.contains("nope.png")); // left as-is, not broken
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// The icon-gallery case: `<img>` tags are built by an inline script from a
+    /// template literal, so no static reference exists. The matching files must
+    /// still land in the package, at their ORIGINAL relative paths.
+    #[tokio::test]
+    async fn template_literal_images_are_collected_at_original_paths() {
+        let dir = tmpdir();
+        for k in ["a", "b", "c"] {
+            std::fs::write(dir.join(format!("velq-{k}-1024.png")), b"png").unwrap();
+        }
+        std::fs::write(dir.join("velq-a-1024.velq"), b"decoy").unwrap();
+        let html = r#"<html><body><div id="g"></div><script>
+            const card = (k) => `<div><img src="velq-${k}-1024.png" width="128"/></div>`;
+            for (const k of ["a","b","c"]) g.insertAdjacentHTML("beforeend", card(k));
+        </script></body></html>"#;
+
+        let res = bundle(html, &dir, false).await;
+
+        for k in ["a", "b", "c"] {
+            let want = format!("velq-{k}-1024.png");
+            assert!(
+                res.assets.iter().any(|a| a.path == want),
+                "missing {want}: {:?}",
+                res.assets.iter().map(|a| &a.path).collect::<Vec<_>>()
+            );
+        }
+        // The template stays untouched — runtime JS resolves the same names.
+        assert!(res.index_html.contains("velq-${k}-1024.png"));
+        assert!(res.assets.iter().all(|a| !a.path.ends_with(".velq")));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn plain_string_refs_in_inline_and_external_js_are_collected() {
+        let dir = tmpdir();
+        std::fs::create_dir_all(dir.join("photos")).unwrap();
+        std::fs::write(dir.join("photos/cat.png"), b"cat").unwrap();
+        std::fs::write(dir.join("sprite.webp"), b"sprite").unwrap();
+        std::fs::write(dir.join("app.js"), br#"el.style.background = "url(sprite.webp)";"#)
+            .unwrap();
+        let html = r#"<html><body><script src="app.js"></script>
+            <script>img.src = "photos/cat.png";</script></body></html>"#;
+
+        let res = bundle(html, &dir, false).await;
+
+        assert!(res.assets.iter().any(|a| a.path == "photos/cat.png"));
+        assert!(res.assets.iter().any(|a| a.path == "sprite.webp"));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn script_refs_cannot_escape_the_base_dir() {
+        let dir = tmpdir();
+        let outside = dir.parent().unwrap().join("velq-escape-test.png");
+        std::fs::write(&outside, b"secret").unwrap();
+        let html = r#"<html><body><script>x = "../velq-escape-test.png";</script></body></html>"#;
+        let res = bundle(html, &dir, false).await;
+        assert!(res.assets.is_empty(), "{:?}", res.assets.iter().map(|a| &a.path).collect::<Vec<_>>());
+        std::fs::remove_file(&outside).ok();
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn template_to_glob_and_seg_match() {
+        assert_eq!(
+            template_to_glob("velq-${k}-1024.png").as_deref(),
+            Some("velq-*-1024.png")
+        );
+        assert_eq!(template_to_glob("plain.png"), None);
+        assert!(seg_match("velq-*-1024.png", "velq-a-duo-1024.png"));
+        assert!(!seg_match("velq-*-1024.png", "velq-a-512.png"));
+        assert!(looks_like_asset("img/x.png"));
+        assert!(!looks_like_asset("../x.png"));
+        assert!(!looks_like_asset("/abs/x.png"));
+        assert!(!looks_like_asset("x.exe"));
     }
 }

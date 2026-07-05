@@ -18,13 +18,16 @@ export function EditorWorkspace() {
 
   return (
     <div className="app-body" style={vars}>
+      {/* ⌘\ (or the toolbar panel button) hides the WHOLE left rail — tree and
+          list together, VS Code-style. Hiding only the tree left an unclosable
+          column, which read as broken. */}
       {!sidebarCollapsed && (
         <>
           <Sidebar />
           <PaneDivider value={sidebarW} min={180} max={420} onChange={setSidebarW} />
         </>
       )}
-      {!historyOpen && (
+      {!historyOpen && !sidebarCollapsed && (
         <>
           <FileListPane />
           <PaneDivider value={listW} min={220} max={520} onChange={setListW} />

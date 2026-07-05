@@ -3,9 +3,8 @@ import { bundleHtmlToVelq } from "@/ipc/bundle";
 import { dirOf, pickSaveFile } from "@/ipc/dialog";
 import { renderMarkdown } from "@/ipc/render";
 import { writeFileContent } from "@/ipc/vault";
-import { openVelqViewer } from "@/ipc/velq";
 import { buildPreviewDoc, htmlDocument } from "@/preview/previewStyles";
-import { useDoc } from "@/store/doc";
+import { openVelq, useDoc } from "@/store/doc";
 import { useSettings } from "@/store/settings";
 import { useToast } from "@/store/toast";
 import { useVault } from "@/store/vault";
@@ -31,12 +30,14 @@ function rememberExportDir(savedPath: string) {
   useSettings.getState().update({ lastExportDir: dirOf(savedPath) });
 }
 
-/** A self-contained HTML document for the current doc (rendered for markdown). */
+/** A self-contained HTML document for the current doc (rendered for markdown).
+ * Uses the selected preview template, so the export looks like the preview. */
 async function toStandaloneHtml(): Promise<string> {
   const { doc, content } = useDoc.getState();
   if (!doc) return "";
   if (doc.language === "html") return htmlDocument(content);
-  return buildPreviewDoc(await renderMarkdown(content), { dark: false });
+  const template = useSettings.getState().previewTemplate;
+  return buildPreviewDoc(await renderMarkdown(content), { dark: false, template });
 }
 
 async function exportMarkdown() {
@@ -78,7 +79,7 @@ async function exportVelq() {
       : "";
     useToast.getState().push(t("toast.packaged", { name: baseName(), note }), {
       label: t("common.open"),
-      run: () => void openVelqViewer(out),
+      run: () => void openVelq(out),
     });
   } catch (e) {
     console.error("export .velq failed", e);

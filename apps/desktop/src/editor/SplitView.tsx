@@ -53,7 +53,8 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
       <div className="split__pane split__preview">
         <PreviewPane
           source={previewSource}
-          language={doc.language}
+          // velq tabs never reach SplitView (EditorPane shows the package viewer).
+          language={doc.language === "html" ? "html" : "markdown"}
           viewRef={viewRef}
           editable={doc.language === "html"}
           onEdit={onPreviewEdit}

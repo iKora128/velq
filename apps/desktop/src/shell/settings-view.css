@@ -104,6 +104,8 @@
 .segmented {
   display: inline-flex;
   flex: none; /* don't compress the control — let the label column yield instead */
+  flex-wrap: wrap; /* long option sets (preview templates) fold to extra rows */
+  justify-content: flex-end;
   padding: 2px;
   gap: 2px;
   background: var(--surface-sunken);

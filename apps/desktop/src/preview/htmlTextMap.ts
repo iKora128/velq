@@ -8,12 +8,17 @@
  * tags (its source offsets + raw slice + decoded value). The iframe's text nodes come
  * out in the same document order, so the Nth text node maps to the Nth run.
  *
- * This is a deliberately small hand-rolled scan, not a full HTML parser — good enough
- * for "tweak the wording" (the W6 goal). Known limits, acceptable for that scope:
+ * Two write-back tiers share this file:
+ *   - text-only edits go through the run map (`rebuildHtml`) — untouched bytes stay
+ *     byte-identical, entities and spacing survive;
+ *   - structural edits (a node added/removed/wrapped: Enter, ⌘B, deletions, paste)
+ *     re-serialize the live body and splice it over the source's body range
+ *     (`replaceBodyHtml`) — the head is never touched.
+ *
+ * This is a deliberately small hand-rolled scan, not a full HTML parser — known
+ * limits, acceptable for the scope:
  *   - a literal `>` inside a quoted attribute value can end a tag early;
- *   - only text between tags is editable (not attributes, not script/style bodies);
- *   - structural edits (adding/removing nodes) change the count and are rejected by
- *     the caller, which compares run count to live text-node count.
+ *   - only rendered content is editable (not attributes, not script/style bodies).
  */
 
 export interface TextRun {
@@ -123,7 +128,7 @@ export function extractBodyTextRuns(source: string): TextRun[] {
  * whose decoded text is unchanged keeps its original raw slice verbatim — so
  * entities and original spacing survive untouched; only genuinely edited runs are
  * re-encoded. Throws if the counts disagree (the caller treats that as "structure
- * changed, don't write back").
+ * changed, fall back to `replaceBodyHtml`").
  */
 export function rebuildHtml(source: string, runs: TextRun[], newTexts: string[]): string {
   if (runs.length !== newTexts.length) {
@@ -139,4 +144,24 @@ export function rebuildHtml(source: string, runs: TextRun[], newTexts: string[])
   }
   out += source.slice(cursor);
   return out;
+}
+
+/**
+ * Structural write-back: replace the inner HTML of `<body>` with a fresh
+ * serialization of the live DOM. Everything before the body's `>` and from
+ * `</body>` on is kept byte-for-byte — doctype, head, body attributes survive.
+ * A source without `<html>` is a fragment the preview wrapped itself, so the
+ * serialization *is* the new source. Returns null when a full document's body
+ * can't be located (malformed) — the caller skips the write-back.
+ */
+export function replaceBodyHtml(source: string, bodyInner: string): string | null {
+  if (!/<html[\s>]/i.test(source)) return bodyInner;
+  const open = /<body[\s>]/i.exec(source);
+  if (!open) return null;
+  const tagEnd = source.indexOf(">", open.index);
+  if (tagEnd < 0) return null;
+  const close = /<\/body\s*>/i.exec(source);
+  const innerEnd = close ? close.index : source.length;
+  if (innerEnd < tagEnd + 1) return null;
+  return source.slice(0, tagEnd + 1) + bodyInner + source.slice(innerEnd);
 }

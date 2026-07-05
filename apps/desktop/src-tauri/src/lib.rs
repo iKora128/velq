@@ -199,10 +199,6 @@ fn on_menu(app: &tauri::AppHandle, id: &str) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // The `.velq` viewer's content is served from the ZIP with a strict CSP. The viewer
-    // window is in no capability, so it has no IPC/fs/network beyond what this allows.
-    const VELQ_CSP: &str = "default-src 'self' data: blob:; connect-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; base-uri 'none'; form-action 'none'";
-
     #[allow(unused_mut)]
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -239,7 +235,10 @@ pub fn run() {
                         tauri::http::header::CONTENT_TYPE,
                         commands::velq::content_type(&path),
                     )
-                    .header(tauri::http::header::CONTENT_SECURITY_POLICY, VELQ_CSP)
+                    .header(
+                        tauri::http::header::CONTENT_SECURITY_POLICY,
+                        commands::velq::velq_csp(&id),
+                    )
                     .body(bytes)
                     .unwrap(),
                 None => tauri::http::Response::builder()
@@ -279,6 +278,7 @@ pub fn run() {
             commands::velq::read_velq_manifest,
             commands::velq::unpack_velq,
             commands::velq::open_velq_viewer,
+            commands::velq::stage_velq,
             commands::bundle::bundle_to_velq,
             commands::bundle::bundle_html_to_velq,
             commands::bundle::package_html_file,

@@ -305,6 +305,11 @@ registerMock("reveal_in_os", () => null);
 registerMock("watch_vault", () => null);
 registerMock("unwatch_vault", () => null);
 registerMock("open_velq_viewer", () => null);
+registerMock(
+  "stage_velq",
+  () =>
+    `data:text/html,${encodeURIComponent('<body style="font-family:sans-serif;display:grid;place-items:center;height:100vh;margin:0"><p>.velq preview (mock)</p></body>')}`,
+);
 registerMock("unpack_velq", () => null);
 registerMock("bundle_to_velq", () => ({ collected: 4, bytes: 28_540, failed: [] }));
 registerMock("bundle_html_to_velq", () => ({ collected: 4, bytes: 28_540, failed: [] }));

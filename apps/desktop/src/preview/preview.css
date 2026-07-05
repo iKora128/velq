@@ -9,6 +9,13 @@
   display: block;
 }
 
+/* Full-pane rendered editing (HTML "Rendered" mode, W6). */
+.rendered-view {
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+}
+
 /* Split layout: editor | divider | preview */
 .split {
   display: flex;

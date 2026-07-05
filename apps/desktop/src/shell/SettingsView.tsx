@@ -1,7 +1,15 @@
 import type { ReactNode } from "react";
 import type { MsgKey } from "@/i18n";
 import { useT } from "@/i18n/useT";
-import type { Density, EditorMode, FileView, LocalePref, ThemePref } from "@/ipc/types";
+import type {
+  Density,
+  EditorMode,
+  FileView,
+  LocalePref,
+  PreviewTemplate,
+  ThemePref,
+  VelqOpenIn,
+} from "@/ipc/types";
 import { useSettings } from "@/store/settings";
 import { cn } from "@/util/cn";
 import "./settings-view.css";
@@ -73,6 +81,22 @@ export function SettingsView() {
             checked={s.proseFont}
             onChange={(proseFont) => update({ proseFont })}
           />
+
+          <Field label={t("settings.previewTemplate")} hint={t("settings.previewTemplate.hint")}>
+            <Segmented<PreviewTemplate>
+              value={s.previewTemplate}
+              onChange={(previewTemplate) => update({ previewTemplate })}
+              options={[
+                { value: "paper", label: t("settings.previewTemplate.paper") },
+                { value: "docs", label: t("settings.previewTemplate.docs") },
+                { value: "note", label: t("settings.previewTemplate.note") },
+                { value: "magazine", label: t("settings.previewTemplate.magazine") },
+                { value: "tech", label: t("settings.previewTemplate.tech") },
+                { value: "sky", label: t("settings.previewTemplate.sky") },
+                { value: "glass", label: t("settings.previewTemplate.glass") },
+              ]}
+            />
+          </Field>
         </Section>
 
         <Section title={t("settings.editor")} desc={t("settings.editor.desc")}>
@@ -125,6 +149,16 @@ export function SettingsView() {
             checked={s.autoPackageHtml}
             onChange={(autoPackageHtml) => update({ autoPackageHtml })}
           />
+          <Field label={t("settings.velqOpenIn")} hint={t("settings.velqOpenIn.hint")}>
+            <Segmented<VelqOpenIn>
+              value={s.velqOpenIn}
+              onChange={(velqOpenIn) => update({ velqOpenIn })}
+              options={[
+                { value: "tab", label: t("settings.velqOpenIn.tab") },
+                { value: "window", label: t("settings.velqOpenIn.window") },
+              ]}
+            />
+          </Field>
         </Section>
       </div>
     </div>

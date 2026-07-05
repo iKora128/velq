@@ -749,3 +749,222 @@ Two gaps closed:
 
 **Gates:** tsc · `vite build` · Biome clean (126 files) · Vitest **48/48** — all green. **No Rust
 touched.**
+
+## M27 — HTML edits like a page, for real: full-pane Rendered mode + structural write-back (W6 slice 2)
+
+The bar the user set (and the landing page promises): "a browser only *displays* HTML — Velq edits it,
+as you see it." M25's prototype could only tweak wording: structural edits were **silently dropped**,
+and HTML always forced Split. This slice makes the rendered page itself the editor.
+
+- **Structural write-back — `replaceBodyHtml` (htmlTextMap, pure, +5 tests).** When the live text-node
+  count no longer matches the source's runs — Enter made a paragraph, ⌘B wrapped a word, an element was
+  deleted, rich content was pasted — serialize the body's `innerHTML` and splice it over the source's
+  body range. Doctype, `<head>` and the `<body>` tag's own attributes stay **byte-for-byte**; text-only
+  edits still take the precise offset path from M25 (untouched bytes stay identical). The DOM is
+  authoritative, so a mapping miss self-heals on the next serialization.
+- **Rendered mode (HTML × Live).** `EditorPane` maps HTML+`live` to a new full-pane `RenderedView`
+  instead of forcing Split; the segmented control's third item reads **Rendered / 見たまま** for HTML
+  (and JA now says 見たまま for Markdown live too — one mental model, spec §3's "syntax vanishes"
+  and this are the same idea). `editorMode` defaults to `live`, so opening an AI-generated HTML file
+  lands **directly on the editable page** — the LP's hero story is now the product's default behavior.
+  Split and Source stay one toggle away; edits flow through `reportChange`, so dirty state, autosave
+  and save-history are untouched.
+- **Keyboard, both sides of the iframe.** ⌘B/I/U bold/italicize/underline in place (write-back runs
+  synchronously after `execCommand` rather than trusting the engine to fire `input`); ⌘S/⌘K/⌘P/⌘N/⌘O/
+  ⌘⇧F/⌘\ are re-dispatched on the parent window so app shortcuts keep working while the caret is in
+  the page. ⌘Z is deliberately left to the iframe's native contenteditable undo.
+- **IME correctness.** Mid-composition `input` events don't write back (half-composed Japanese never
+  hits the source); `compositionend` commits the run.
+- **Fragments.** A file without `<html>` is its own body — now editable too (M25 skipped it).
+- **A StrictMode bug the prototype hid:** the round-trip guard (`source === liveSource`) returned early
+  after StrictMode's simulated unmount had already turned `contenteditable` off, leaving the pane
+  read-only until an external rewrite. Split masked it (any left-pane keystroke re-attaches); rendered-
+  only exposed it. The guard now also checks `body.isContentEditable` in the live DOM.
+
+Verified with Playwright against the mock frontend (screenshots in `docs/screenshots/m27/`): typed on
+the rendered page (run-map path), Enter + a new paragraph (structural path), word-selected ⌘B
+(formatting path), flipped to Source — all three edits present at the right offsets with
+`<title>`/doctype untouched — then back to Rendered with nothing lost. The JA pass confirms the
+見たまま label and CJK write-back.
+
+### Honest limits (documented, for the next loops)
+- A structural edit rewrites the body region in one go, so that save's version diff is coarser than a
+  text tweak's (text-only edits remain byte-minimal). Coalescing/undo granularity from M25 still stands.
+- Attributes, `<style>`/`<script>` bodies and `<head>` still edit in Source/Split — by design (the calm
+  scope is *content*, not markup surgery; that's W7 element-selection territory).
+- Serialization normalizes what the parser normalized (`<br/>`→`<br>`, attribute quoting) — but only
+  when a structural edit actually happened; pure text tweaks never reformat.
+
+**Gates:** `tsc --noEmit` green · `vite build` green · Biome clean (45 files checked) · Vitest **53/53**
+(htmlTextMap 18→23). **No Rust touched.**
+
+## M28 — Drop an HTML, get a .velq (+ collision-proof package names)
+
+Two field reports from the user's first real session with the built app:
+
+- **Dropping an HTML onto the window only copied it into the vault** — and a bare copy of
+  `index.html` is actually *broken* (its relative css/img/js stay behind). Now an OS drop of
+  `.html`/`.htm` with **auto-package on** runs the same `packageAndStage` as the OS "Open with"
+  path — dependencies are traced **from the file's original folder** and a self-contained `.velq`
+  lands in `Documents/Velq`. Everything else dropped (`.md`, `.velq`, images) still just copies
+  into the open vault; with auto-package off, HTML copies too (no magic for opted-out users).
+- **`index.velq` collides with itself all day** (user: 上位のフォルダ名-{filename} がいい).
+  Adopted with one refinement: only stems so generic that every site ships one
+  (`index`, `home`, `default`, `main`, `page`, `document`, `untitled` — case-insensitive) get the
+  parent-folder prefix: `portfolio/index.html` → **`portfolio-index.velq`**, while a distinctive
+  name (`Q2レポート.html`) stays itself rather than becoming `Documents-Q2レポート.velq`.
+  The existing ` 2` numbering stays as the backstop. Logic is `velq_stem` in
+  `commands/bundle.rs` (2 new unit tests).
+
+**Gates:** `tsc --noEmit` green · Biome clean · `cargo test -p velq-desktop` **7/7** · clippy clean.
+
+## M29 — Preview templates (Paper / Docs / Note / Magazine, then Tech / Sky / Glass)
+
+Field report (user): the single Markdown preview is 見づらい — H2s and bold don't stand out, and a
+"published page" feel was missing. Rather than a theme store, four opinionated templates now live in
+`previewStyles.ts` as a registry (each a self-contained light+dark stylesheet, since the sandboxed
+iframe can't reach the app's CSS variables):
+
+- **Paper** — the original calm serif; stays the default, byte-for-byte the same look.
+- **Docs** — the GitHub reading experience (sans, bordered H1/H2, familiar tables/code).
+- **Note** — Notion/Bear-style: violet accent-bar H2 with a gradient band, callout-card quotes,
+  rounded bordered tables, accent list markers.
+- **Magazine** — editorial: display-sans headings over serif body, H1 signature underline, banded
+  H2, diamond H3, **bold gets a marker highlight**, pull-quote cards, dark contrast code blocks,
+  accent table rules. The "make it obvious" answer to the field report.
+
+One persisted setting (`previewTemplate`, Rust `Settings` + serde default keeps old
+`settings.json` valid), applied everywhere rendered Markdown appears: split preview, Quick Look,
+and HTML/PDF exports — an export looks like the preview it came from. HTML documents are never
+templated. Switcher = palette icon in the editor toolbar (markdown + split only, reusing
+`ContextMenu`) + a Settings → Appearance segmented control; both i18n'd (EN/JA).
+
+Verified by rendering a representative EN/JA document through all 8 template×theme combinations in
+headless Chrome (`docs/screenshots/m29/`): H2/bold hierarchy reads at a glance in Note and
+Magazine; Docs matches GitHub; Paper unchanged; dark variants keep contrast (marker highlight
+becomes a dark amber band, still legible).
+
+**Gates:** `tsc --noEmit` green · Biome clean · Vitest **57/57** (new `previewStyles.test.ts`:
+distinct stylesheets per template, paper fallback for unknown persisted values) · `cargo check`
+green (settings field only).
+
+### Round 2 — three more, from the user's own references
+
+Request: 「zennやnani翻訳みたいなのも増やして。もしくは tategazou.com の見た目とか。」 Palettes were
+lifted from the actual sites (Zenn's `#edf2f7`/`#0f83fd`, Nani's CSS custom properties
+`--color-primary #12a8ff` / `--color-primary-bg #ebf6ff`, tategazou's `styles.css` — paper
+`#f6f2ec`, teal `#a0d3d9` / orange `#f29441` / red `#f2380f`, frosted `rgba(255,255,255,0.76)`
+cards). Shipped as generic names — no brand names leak into the UI:
+
+- **Tech**（テック, Zenn-inspired）— white article card on blue-gray, airy 1.9 line-height,
+  bordered H1/H2, navy code blocks.
+- **Sky**（スカイ, Nani-inspired）— sky-blue pill H2, extra-round 32px card, dotted links & hr,
+  round accent dots on H3/bullets.
+- **Glass**（ガラス, tategazou-inspired）— frosted `backdrop-filter` card over a fixed
+  teal→orange→red gradient mesh, gradient H1 underline + H2 pill + hr, orange marker-highlighted
+  bold. These three introduce a page-behind-card layout (body carries the 40vh scroll allowance
+  instead of the prose column).
+
+All 7×2 combinations re-verified in headless Chrome (screenshots added to
+`docs/screenshots/m29/`); dark variants hand-tuned (Zenn/Nani/tategazou have no official dark
+mode). Settings `.segmented` now wraps so the 7-option row folds instead of overflowing.
+
+**Gates (round 2):** `tsc --noEmit` green · Biome clean · Vitest **57/57** (template loop tests
+pick up the new ids automatically).
+
+## M29 — Script-built pages package correctly · .velq opens in a tab · say that the page is editable
+
+Three field reports from the user's second real session.
+
+- **"Images fail in the bundle."** Ground truth (unzipped the actual `.velq`): the page built its
+  `<img>` tags in JavaScript from a template literal (`velq-${k}-1024.png`), so no static reference
+  existed and **zero assets were collected**. New bundler pass (`velq-bundler`, +4 tests): scan every
+  script's text (inline and local `src=`) for path-looking tokens, expand `${…}` holes into `*` globs,
+  and collect whatever exists on disk — **at the original relative path**, because JS can't be
+  rewritten; the runtime-computed name then resolves inside the package unchanged. Existence on disk
+  is the filter (a stray `foo.png` in a comment costs nothing); `..`/absolute/URL tokens are rejected,
+  one glob is capped at 300 files (over-cap is reported, not silently truncated).
+- **"Opening a .velq in a new window is annoying."** New setting **`.velq の開き方: タブ / 新しい
+  ウィンドウ` — default: tab.** A `stage_velq` command registers the package for the `velq://` scheme
+  and the tab shows it in a `sandbox="allow-scripts"` iframe — same isolation story as the viewer
+  window (no IPC, `connect-src 'none'`), same URL, no unpacking. The tab wears a thin identity bar —
+  package icon · name · 「パッケージ · 表示専用」 · **新しいウィンドウで開く** — so the pop-out is one
+  click and the read-only nature is stated, not discovered. Mode segments and history are hidden for
+  package tabs. All `.velq` opens route through one `openVelq()` (file browser, OS open, post-package
+  toast, export toast).
+- **"I can't find the edit button."** Two causes seen in the field: a persisted `editorMode:"source"`
+  from an earlier build (HTML opened as code), and nothing on the rendered page saying it's editable.
+  Now a **one-shot hint toast** on first Rendered view (「このページはそのまま編集できます —
+  クリックして入力してください。コードで直すときは右上の「ソース」へ。」), persisted as
+  `hintedRenderedEdit` so it never nags. The deeper "多くが直感的でない" deserves a proper UI loop
+  (spec §13) next session — logged here as the trigger.
+
+**Gates:** `tsc --noEmit` green · Vitest **57/57** · `cargo test --workspace` **22/22** (bundler 7,
+incl. the gallery-shaped template-literal case) · clippy **0** · Biome clean.
+
+## M30 — Evidence over guesses: the "broken images" post-mortem, closable panels, and a visible way into editing
+
+The user re-tested and reported: images still broken in the package, the left columns can't be
+closed, and "edit" still nowhere to be found. Investigated each with evidence this time.
+
+- **Images: the package being opened predated the fix.** `~/Documents/Velq` held exactly one
+  gallery package — 2,565 bytes, stamped 13:47, i.e. built by the pre-M29 bundler (the script-scan
+  fix shipped 14:03). Nothing wrong with serving: the page text rendered fine in the tab, only the
+  (absent) images 404'd inside the zip. Two hardenings so a stale artifact can't poison a test
+  again: **(1) a committed end-to-end regression test that packages the actual repo gallery file**
+  (`gallery_html_packages_with_its_script_built_images` — asserts the 11 template-literal PNGs are
+  in the zip and readable back; 10.6 MB result vs the broken 2.5 KB), and **(2) packaging now opens
+  the fresh result immediately** instead of leaving a toast race. The user's stale artifact was
+  replaced in place with a verified package produced by the same library pipeline.
+- **Left columns now close everywhere.** Before: the editor's ⌘\ hid only the tree (the list column
+  stayed — read as broken), the reopen button lived *inside* the collapsed sidebar, and the Files
+  view had no collapse at all. Now: ⌘\ (and a **PanelLeft toggle pinned to the editor toolbar,
+  visible in both states**) collapses the editor view's **tree AND list together** (VS Code's
+  one-keystroke-to-clean-canvas); the Files view's list mode gets the same toggle in its toolbar.
+- **A visible road into editing.** Root cause of "エディットが行方不明": with auto-package on,
+  HTML arriving from outside (drop / OS-open) *always* became a read-only package tab — the editor
+  was never even shown, and the one-shot hint only fired inside the rendered view (which those
+  users never reached). Fixes: the package tab's bar now carries **「元の HTML を編集」** (session
+  provenance from packaging → `openPathForEdit`, which bypasses the auto-package rule); the hint
+  moved to EditorPane and fires the **first time any HTML document opens, in any mode**.
+
+Verified in the mock frontend (Playwright, `docs/screenshots/m30/`): hint toast appears with
+`editorMode:"source"` (the user's exact persisted state), toolbar toggle collapses tree+list and
+survives the collapse, explorer list-mode toggle works, everything reopens.
+
+**Gates:** tsc green · Vitest **57/57** · `cargo test --workspace` **23/23** (new real-file e2e) ·
+clippy **0** · Biome clean.
+
+## M31 — The images WERE in the package: WebKit's `'self'` CSP vs the sandboxed tab
+
+M30's replaced package (verified: 11 PNGs in the zip) still showed no images in the tab. Two
+experiments closed it:
+
+- **Chromium repro said the CSP was fine** — a sandboxed `allow-scripts` iframe with
+  `img-src 'self'` still loaded images (Chromium resolves `'self'` from the document URL, opaque
+  origin or not). Misleading: the app runs WebKit.
+- **Field instrumentation told the truth.** A temporary log inside the `velq://` scheme handler
+  (every request: id · path · hit/miss), then `open -a Velq <the .velq>` against the real app:
+  with the CSP switched to an **explicit per-package origin** (`img-src velq://<id> …` instead of
+  `'self'`), WebKit requested **index.html + all 11 PNGs, every one served (HIT)**. Under the old
+  `'self'` policy those subresource requests were never made — WebKit does not resolve `'self'`
+  inside a sandboxed (opaque-origin) iframe the way Chromium does.
+
+Fix shipped: `velq_csp(id)` builds the policy per package — sources pinned to `velq://<id>` (one
+package can also never reference another's files, which `'self'` never guaranteed either),
+`connect-src 'none'` as always. The pop-out viewer window never had the bug (no sandbox → `'self'`
+resolved). Diagnostic logging removed after the capture; unit test pins the no-`'self'` shape.
+
+**Lesson for the log:** "renders in Chromium" ≠ "renders in WKWebView" — for anything
+CSP/origin/sandbox-flavoured, verify in the engine we ship or instrument the shipped app itself.
+
+**Gates:** `cargo test -p velq-desktop` **9/9** (new CSP-shape test) · clippy **0** · no TS changes.
+
+## M32 — The app wears its own icon
+
+The chosen brand mark (**a-paper** — the origami V, cream × navy, same as the landing page and
+favicons) is now the desktop app's icon. `docs/brand/icon-candidates/velq-a-paper-1024.png` scaled
+to the macOS Big Sur grid (824 px artwork centered on a 1024 canvas, so it sits at the same visual
+size as neighboring Dock icons) → `cargo tauri icon` regenerated the whole `src-tauri/icons/` set
+(icns / ico / pngs). Swapping to the runner-up **a-duo** later = rerun the same two steps with its
+PNG.

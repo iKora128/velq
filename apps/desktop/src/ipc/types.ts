@@ -48,6 +48,10 @@ export interface FilePreview {
 export type ThemePref = "light" | "dark" | "system";
 export type Density = "comfortable" | "compact";
 export type EditorMode = "source" | "split" | "live";
+/** Markdown preview look — see `@/preview/previewStyles`. */
+export type PreviewTemplate = "paper" | "docs" | "note" | "magazine" | "tech" | "sky" | "glass";
+/** Where a .velq opens: a tab in the main window, or its own window. */
+export type VelqOpenIn = "tab" | "window";
 export type FileView = "grid" | "list" | "columns" | "tree";
 /** UI language preference; "system" follows the OS language. Resolved to a concrete
  * locale by `resolveLocale` in `@/i18n`. */
@@ -61,6 +65,11 @@ export interface Settings {
   vimMode: boolean;
   showLineNumbers: boolean;
   proseFont: boolean;
+  /** Template for rendered Markdown: preview, Quick Look, HTML/PDF export. */
+  previewTemplate: PreviewTemplate;
+  velqOpenIn: VelqOpenIn;
+  /** One-shot: the "this page is directly editable" hint was shown. */
+  hintedRenderedEdit: boolean;
   /** UI language. */
   locale: LocalePref;
   lastVault: string | null;
@@ -81,6 +90,9 @@ export const DEFAULT_SETTINGS: Settings = {
   vimMode: false,
   showLineNumbers: false,
   proseFont: true,
+  previewTemplate: "paper",
+  velqOpenIn: "tab",
+  hintedRenderedEdit: false,
   locale: "system",
   lastVault: null,
   lastExportDir: null,

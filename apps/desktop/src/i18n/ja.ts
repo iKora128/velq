@@ -49,12 +49,23 @@ export const ja: Dict = {
   "settings.density.compact": "コンパクト",
   "settings.readingFont": "読みやすいフォント",
   "settings.readingFont.hint": "本文をセリフ体で表示する。",
+  "settings.previewTemplate": "プレビューのテンプレート",
+  "settings.previewTemplate.hint":
+    "Markdown の表示スタイル。プレビュー・クイックルック・HTML/PDF 書き出しに反映されます。",
+  "settings.previewTemplate.paper": "ペーパー",
+  "settings.previewTemplate.docs": "ドキュメント",
+  "settings.previewTemplate.note": "ノート",
+  "settings.previewTemplate.magazine": "マガジン",
+  "settings.previewTemplate.tech": "テック",
+  "settings.previewTemplate.sky": "スカイ",
+  "settings.previewTemplate.glass": "ガラス",
   "settings.editor": "エディタ",
   "settings.editor.desc": "書くときの初期設定。",
   "settings.editor.defaultView": "初期表示",
   "settings.editor.source": "ソース",
   "settings.editor.split": "分割",
-  "settings.editor.live": "ライブ",
+  "settings.editor.live": "見たまま",
+  "settings.editor.rendered": "見たまま",
   "settings.lineNumbers": "行番号",
   "settings.vim": "Vim モード",
   "settings.vim.hint": "vim キーマップでのモード編集。",
@@ -70,7 +81,12 @@ export const ja: Dict = {
   "settings.packaging.desc": "HTML を持ち運べる .velq にする方法。",
   "settings.autoPackage": "「このアプリで開く」の HTML を自動パッケージ",
   "settings.autoPackage.hint":
-    "Velq の外（OS の「このアプリで開く」）から HTML を開いたとき、依存関係をたどって .velq を Documents/Velq に保存します。Velq の中で開いたファイルは常に編集できます。",
+    "Velq の外（OS の「このアプリで開く」やウィンドウへのドロップ）から HTML を受け取ったとき、依存関係をたどって .velq を Documents/Velq に保存します。Velq の中で開いたファイルは常に編集できます。",
+  "settings.velqOpenIn": ".velq の開き方",
+  "settings.velqOpenIn.hint":
+    "タブなら作業場所を離れません。ウィンドウなら文書に専用の場所を与えます。",
+  "settings.velqOpenIn.tab": "タブで開く",
+  "settings.velqOpenIn.window": "新しいウィンドウ",
 
   // ---- コマンド / メニューの操作名 ----
   "action.newDoc": "新規ドキュメント",
@@ -157,6 +173,16 @@ export const ja: Dict = {
   // ---- ツールバー ----
   "toolbar.locationAria": "場所",
   "toolbar.viewModeAria": "エディタの表示モード",
+  "toolbar.previewTemplate": "プレビューのテンプレート",
+
+  // ---- .velq タブ表示 ----
+  "velqview.readonly": "パッケージ · 表示専用",
+  "velqview.popout": "新しいウィンドウで開く",
+  "velqview.editOriginal": "元の HTML を編集",
+
+  // ---- 初回ヒント ----
+  "hint.renderedEdit":
+    "HTML は「見たまま」でページのまま編集できます — 右上の切替(ソース / 分割 / 見たまま)で選べます。",
 
   // ---- パンくず ----
   "breadcrumb.unsaved": "未保存の変更",

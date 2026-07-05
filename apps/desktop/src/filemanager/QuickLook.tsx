@@ -7,6 +7,7 @@ import { readFile } from "@/ipc/vault";
 import { buildPreviewDoc, htmlDocument } from "@/preview/previewStyles";
 import { langFromName, useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
+import { useSettings } from "@/store/settings";
 import { useResolvedDark } from "@/util/theme";
 import "./quicklook.css";
 
@@ -23,6 +24,7 @@ export function QuickLook() {
   const previewsByFolder = useFiles((s) => s.previewsByFolder);
   const openFile = useDoc((s) => s.openFile);
   const dark = useResolvedDark();
+  const template = useSettings((s) => s.previewTemplate);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const folder = node ? parentOf(node.path) : null;
@@ -40,7 +42,7 @@ export function QuickLook() {
       const html =
         langFromName(node.name) === "html"
           ? htmlDocument(content)
-          : buildPreviewDoc(await renderMarkdown(content), { dark });
+          : buildPreviewDoc(await renderMarkdown(content), { dark, template });
       if (cancelled) return;
       const idoc = iframeRef.current?.contentDocument;
       if (idoc) {
@@ -52,7 +54,7 @@ export function QuickLook() {
     return () => {
       cancelled = true;
     };
-  }, [node, dark]);
+  }, [node, dark, template]);
 
   useEffect(() => {
     if (!node) return;

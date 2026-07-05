@@ -1,4 +1,4 @@
-import { Columns3, LayoutGrid, List } from "lucide-react";
+import { Columns3, LayoutGrid, List, PanelLeft } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useT } from "@/i18n/useT";
 import { useDoc } from "@/store/doc";
@@ -35,9 +35,23 @@ export function ExplorerView() {
     lastActive.current = activeId;
   }, [view, activeId, setView]);
 
+  const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
+
   return (
     <div className="explorer">
       <div className="explorer__toolbar">
+        {fileView === "list" && (
+          <button
+            type="button"
+            className={cn("icon-btn", !sidebarCollapsed && "icon-btn--active")}
+            title={t("common.toggleSidebar")}
+            aria-label={t("common.toggleSidebar")}
+            aria-pressed={!sidebarCollapsed}
+            onClick={() => useUI.getState().toggleSidebar()}
+          >
+            <PanelLeft size={15} />
+          </button>
+        )}
         <span className="explorer__title">{root ? root.name : t("explorer.defaultName")}</span>
         <div className="explorer__spacer" />
         <div className="seg">
@@ -83,11 +97,16 @@ export function ExplorerView() {
 
 function ListBrowser() {
   const [sidebarW, setSidebarW] = useState(300);
+  const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
   const vars = { "--sidebar-w": `${sidebarW}px` } as CSSProperties;
   return (
     <div className={cn("explorer-list")} style={vars}>
-      <Sidebar />
-      <PaneDivider value={sidebarW} min={220} max={480} onChange={setSidebarW} />
+      {!sidebarCollapsed && (
+        <>
+          <Sidebar />
+          <PaneDivider value={sidebarW} min={220} max={480} onChange={setSidebarW} />
+        </>
+      )}
       <FileListPane />
     </div>
   );

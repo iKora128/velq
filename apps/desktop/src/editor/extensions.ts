@@ -24,7 +24,9 @@ export const keymapModeCompartment = new Compartment(); // vim on/off
 export const liveCompartment = new Compartment(); // live-preview decorations on/off
 export const themeCompartment = new Compartment(); // reserved for editor themes (M18)
 
-export type Lang = "markdown" | "html";
+// "velq" tabs never reach CodeMirror (EditorPane shows the package viewer),
+// but they live in the same Doc type.
+export type Lang = "markdown" | "html" | "velq";
 
 export function langExtension(lang: Lang): Extension {
   if (lang === "html") return html({ matchClosingTags: true, autoCloseTags: true });

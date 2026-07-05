@@ -3,8 +3,10 @@ import { type RefObject, useEffect, useRef } from "react";
 import { linkEditorToPreview } from "@/editor/scrollSync";
 import { useT } from "@/i18n/useT";
 import { renderMarkdown } from "@/ipc/render";
+import { useSettings } from "@/store/settings";
+import { isMac } from "@/util/platform";
 import { useResolvedDark } from "@/util/theme";
-import { extractBodyTextRuns, rebuildHtml } from "./htmlTextMap";
+import { extractBodyTextRuns, rebuildHtml, replaceBodyHtml } from "./htmlTextMap";
 import { buildPreviewDoc, htmlDocument } from "./previewStyles";
 import "./preview.css";
 
@@ -15,9 +17,9 @@ interface Props {
   language: "markdown" | "html";
   /** When provided (markdown only), the editor drives preview scroll. */
   viewRef?: RefObject<EditorView | null>;
-  /** HTML only: let the reader tweak text directly on the rendered result (W6). */
+  /** HTML only: edit directly on the rendered result — text, structure, ⌘B/I/U (W6). */
   editable?: boolean;
-  /** Called with the rewritten source after an in-preview text edit. */
+  /** Called with the rewritten source after an in-preview edit. */
   onEdit?: (nextSource: string) => void;
 }
 
@@ -37,42 +39,100 @@ function collectEditableTextNodes(root: HTMLElement): Text[] {
   return nodes;
 }
 
+/** App shortcuts that must keep working while the caret is inside the iframe —
+ * re-dispatched on the parent window for `useShortcuts`. ⌘Z is deliberately absent:
+ * the iframe's own contenteditable undo stack handles it. */
+const FORWARDED_KEYS = new Set(["s", "k", "p", "o", "n", "f", "\\"]);
+
 /**
- * Make the iframe body editable and, on each text edit, write the change back to the
- * source at the right offsets (W6). If the live text-node count no longer matches the
- * source's runs, the edit was structural (a node added/removed) — we leave the source
- * alone rather than guess, so "tweak the wording" stays safe and structure edits go
- * through the code pane. Returns a teardown. No script runs inside the iframe.
+ * Make the iframe body a real editing surface (W6). On each `input`:
+ *   - if the live text-node count still matches the source's runs, the edit was
+ *     text-only → write it back at exact offsets (untouched bytes stay identical);
+ *   - otherwise the edit was structural (Enter, ⌘B, a deleted element, paste) →
+ *     re-serialize the body and splice it over the source's body range; the head
+ *     is never touched. Either way the DOM stays authoritative, so a mapping miss
+ *     self-heals on the next serialization.
+ * ⌘B/I/U format in place; app shortcuts are forwarded to the parent window.
+ * Returns a teardown. No script runs inside the iframe.
  */
 function attachEditable(
   iframe: HTMLIFrameElement,
   liveSource: { current: string },
   onEditRef: { current: ((s: string) => void) | undefined },
 ): () => void {
-  const body = iframe.contentDocument?.body;
-  if (!body) return () => {};
+  const idoc = iframe.contentDocument;
+  const body = idoc?.body;
+  if (!idoc || !body) return () => {};
   body.contentEditable = "true";
   body.spellcheck = false;
 
-  const onInput = () => {
+  // IME (Japanese and friends): don't write half-composed text back to the
+  // source — hold until compositionend commits it.
+  let composing = false;
+
+  const writeBack = () => {
+    if (composing) return;
     const runs = extractBodyTextRuns(liveSource.current);
     const nodes = collectEditableTextNodes(body);
-    if (nodes.length !== runs.length) return; // structural edit — don't write back
-    const newTexts = nodes.map((n) => n.textContent ?? "");
-    let next: string;
-    try {
-      next = rebuildHtml(liveSource.current, runs, newTexts);
-    } catch {
-      return;
+    let next: string | null;
+    if (nodes.length === runs.length) {
+      try {
+        next = rebuildHtml(
+          liveSource.current,
+          runs,
+          nodes.map((n) => n.textContent ?? ""),
+        );
+      } catch {
+        next = null;
+      }
+    } else {
+      next = replaceBodyHtml(liveSource.current, body.innerHTML);
     }
-    if (next === liveSource.current) return;
+    if (next == null || next === liveSource.current) return;
     liveSource.current = next;
     onEditRef.current?.(next);
   };
 
-  body.addEventListener("input", onInput);
+  const onCompositionStart = () => {
+    composing = true;
+  };
+  const onCompositionEnd = () => {
+    composing = false;
+    writeBack();
+  };
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if (!mod || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k === "b" || k === "i" || k === "u") {
+      e.preventDefault();
+      idoc.execCommand(k === "b" ? "bold" : k === "i" ? "italic" : "underline");
+      // The DOM mutates synchronously; write back now rather than trusting the
+      // engine to fire `input` for execCommand (a later duplicate is a no-op).
+      writeBack();
+    } else if (FORWARDED_KEYS.has(k)) {
+      e.preventDefault();
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: e.key,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey,
+          shiftKey: e.shiftKey,
+        }),
+      );
+    }
+  };
+
+  body.addEventListener("input", writeBack);
+  body.addEventListener("compositionstart", onCompositionStart);
+  body.addEventListener("compositionend", onCompositionEnd);
+  idoc.addEventListener("keydown", onKeyDown, true);
   return () => {
-    body.removeEventListener("input", onInput);
+    body.removeEventListener("input", writeBack);
+    body.removeEventListener("compositionstart", onCompositionStart);
+    body.removeEventListener("compositionend", onCompositionEnd);
+    idoc.removeEventListener("keydown", onKeyDown, true);
     try {
       body.contentEditable = "false";
     } catch {
@@ -85,16 +145,19 @@ function attachEditable(
  * Renders the document into a sandboxed (script-less), isolated iframe — JS never
  * runs in the editor preview (full execution is reserved for the `.velq` viewer, M13).
  * Markdown updates swap `.velq-prose` innerHTML in place (no flicker); HTML rewrites
- * the document (it owns its own <head>/styles). With `editable` (HTML only) the reader
- * can tweak text right on the rendered result and it flows back to source (W6).
+ * the document (it owns its own <head>/styles). With `editable` (HTML only) the page
+ * itself becomes the editor — text, structure, ⌘B/I/U — and every edit flows back
+ * to source (W6).
  */
 export function PreviewPane({ source, language, viewRef, editable = false, onEdit }: Props) {
   const t = useT();
   const dark = useResolvedDark();
+  const template = useSettings((s) => s.previewTemplate);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const initialized = useRef(false);
   const lastDark = useRef(dark);
   const lastLang = useRef(language);
+  const lastTemplate = useRef(template);
   const cleanup = useRef<(() => void) | null>(null);
   const seq = useRef(0);
   // The source the iframe currently reflects; edits build on it, and it re-syncs to
@@ -117,6 +180,7 @@ export function PreviewPane({ source, language, viewRef, editable = false, onEdi
       initialized.current = true;
       lastDark.current = dark;
       lastLang.current = language;
+      lastTemplate.current = template;
       cleanup.current?.();
       cleanup.current = null;
       const view = viewRef?.current;
@@ -129,11 +193,21 @@ export function PreviewPane({ source, language, viewRef, editable = false, onEdi
 
     if (language === "html") {
       // A preview edit already round-tripped into this exact source — the iframe
-      // shows it, so skip the rewrite that would jump the reader's caret.
-      if (editable && initialized.current && source === liveSource.current) return;
+      // shows it, so skip the rewrite that would jump the reader's caret. The DOM
+      // check covers StrictMode's simulated unmount, whose teardown turned
+      // contenteditable off: fall through and re-attach instead of returning.
+      if (
+        editable &&
+        initialized.current &&
+        source === liveSource.current &&
+        iframe.contentDocument?.body?.isContentEditable
+      )
+        return;
       writeDoc(htmlDocument(source), false);
-      // Editing works on the body; a full <html> doc keeps head/title out of the map.
-      if (editable && /<body[\s>]/i.test(source)) {
+      // A full document needs a locatable <body> for the write-back range; a
+      // fragment (no <html>) is its own body, so it's always editable.
+      const canEdit = /<html[\s>]/i.test(source) ? /<body[\s>]/i.test(source) : true;
+      if (editable && canEdit) {
         liveSource.current = source;
         const teardown = attachEditable(iframe, liveSource, onEditRef);
         const prev = cleanup.current;
@@ -151,16 +225,19 @@ export function PreviewPane({ source, language, viewRef, editable = false, onEdi
         const idoc = iframe.contentDocument;
         if (!idoc) return;
         const needsFullWrite =
-          !initialized.current || lastDark.current !== dark || lastLang.current !== language;
+          !initialized.current ||
+          lastDark.current !== dark ||
+          lastLang.current !== language ||
+          lastTemplate.current !== template;
         if (needsFullWrite) {
-          writeDoc(buildPreviewDoc(bodyHtml, { dark }), true);
+          writeDoc(buildPreviewDoc(bodyHtml, { dark, template }), true);
         } else {
           const prose = idoc.querySelector(".velq-prose");
           if (prose) prose.innerHTML = bodyHtml;
         }
       })
       .catch((e) => console.error("preview render failed", e));
-  }, [source, language, dark, viewRef, editable]);
+  }, [source, language, dark, template, viewRef, editable]);
 
   useEffect(() => () => cleanup.current?.(), []);
 

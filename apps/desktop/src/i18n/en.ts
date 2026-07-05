@@ -53,12 +53,23 @@ export const en = {
   "settings.density.compact": "Compact",
   "settings.readingFont": "Reading font",
   "settings.readingFont.hint": "Use a serif typeface for prose.",
+  "settings.previewTemplate": "Preview template",
+  "settings.previewTemplate.hint":
+    "How rendered Markdown looks — in the preview, Quick Look, and HTML/PDF exports.",
+  "settings.previewTemplate.paper": "Paper",
+  "settings.previewTemplate.docs": "Docs",
+  "settings.previewTemplate.note": "Note",
+  "settings.previewTemplate.magazine": "Magazine",
+  "settings.previewTemplate.tech": "Tech",
+  "settings.previewTemplate.sky": "Sky",
+  "settings.previewTemplate.glass": "Glass",
   "settings.editor": "Editor",
   "settings.editor.desc": "Defaults for the writing surface.",
   "settings.editor.defaultView": "Default view",
   "settings.editor.source": "Source",
   "settings.editor.split": "Split",
   "settings.editor.live": "Live",
+  "settings.editor.rendered": "Rendered",
   "settings.lineNumbers": "Line numbers",
   "settings.vim": "Vim mode",
   "settings.vim.hint": "Modal editing with a vim keymap.",
@@ -73,7 +84,12 @@ export const en = {
   "settings.packaging.desc": "How HTML becomes a portable .velq.",
   "settings.autoPackage": 'Auto-package HTML from "Open with"',
   "settings.autoPackage.hint":
-    'Opening an HTML file from outside Velq (the OS "Open with") traces its dependencies into a .velq in Documents/Velq. Files you open inside Velq are always editable.',
+    'Opening an HTML file from outside Velq (the OS "Open with" or a drop onto the window) traces its dependencies into a .velq in Documents/Velq. Files you open inside Velq are always editable.',
+  "settings.velqOpenIn": "Open .velq files",
+  "settings.velqOpenIn.hint":
+    "A tab keeps you in your workspace; a window gives the document its own space.",
+  "settings.velqOpenIn.tab": "In a tab",
+  "settings.velqOpenIn.window": "In a new window",
 
   // ---- Command / menu action titles (command palette rows) ----
   "action.newDoc": "New document",
@@ -159,6 +175,16 @@ export const en = {
   // ---- Toolbar ----
   "toolbar.locationAria": "Location",
   "toolbar.viewModeAria": "Editor view mode",
+  "toolbar.previewTemplate": "Preview template",
+
+  // ---- .velq tab view ----
+  "velqview.readonly": "Sealed package · read-only",
+  "velqview.popout": "Open in new window",
+  "velqview.editOriginal": "Edit the original HTML",
+
+  // ---- One-shot hints ----
+  "hint.renderedEdit":
+    "HTML edits as the page itself in Rendered view — pick Source / Split / Rendered at the top right.",
 
   // ---- Breadcrumb ----
   "breadcrumb.unsaved": "Unsaved changes",

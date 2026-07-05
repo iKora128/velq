@@ -5,6 +5,7 @@ import {
   extractBodyTextRuns,
   extractTextRuns,
   rebuildHtml,
+  replaceBodyHtml,
 } from "./htmlTextMap";
 
 describe("extractTextRuns", () => {
@@ -116,5 +117,34 @@ describe("rebuildHtml", () => {
   it("throws when the counts disagree", () => {
     const runs = extractTextRuns("<p>x</p>");
     expect(() => rebuildHtml("<p>x</p>", runs, [])).toThrow(/mismatch/);
+  });
+});
+
+describe("replaceBodyHtml", () => {
+  it("splices the new body inner HTML, keeping doctype/head/body attrs byte-for-byte", () => {
+    const src =
+      '<!doctype html>\n<html lang="ja">\n<head><title>T</title></head>\n<body class="x">\n<p>old</p>\n</body>\n</html>';
+    expect(replaceBodyHtml(src, "<p>new</p><p>added</p>")).toBe(
+      '<!doctype html>\n<html lang="ja">\n<head><title>T</title></head>\n<body class="x"><p>new</p><p>added</p></body>\n</html>',
+    );
+  });
+
+  it("treats a source without <html> as a fragment: the serialization is the new source", () => {
+    expect(replaceBodyHtml("<p>a</p>", "<p>a</p><p>b</p>")).toBe("<p>a</p><p>b</p>");
+  });
+
+  it("replaces to end-of-source when </body> is missing", () => {
+    expect(replaceBodyHtml("<html><body><p>x</p>", "<p>y</p>")).toBe("<html><body><p>y</p>");
+  });
+
+  it("returns null for a full document whose <body> cannot be located", () => {
+    expect(replaceBodyHtml("<html><p>x</p></html>", "<p>y</p>")).toBeNull();
+    expect(replaceBodyHtml("<html><body", "<p>y</p>")).toBeNull();
+  });
+
+  it("matches <body> case-insensitively and with attributes", () => {
+    expect(replaceBodyHtml("<HTML><BODY id='b'>x</BODY></HTML>", "y")).toBe(
+      "<HTML><BODY id='b'>y</BODY></HTML>",
+    );
   });
 });
