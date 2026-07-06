@@ -246,9 +246,9 @@ fn looks_like_asset(s: &str) -> bool {
         return false;
     }
     match s.rsplit_once('.') {
-        Some((stem, ext)) if !stem.is_empty() && !stem.ends_with('/') => {
-            SCRIPT_ASSET_EXTS.iter().any(|e| ext.eq_ignore_ascii_case(e))
-        }
+        Some((stem, ext)) if !stem.is_empty() && !stem.ends_with('/') => SCRIPT_ASSET_EXTS
+            .iter()
+            .any(|e| ext.eq_ignore_ascii_case(e)),
         _ => false,
     }
 }
@@ -505,8 +505,7 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
             None => continue,
         };
         for (rel, abs) in matches {
-            if rel == "index.html" || rel.ends_with(".velq") || !seen_original.insert(rel.clone())
-            {
+            if rel == "index.html" || rel.ends_with(".velq") || !seen_original.insert(rel.clone()) {
                 continue;
             }
             if let Ok(bytes) = std::fs::read(&abs) {
@@ -727,8 +726,11 @@ mod tests {
         std::fs::create_dir_all(dir.join("photos")).unwrap();
         std::fs::write(dir.join("photos/cat.png"), b"cat").unwrap();
         std::fs::write(dir.join("sprite.webp"), b"sprite").unwrap();
-        std::fs::write(dir.join("app.js"), br#"el.style.background = "url(sprite.webp)";"#)
-            .unwrap();
+        std::fs::write(
+            dir.join("app.js"),
+            br#"el.style.background = "url(sprite.webp)";"#,
+        )
+        .unwrap();
         let html = r#"<html><body><script src="app.js"></script>
             <script>img.src = "photos/cat.png";</script></body></html>"#;
 
@@ -746,7 +748,11 @@ mod tests {
         std::fs::write(&outside, b"secret").unwrap();
         let html = r#"<html><body><script>x = "../velq-escape-test.png";</script></body></html>"#;
         let res = bundle(html, &dir, false).await;
-        assert!(res.assets.is_empty(), "{:?}", res.assets.iter().map(|a| &a.path).collect::<Vec<_>>());
+        assert!(
+            res.assets.is_empty(),
+            "{:?}",
+            res.assets.iter().map(|a| &a.path).collect::<Vec<_>>()
+        );
         std::fs::remove_file(&outside).ok();
         std::fs::remove_dir_all(&dir).ok();
     }

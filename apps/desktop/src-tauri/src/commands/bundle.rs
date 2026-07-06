@@ -68,7 +68,9 @@ fn unique_velq(dir: &Path, stem: &str) -> PathBuf {
 
 /// Stems so generic that every site ships one — for these the parent folder is
 /// the document's real name, so two `index.html` never fight over `index.velq`.
-const GENERIC_STEMS: &[&str] = &["index", "home", "default", "main", "page", "document", "untitled"];
+const GENERIC_STEMS: &[&str] = &[
+    "index", "home", "default", "main", "page", "document", "untitled",
+];
 
 /// The `.velq` stem for a source HTML path: `portfolio/index.html` →
 /// `portfolio-index`, but a distinctive name (`Q2レポート.html`) stays itself.
@@ -164,7 +166,10 @@ mod tests {
 
     #[test]
     fn generic_stems_get_the_parent_folder_prefix() {
-        assert_eq!(velq_stem(Path::new("/dl/portfolio/index.html")), "portfolio-index");
+        assert_eq!(
+            velq_stem(Path::new("/dl/portfolio/index.html")),
+            "portfolio-index"
+        );
         assert_eq!(velq_stem(Path::new("/x/Site/INDEX.HTML")), "Site-INDEX");
         assert_eq!(velq_stem(Path::new("/a/blog/home.html")), "blog-home");
     }
