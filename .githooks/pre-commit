@@ -1,0 +1,12 @@
+#!/bin/sh
+# Keep Rust formatted so CI's `cargo fmt --all --check` never blocks a push.
+# Enable once per clone with:  git config core.hooksPath .githooks
+command -v cargo >/dev/null 2>&1 || exit 0
+
+staged_rs=$(git diff --cached --name-only --diff-filter=ACM -- '*.rs')
+[ -z "$staged_rs" ] && exit 0
+
+cargo fmt --all
+# Re-stage the Rust files that were already part of this commit, in case
+# rustfmt just reformatted them.
+printf '%s\n' "$staged_rs" | xargs git add
