@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { GITHUB, RELEASES, type Copy } from "../data/copy";
+import { GITHUB, RELEASES, RELEASES_API, type Copy } from "../data/copy";
 import { icons, githubPath } from "../data/icons";
 
 interface Props {
@@ -31,7 +31,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
           <span set:html={ic("languages", 15)} />{t.nav.lang.label}
         </a>
         <a class="nav__gh" href={GITHUB} aria-label="GitHub" set:html={gh} />
-        <a class="btn btn--primary btn--sm" href={RELEASES}>{t.nav.cta}</a>
+        <a class="btn btn--primary btn--sm" href={RELEASES} data-dl="auto">{t.nav.cta}</a>
       </div>
     </div>
   </nav>
@@ -45,8 +45,8 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
       </h1>
       <p class="lede" data-reveal set:html={t.hero.lede} />
       <div class="hero__cta" data-reveal>
-        <a class="btn btn--primary btn--lg" href={RELEASES}>
-          <span set:html={ic("download", 18)} />{t.hero.ctaPrimary}
+        <a class="btn btn--primary btn--lg" href={RELEASES} data-dl="auto" data-auto-cta={t.download.autoCta}>
+          <span set:html={ic("download", 18)} /><span class="dl-label">{t.hero.ctaPrimary}</span>
         </a>
         <a class="btn btn--lg" href={GITHUB}><span set:html={gh} />{t.hero.ctaSecondary}</a>
       </div>
@@ -207,7 +207,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
     </div>
   </section>
 
-  <section class="block block--dl" id="download">
+  <section class="block block--dl" id="download" data-dl-api={RELEASES_API}>
     <div class="wrap">
       <div class="section-head" data-reveal>
         <h2>{t.download.title}</h2>
@@ -219,7 +219,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
             <article class={`dl${i === 0 ? " dl--primary" : ""}`}>
               <h3>{c.os}</h3>
               <p>{c.meta}</p>
-              <a class={`btn btn--sm${i === 0 ? " btn--primary" : ""}`} href={RELEASES}>
+              <a class={`btn btn--sm${i === 0 ? " btn--primary" : ""}`} href={RELEASES} data-dl={c.key}>
                 {c.cta}
               </a>
             </article>
@@ -256,7 +256,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
       <img class="finale__mark" src="/brand/icon-256.png" alt="" width="88" height="88" />
       <p class="finale__line">{t.cta.line}</p>
       <div class="hero__cta">
-        <a class="btn btn--primary btn--lg" href={RELEASES}>
+        <a class="btn btn--primary btn--lg" href={RELEASES} data-dl="auto">
           <span set:html={ic("download", 18)} />{t.cta.button}
         </a>
         <a class="btn btn--lg" href={GITHUB}><span set:html={gh} />{t.cta.secondary}</a>
@@ -276,4 +276,71 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
       </div>
     </div>
   </footer>
+
+  <script>
+    // Point the download buttons straight at the latest release's real installers,
+    // and make the OS-aware CTAs match the visitor's platform. Any failure leaves
+    // the buttons on their `/releases/latest` href, so downloads never break.
+    (async () => {
+      const OS = { mac: "macOS", win: "Windows", linux: "Linux" };
+      const MATCH = {
+        mac: [/aarch64\.dmg$/i, /\.dmg$/i],
+        win: [/-setup\.exe$/i, /\.msi$/i, /\.exe$/i],
+        linux: [/\.AppImage$/i, /\.deb$/i],
+      };
+      const CACHE = "velq_dl_v1";
+      const api = document.querySelector("[data-dl-api]")?.getAttribute("data-dl-api");
+
+      const detect = () => {
+        const s = (navigator.userAgent + " " + (navigator.platform || "")).toLowerCase();
+        if (/mac|iphone|ipad/.test(s)) return "mac";
+        if (/win/.test(s)) return "win";
+        if (/linux|android|x11|cros/.test(s)) return "linux";
+        return null;
+      };
+      const os = detect();
+
+      // Relabel the OS-aware CTAs from detection alone (works even offline).
+      if (os) {
+        document.querySelectorAll('[data-dl="auto"][data-auto-cta]').forEach((el) => {
+          const label = el.querySelector(".dl-label");
+          if (label) label.textContent = el.getAttribute("data-auto-cta").replace("%s", OS[os]);
+        });
+      }
+
+      if (!api) return;
+      let urls;
+      try {
+        const cached = sessionStorage.getItem(CACHE);
+        if (cached) {
+          urls = JSON.parse(cached);
+        } else {
+          const res = await fetch(api, { headers: { Accept: "application/vnd.github+json" } });
+          if (!res.ok) return;
+          const list = (await res.json()).assets || [];
+          urls = {};
+          for (const key in MATCH) {
+            for (const rx of MATCH[key]) {
+              const hit = list.find((a) => rx.test(a.name));
+              if (hit) {
+                urls[key] = hit.browser_download_url;
+                break;
+              }
+            }
+          }
+          try {
+            sessionStorage.setItem(CACHE, JSON.stringify(urls));
+          } catch (e) {}
+        }
+      } catch (e) {
+        return;
+      }
+
+      document.querySelectorAll("[data-dl]").forEach((el) => {
+        const key = el.getAttribute("data-dl");
+        const url = key === "auto" ? os && urls[os] : urls[key];
+        if (url) el.setAttribute("href", url);
+      });
+    })();
+  </script>
 </BaseLayout>

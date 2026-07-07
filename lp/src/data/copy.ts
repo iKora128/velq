@@ -65,7 +65,8 @@ export interface Copy {
   download: {
     title: string;
     sub: string;
-    cards: { os: string; meta: string; cta: string }[];
+    cards: { os: string; meta: string; cta: string; key: "mac" | "win" | "linux" }[];
+    autoCta: string;
     note: string;
   };
   cta: { line: string; button: string; secondary: string };
@@ -74,6 +75,7 @@ export interface Copy {
 
 export const GITHUB = "https://github.com/iKora128/velq";
 export const RELEASES = `${GITHUB}/releases/latest`;
+export const RELEASES_API = "https://api.github.com/repos/iKora128/velq/releases/latest";
 
 export const en: Copy = {
   lang: "en",
@@ -279,10 +281,11 @@ export const en: Copy = {
     title: "Get Velq",
     sub: "Download once. It keeps itself up to date.",
     cards: [
-      { os: "macOS", meta: "Apple Silicon & Intel · .dmg", cta: "Download .dmg" },
-      { os: "Windows", meta: "64-bit · .msi / .exe", cta: "Download" },
-      { os: "Linux", meta: ".AppImage / .deb", cta: "Download" },
+      { os: "macOS", meta: "Apple Silicon · .dmg", cta: "Download .dmg", key: "mac" },
+      { os: "Windows", meta: "64-bit · .msi / .exe", cta: "Download", key: "win" },
+      { os: "Linux", meta: ".AppImage / .deb", cta: "Download", key: "linux" },
     ],
+    autoCta: "Download for %s",
     note: "Early 0.x — macOS is the daily-driven platform; Windows and Linux ship from the same CI.",
   },
   cta: {
@@ -501,10 +504,11 @@ export const ja: Copy = {
     title: "Velq を入手",
     sub: "ダウンロードは一度だけ。あとは自動で最新になります。",
     cards: [
-      { os: "macOS", meta: "Apple Silicon & Intel · .dmg", cta: ".dmg をダウンロード" },
-      { os: "Windows", meta: "64-bit · .msi / .exe", cta: "ダウンロード" },
-      { os: "Linux", meta: ".AppImage / .deb", cta: "ダウンロード" },
+      { os: "macOS", meta: "Apple Silicon · .dmg", cta: ".dmg をダウンロード", key: "mac" },
+      { os: "Windows", meta: "64-bit · .msi / .exe", cta: "ダウンロード", key: "win" },
+      { os: "Linux", meta: ".AppImage / .deb", cta: "ダウンロード", key: "linux" },
     ],
+    autoCta: "%s 版をダウンロード",
     note: "いまは 0.x。日々使い込んでいるのは macOS 版で、Windows / Linux も同じ CI から出荷しています。",
   },
   cta: {
