@@ -6,6 +6,11 @@
 
 [velq.sh](https://velq.sh) · Apache-2.0 · Built with Tauri v2 + React 19 + Rust
 
+[![CI](https://github.com/iKora128/velq/actions/workflows/ci.yml/badge.svg)](https://github.com/iKora128/velq/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/iKora128/velq?color=2563eb)](https://github.com/iKora128/velq/releases/latest)
+[![License](https://img.shields.io/github/license/iKora128/velq?color=2563eb)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/iKora128/velq/total?color=2563eb)](https://github.com/iKora128/velq/releases)
+
 </div>
 
 ---
