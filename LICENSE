@@ -1,3 +1,4 @@
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -91,8 +92,8 @@
       modifications, and in Source or Object form, provided that You
       meet the following conditions:
 
-      (a) You must give any other recipients of the Work or Derivative
-          Works a copy of this License; and
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
 
       (b) You must cause any modified files to carry prominent notices
           stating that You changed the files; and
@@ -186,7 +187,7 @@
       same "printed page" as the copyright notice for easier
       identification within third-party archives.
 
-   Copyright 2026 Daichi Nagashima
+   Copyright [yyyy] [name of copyright owner]
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -199,15 +200,3 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-
----
-
-PLUGIN EXCEPTION
-
-As a special exception, plugins written for Velq's plugin API (see
-docs/plugin-api.md) are the original works of their respective authors and
-are NOT considered Derivative Works of Velq. Plugin authors may license their
-plugins under any terms they choose. This exception applies only to plugins
-that interface with Velq solely through its published plugin API or through
-Tauri command / HTTP boundaries, and does not grant any right to incorporate
-Velq's own Apache-2.0 source into a differently-licensed work.

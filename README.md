@@ -91,9 +91,8 @@ and [CLAUDE.md](CLAUDE.md) for the engineering conventions.
 ## Licensing
 
 - **Core** (editor, viewer, `.velq`, file manager, plugin API): **Apache-2.0** — see [LICENSE](LICENSE).
-- **Plugins**: authors choose their own license. Velq's plugin API carries an explicit
-  exception (see the end of [LICENSE](LICENSE)); plugins that interface only through the
-  published API are not Derivative Works.
+- **Plugins**: each plugin is its author's own work, licensed under whatever terms the
+  author chooses — plugins are not part of Velq.
 - **SaaS / AI features**: proprietary, in a separate repository, connected through the
   plugin API or Tauri command / HTTP boundaries.
 
