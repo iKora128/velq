@@ -355,36 +355,6 @@ registerMock("new_velq", ({ parentPath, name }: { parentPath: string; name: stri
   dir.children[uname] = f(""); // empty markdown .velq → opens blank in the Markdown editor
   return toFileNode(`${parentPath}/${uname}`, uname, dir.children[uname]);
 });
-registerMock(
-  "convert_md_in_place",
-  ({ mdPath, md }: { mdPath: string; md: string; html: string }) => {
-    const parent = parentDirOf(mdPath);
-    if (!parent) throw new Error("mock: bad md path");
-    const base = basename(mdPath);
-    const uname = uniqueName(parent, `${base.replace(/\.(md|markdown)$/i, "")}.velq`);
-    parent.children[uname] = f(md); // md content → read_velq_doc opens it as Markdown
-    delete parent.children[base]; // swap: the original is removed
-    return {
-      outPath: `${mdPath.slice(0, mdPath.lastIndexOf("/"))}/${uname}`,
-      collected: 0,
-      failed: 0,
-    };
-  },
-);
-registerMock("convert_html_in_place", ({ htmlPath }: { htmlPath: string }) => {
-  const parent = parentDirOf(htmlPath);
-  const src = resolve(htmlPath);
-  if (!parent || src?.kind !== "file") throw new Error("mock: bad html path");
-  const base = basename(htmlPath);
-  const uname = uniqueName(parent, `${base.replace(/\.html?$/i, "")}.velq`);
-  parent.children[uname] = f(src.content); // html content → read_velq_doc sees it as HTML
-  delete parent.children[base];
-  return {
-    outPath: `${htmlPath.slice(0, htmlPath.lastIndexOf("/"))}/${uname}`,
-    collected: 0,
-    failed: 0,
-  };
-});
 registerMock("read_velq_doc", ({ path }: { path: string }) => {
   const node = resolve(path);
   if (node?.kind !== "file") throw new Error(`mock: no .velq at ${path}`);

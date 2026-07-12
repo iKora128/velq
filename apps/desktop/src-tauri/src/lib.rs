@@ -289,8 +289,6 @@ pub fn run() {
             commands::bundle::bundle_html_to_velq,
             commands::bundle::package_html_file,
             commands::bundle::package_md_file,
-            commands::bundle::convert_md_in_place,
-            commands::bundle::convert_html_in_place,
             commands::bundle::fetch_ogp,
             commands::bundle::bundle_md_doc,
         ])

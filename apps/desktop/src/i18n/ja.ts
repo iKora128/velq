@@ -255,6 +255,16 @@ export const ja: Dict = {
   "conflict.message": "編集中に、このファイルがディスク上で変更されました。",
   "conflict.reload": "ディスクから読み込み直す",
   "conflict.keepMine": "自分の版を保持",
+  "convert.title": ".velq にする？",
+  "convert.body":
+    "選んだファイルの .velq コピーを 書類/Velq フォルダに作ります。元のファイルはそのまま残ります。",
+  "convert.more": "他 {count} 件",
+  "convert.always": "今後はドラッグしたファイルを確認せず変換",
+  "convert.keep": "ファイルのまま追加",
+  "convert.make": ".velq にする",
+  "convertBanner.text":
+    "このファイルはそのままでもOK。書類/Velq に .velq コピーを作ることもできます。",
+  "convertBanner.make": ".velq にする",
 
   // ---- ドロップゾーン ----
   "dropzone.hint": "ドロップして Velq フォルダに追加",

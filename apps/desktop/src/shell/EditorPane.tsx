@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import { Editor } from "@/editor/Editor";
 import { RenderedView } from "@/editor/RenderedView";
 import { SplitView } from "@/editor/SplitView";
+import { canConvertToVelq } from "@/export/convert";
 import { openHtmlAndPackage } from "@/export/htmlPackage";
 import { DiffBar } from "@/history/DiffBar";
 import { DiffView } from "@/history/DiffView";
 import { t as tr } from "@/i18n";
 import { useT } from "@/i18n/useT";
+import { useConvertBanner } from "@/store/convertBanner";
 import { useDoc } from "@/store/doc";
 import { useHistory } from "@/store/history";
 import { useSettings } from "@/store/settings";
@@ -14,6 +16,7 @@ import { useToast } from "@/store/toast";
 import { useVault } from "@/store/vault";
 import { fmtShortcut } from "@/util/platform";
 import { ConflictBanner } from "./ConflictBanner";
+import { ConvertBanner } from "./ConvertBanner";
 import { TabBar } from "./TabBar";
 import { Toolbar } from "./Toolbar";
 
@@ -47,11 +50,23 @@ export function EditorPane() {
   const key = doc ? `${doc.id}:${rev}` : "none";
   const showDiff = doc && diffVersion && baseContent != null;
 
+  // A plain Markdown/HTML file (not one already inside a .velq) may be offered a
+  // one-click "make a .velq copy" — dismissible, and NEVER automatic.
+  const bannerDismissed = useConvertBanner((s) => (doc ? s.dismissed.has(doc.id) : false));
+  const showConvertBanner =
+    doc != null &&
+    doc.path != null &&
+    !doc.velqSource &&
+    !showDiff &&
+    !bannerDismissed &&
+    canConvertToVelq(doc.name);
+
   return (
     <section className="editor-pane">
       <Toolbar />
       {hasTabs && <TabBar />}
       {conflict && doc?.path && !showDiff && <ConflictBanner path={doc.path} />}
+      {showConvertBanner && doc?.path && <ConvertBanner docId={doc.id} path={doc.path} />}
       {showDiff && <DiffBar version={diffVersion} />}
       <div className="editor-body">
         {!doc ? (

@@ -1,0 +1,74 @@
+.cprompt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 16vh;
+  background: rgba(0, 0, 0, 0.3);
+}
+.cprompt {
+  width: min(440px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  align-items: center;
+}
+.cprompt__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+.cprompt__title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+.cprompt__body {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+}
+.cprompt__files {
+  align-self: stretch;
+  max-height: 24vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--text);
+  text-align: left;
+}
+.cprompt__more {
+  color: var(--text-muted);
+}
+.cprompt__always {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+.cprompt__foot {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}

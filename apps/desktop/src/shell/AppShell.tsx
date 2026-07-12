@@ -12,6 +12,7 @@ import { PluginsPanel } from "@/plugins/PluginsPanel";
 import { useFiles } from "@/store/files";
 import { useUI } from "@/store/ui";
 import { ActivityBar } from "./ActivityBar";
+import { ConvertPromptModal } from "./ConvertPromptModal";
 import { EditorWorkspace } from "./EditorWorkspace";
 import { ExplorerView } from "./ExplorerView";
 import { PackagingOverlay } from "./PackagingOverlay";
@@ -68,6 +69,7 @@ export function AppShell() {
       <Cheatsheet />
       <PluginsPanel />
       <BatchRenameDialog />
+      <ConvertPromptModal />
       <PackagingOverlay />
       <Toaster />
       {dragging && (

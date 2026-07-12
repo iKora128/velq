@@ -257,6 +257,15 @@ export const en = {
   "conflict.message": "This file changed on disk while you were editing.",
   "conflict.reload": "Reload from disk",
   "conflict.keepMine": "Keep my version",
+  "convert.title": "Make a .velq?",
+  "convert.body":
+    "A .velq copy will be created in your Documents/Velq folder. Your original files stay exactly where they are.",
+  "convert.more": "+{count} more",
+  "convert.always": "Always do this for files I drop in",
+  "convert.keep": "Add as files",
+  "convert.make": "Make .velq",
+  "convertBanner.text": "Keep this as a plain file — or make a .velq copy in Documents/Velq.",
+  "convertBanner.make": "Make .velq",
 
   // ---- Drop zone ----
   "dropzone.hint": "Drop to add to your Velq folder",

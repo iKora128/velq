@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { editorBus } from "@/editor/editorBus";
-import { isHtmlPath, isMdPath, packageAndStage, packageMdAndStage } from "@/export/htmlPackage";
+import { convertDroppedToVelq, convertible, importRawIntoVault } from "@/export/dropActions";
 import { t } from "@/i18n";
 import { isTauri } from "@/ipc/tauri";
 import { importFile } from "@/ipc/vault";
+import { useConvertPrompt } from "@/store/convertPrompt";
 import { describeError, useDoc } from "@/store/doc";
-import { useFiles } from "@/store/files";
 import { useSettings } from "@/store/settings";
 import { useToast } from "@/store/toast";
-import { useVault } from "@/store/vault";
 
 function baseName(p: string): string {
   return p.split(/[/\\]/).filter(Boolean).pop() ?? p;
@@ -38,54 +37,28 @@ async function importImagesIntoDoc(paths: string[]): Promise<boolean> {
   return ok > 0;
 }
 
-/** Dropped HTML wraps into a `.velq` (when auto-package is on) — the package IS
- * the working unit: it opens showing the page, and its "extract & edit" button
- * (edit mode already on) takes you to the HTML inside. Packaging from the file's
- * ORIGINAL folder keeps relative css/img/js resolvable. Everything else is copied
- * into the open vault's root. */
+/** Handle an OS drop. Markdown/HTML files are OFFERED as a `.velq` (a copy into
+ * Documents/Velq — the original is never touched): if the user opted into "always",
+ * we convert straight away, otherwise a modal asks. Everything else — a `.velq` from
+ * Finder, notes, images — is copied into the open vault as-is. Converting NEVER
+ * happens silently on a plain drop unless the user chose "always". */
 async function importDropped(paths: string[], overEditor: boolean) {
   // Images aimed at the editor go into the document, not the vault root.
   if (overEditor && (await importImagesIntoDoc(paths))) return;
-  const autoPackage = useSettings.getState().autoPackageHtml;
-  const toImport: string[] = [];
-  for (const p of paths) {
-    if (autoPackage && isHtmlPath(p)) await packageAndStage(p);
-    else if (autoPackage && isMdPath(p)) await packageMdAndStage(p);
-    else toImport.push(p);
-  }
-  if (toImport.length === 0) return;
+  const toConvert = convertible(paths);
+  const others = paths.filter((p) => !toConvert.includes(p));
 
-  const vault = useVault.getState().root;
-  if (!vault) {
-    useToast.getState().push(t("toast.dropOpenFolderFirst"));
-    return;
+  if (toConvert.length > 0) {
+    if (useSettings.getState().autoPackageHtml) await convertDroppedToVelq(toConvert);
+    else useConvertPrompt.getState().open(toConvert); // ask first — the modal decides
   }
-  let added = 0;
-  for (const p of toImport) {
-    try {
-      await importFile(p, vault.path);
-      added += 1;
-    } catch (e) {
-      console.error("import failed", p, e);
-      useToast.getState().push(t("toast.cantAdd", { name: baseName(p), error: describeError(e) }));
-    }
-  }
-  if (added > 0) {
-    await useFiles.getState().loadDir(vault.path);
-    useToast
-      .getState()
-      .push(
-        added === 1
-          ? t("toast.addedOne", { vault: vault.name })
-          : t("toast.addedMany", { count: added, vault: vault.name }),
-      );
-  }
+  await importRawIntoVault(others);
 }
 
-/** OS file drag-and-drop onto the window. HTML wraps into a `.velq` when
- * auto-package is on; anything else — a `.velq` from Finder, notes, images — is
- * copied into the open vault. Returns whether a drag is currently hovering, so the
- * shell can show a drop hint. */
+/** OS file drag-and-drop onto the window. Markdown/HTML is offered as a `.velq`
+ * (asks first, unless "always" is set); anything else — a `.velq` from Finder,
+ * notes, images — is copied into the open vault. Returns whether a drag is currently
+ * hovering, so the shell can show a drop hint. */
 export function useFileDrop(): boolean {
   const [dragging, setDragging] = useState(false);
   useEffect(() => {

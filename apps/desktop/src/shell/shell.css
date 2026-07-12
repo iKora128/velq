@@ -218,6 +218,27 @@
   min-width: 0;
 }
 
+/* A helpful (not alarming) offer to make a .velq — accent-tinted, dismissible. */
+.convert-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--accent-subtle);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  font-size: var(--text-sm);
+  color: var(--text);
+  flex: none;
+}
+.convert-banner__icon {
+  color: var(--accent-text);
+  flex: none;
+}
+.convert-banner__text {
+  flex: 1;
+  min-width: 0;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;
