@@ -33,6 +33,8 @@ pub struct Settings {
     pub density: String,
     pub editor_mode: String,
     pub file_view: String,
+    /// The editor's left panel view: "tree" | "columns" | "icons".
+    pub sidebar_view: String,
     pub vim_mode: bool,
     pub show_line_numbers: bool,
     pub prose_font: bool,
@@ -63,6 +65,7 @@ impl Default for Settings {
             density: "comfortable".into(),
             editor_mode: "live".into(),
             file_view: "grid".into(),
+            sidebar_view: "tree".into(),
             vim_mode: false,
             show_line_numbers: false,
             prose_font: true,

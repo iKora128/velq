@@ -40,6 +40,49 @@
   border-right: 1px solid var(--border-subtle);
   min-width: 0;
 }
+/* The tree, Miller columns and icon grid each fill the space between the head and
+   the footer switch (all three are `flex: 1; min-height: 0`). Columns run a touch
+   narrower than in the full-window Explorer so more of them fit this panel. */
+.sidebar[data-view="columns"] .miller__col {
+  width: 190px;
+}
+
+/* ---- Footer view switch (tree / columns / icons), Finder-style ---- */
+.sidebar-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 34px;
+  padding: 0 var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.sidebar-foot__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+.sidebar-foot__btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.sidebar-foot__btn.is-on {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+.sidebar-foot__label {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
 
 .file-list {
   width: var(--list-w);

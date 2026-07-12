@@ -20,6 +20,7 @@ function pickSettings(s: SettingsState): Settings {
     density: s.density,
     editorMode: s.editorMode,
     fileView: s.fileView,
+    sidebarView: s.sidebarView,
     vimMode: s.vimMode,
     showLineNumbers: s.showLineNumbers,
     proseFont: s.proseFont,
