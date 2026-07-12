@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { editorBus } from "@/editor/editorBus";
-import { isHtmlPath, packageAndStage } from "@/export/htmlPackage";
+import { isHtmlPath, isMdPath, packageAndStage, packageMdAndStage } from "@/export/htmlPackage";
 import { t } from "@/i18n";
 import { isTauri } from "@/ipc/tauri";
 import { importFile } from "@/ipc/vault";
@@ -38,16 +38,19 @@ async function importImagesIntoDoc(paths: string[]): Promise<boolean> {
   return ok > 0;
 }
 
-/** Dropped HTML (with auto-package on) is packaged from its ORIGINAL folder — its
- * relative css/img/js resolve there; a bare copy into the vault would break them.
- * Everything else is copied into the open vault's root. */
+/** Dropped HTML wraps into a `.velq` (when auto-package is on) — the package IS
+ * the working unit: it opens showing the page, and its "extract & edit" button
+ * (edit mode already on) takes you to the HTML inside. Packaging from the file's
+ * ORIGINAL folder keeps relative css/img/js resolvable. Everything else is copied
+ * into the open vault's root. */
 async function importDropped(paths: string[], overEditor: boolean) {
   // Images aimed at the editor go into the document, not the vault root.
   if (overEditor && (await importImagesIntoDoc(paths))) return;
   const autoPackage = useSettings.getState().autoPackageHtml;
   const toImport: string[] = [];
   for (const p of paths) {
-    if (isHtmlPath(p) && autoPackage) await packageAndStage(p);
+    if (autoPackage && isHtmlPath(p)) await packageAndStage(p);
+    else if (autoPackage && isMdPath(p)) await packageMdAndStage(p);
     else toImport.push(p);
   }
   if (toImport.length === 0) return;
@@ -79,10 +82,10 @@ async function importDropped(paths: string[], overEditor: boolean) {
   }
 }
 
-/** OS file drag-and-drop onto the window. HTML packages to `.velq` when
- * auto-package is on (same rule as opening from the OS); anything else — a `.velq`
- * from Finder, notes, images — is copied into the open vault. Returns whether a
- * drag is currently hovering, so the shell can show a drop hint. */
+/** OS file drag-and-drop onto the window. HTML wraps into a `.velq` when
+ * auto-package is on; anything else — a `.velq` from Finder, notes, images — is
+ * copied into the open vault. Returns whether a drag is currently hovering, so the
+ * shell can show a drop hint. */
 export function useFileDrop(): boolean {
   const [dragging, setDragging] = useState(false);
   useEffect(() => {

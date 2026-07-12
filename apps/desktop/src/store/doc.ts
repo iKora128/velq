@@ -4,8 +4,9 @@ import { t } from "@/i18n";
 import type { EditorMode, FileNode } from "@/ipc/types";
 import { readFile } from "@/ipc/vault";
 import { saveVersion } from "@/ipc/vcs";
-import { openVelqViewer } from "@/ipc/velq";
+import { openVelqViewer, readVelqDoc, unpackVelq } from "@/ipc/velq";
 import { countWords } from "@/util/text";
+import { useHtmlRuntime } from "./htmlRuntime";
 import { useSettings } from "./settings";
 import { useToast } from "./toast";
 import { useUI } from "./ui";
@@ -21,6 +22,9 @@ export interface Doc {
   /** For a freshly packaged .velq tab: the source HTML it was built from, so the
    * viewer can offer "edit the original". Session-only provenance. */
   origin?: string;
+  /** Set when this tab IS a `.velq` opened for editing: the package the inner HTML
+   * came from. Saving writes the edited HTML back into it (never a loose file). */
+  velqSource?: string;
 }
 
 interface Tab {
@@ -137,10 +141,24 @@ export async function openVelq(
     }
     return;
   }
-  // Content lives behind the velq:// scheme; the tab itself carries no text.
-  useDoc.getState().open({ id: path, path, name, language: "velq", origin: opts?.origin }, "", {
-    preview: opts?.preview ?? false,
-  });
+  // A `.velq` IS the working file: open its inner document as editable (tab keeps
+  // the `.velq` name + `velqSource`, so saving writes back into the package). A
+  // Markdown package edits its `.md` source; an HTML package edits its HTML. The
+  // read-only, full-fidelity view is the pop-out window above.
+  try {
+    const doc = await readVelqDoc(path);
+    const language: Lang = doc.md != null ? "markdown" : "html";
+    useDoc
+      .getState()
+      .open(
+        { id: path, path, name, language, velqSource: path, origin: opts?.origin },
+        doc.md ?? doc.html,
+        { preview: opts?.preview ?? false },
+      );
+  } catch (e) {
+    console.error("read_velq_doc failed", path, e);
+    useToast.getState().push(t("toast.cantOpen", { name, error: describeError(e) }));
+  }
 }
 
 /** Open a file for EDITING, bypassing the auto-package rule — the explicit
@@ -149,10 +167,34 @@ export async function openPathForEdit(path: string): Promise<void> {
   const name = path.split(/[/\\]/).pop() ?? path;
   try {
     const fc = await readFile(path);
-    useDoc.getState().open({ id: path, path, name, language: langFromName(name) }, fc.content);
+    const language = langFromName(name);
+    useDoc.getState().open({ id: path, path, name, language }, fc.content);
+    // An explicit "edit" gesture lands you ready to type, not in look-only view.
+    if (language === "html") useHtmlRuntime.getState().setEditing(path, true);
   } catch (e) {
     console.error("openPathForEdit failed", path, e);
     useToast.getState().push(t("toast.cantOpen", { name, error: describeError(e) }));
+  }
+}
+
+/** Extract a sealed `.velq` back to editable files and open its HTML — the escape
+ * hatch when a package has no known source (opened straight from disk), so a
+ * `.velq` is never a dead end for editing. Unpacks beside the package into a
+ * "<name> (editable)" folder; edits land there, not in the sealed package. */
+export async function unpackVelqAndEdit(velqPath: string): Promise<void> {
+  const sep = Math.max(velqPath.lastIndexOf("/"), velqPath.lastIndexOf("\\"));
+  const dir = sep >= 0 ? velqPath.slice(0, sep) : ".";
+  const stem = (velqPath.split(/[/\\]/).pop() ?? velqPath).replace(/\.velq$/i, "");
+  const outDir = `${dir}/${stem} (editable)`;
+  const htmlPath = `${outDir}/index.html`;
+  try {
+    await unpackVelq(velqPath, outDir);
+    await useDoc.getState().openByPath(htmlPath);
+    // You pressed "extract & edit" — so land ready to type, edit mode already on.
+    useHtmlRuntime.getState().setEditing(htmlPath, true);
+  } catch (e) {
+    console.error("unpackVelqAndEdit failed", velqPath, e);
+    useToast.getState().push(t("toast.cantOpen", { name: stem, error: describeError(e) }));
   }
 }
 
@@ -194,7 +236,12 @@ export const useDoc = create<DocState>((set, get) => ({
             : s.tabs;
         return { tabs, activeId: doc.id, ...mirror(tabs, doc.id) };
       }
-      const tab = makeTab(doc, content, { preview, pinned: opts?.pinned, mode: opts?.mode });
+      // HTML is a "page you edit," so it always opens in the rendered (live) view
+      // — never inheriting the Markdown/global mode. Carried as a per-tab override
+      // so switching one HTML file's view never disturbs the global default (and
+      // vice-versa). Markdown still follows the global setting.
+      const mode = opts?.mode ?? (doc.language === "html" ? "live" : undefined);
+      const tab = makeTab(doc, content, { preview, pinned: opts?.pinned, mode });
       let tabs: Tab[];
       if (preview) {
         const idx = s.tabs.findIndex((t) => t.preview);

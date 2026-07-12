@@ -7,6 +7,7 @@ import { RenderedView } from "@/editor/RenderedView";
 import { useT } from "@/i18n/useT";
 import { PreviewPane } from "@/preview/PreviewPane";
 import { useDoc } from "@/store/doc";
+import { effectiveRunScripts, useHtmlRuntime } from "@/store/htmlRuntime";
 import { useSettings } from "@/store/settings";
 import { VelqView } from "./VelqView";
 
@@ -23,6 +24,7 @@ export function SecondPane() {
   const vimMode = useSettings((s) => s.vimMode);
   const spellcheck = useSettings((s) => s.spellcheck);
   const proseFont = useSettings((s) => s.proseFont);
+  const overrides = useHtmlRuntime((s) => s.overrides);
 
   const doc = tab?.doc;
   const extraExt = useMemo(
@@ -39,6 +41,7 @@ export function SecondPane() {
   const effective = doc.language === "html" && mode === "live" ? "rendered" : mode;
   const font = doc.language === "html" || !proseFont ? "mono" : "prose";
   const key = `${doc.id}:${tab.rev}`;
+  const runScripts = doc.language === "html" && effectiveRunScripts(overrides, doc.id, tab.content);
 
   return (
     <aside className="second-pane">
@@ -63,6 +66,7 @@ export function SecondPane() {
           <PreviewPane
             source={tab.content}
             language={doc.language === "html" ? "html" : "markdown"}
+            runScripts={runScripts}
           />
         ) : doc.language === "velq" && doc.path ? (
           <VelqView key={key} path={doc.path} name={doc.name} />
@@ -70,6 +74,7 @@ export function SecondPane() {
           <RenderedView
             key={key}
             content={tab.content}
+            docId={doc.id}
             onEdit={(text) => reportChangeFor(doc.id, text)}
           />
         ) : (

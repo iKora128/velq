@@ -4,6 +4,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod ogp;
+
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

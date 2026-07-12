@@ -176,11 +176,18 @@ export const ja: Dict = {
   "toolbar.locationAria": "場所",
   "toolbar.viewModeAria": "エディタの表示モード",
   "toolbar.previewTemplate": "プレビューのテンプレート",
+  "toolbar.toggleFileList": "ファイル一覧を表示 / 隠す",
+  "toolbar.runScripts": "ページのスクリプトを実行して正しく表示",
+  "editState.edit": "編集",
+  "editState.editing": "編集中",
+  "editState.editHint": "このページを編集できる状態にする — 押したら文字をクリックして入力",
+  "editState.editingHint": "編集中 — 文字をクリックして入力。もう一度押すと編集をやめます",
 
   // ---- .velq タブ表示 ----
   "velqview.readonly": "パッケージ · 表示専用",
   "velqview.popout": "新しいウィンドウで開く",
   "velqview.editOriginal": "元の HTML を編集",
+  "velqview.editExtract": "取り出して編集",
 
   // ---- 初回ヒント ----
   "hint.renderedEdit":
@@ -305,6 +312,9 @@ export const ja: Dict = {
   "toast.packaged": "{name}.velq をパッケージしました{note}",
   "toast.cantPackageVelq": ".velq をパッケージできませんでした。",
   "toast.packaging": "{name} をパッケージ中…",
+  "packaging.rendering": "レンダリング中…",
+  "packaging.ogp": "リンクプレビューを取得中…",
+  "packaging.bundling": "画像を取得してパッケージ中…",
   "toast.savedToVelq": "Documents/Velq に保存 · {count} ファイル{skipped}",
   "toast.cantPackageNamed": "{name} をパッケージできませんでした: {error}",
   "toast.linksSkippedOne": "（{count} 件のリンクをスキップ）",

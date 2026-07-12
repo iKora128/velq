@@ -84,6 +84,22 @@ function base(p: Palette, dark: boolean): string {
   /* Smooth jumps between scroll-sync anchors. */
   html { scroll-behavior: smooth; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  /* OGP link cards (a bare-URL line becomes a rich preview). */
+  .velq-ogp {
+    display: flex; align-items: stretch; gap: 0;
+    border: 1px solid ${p.border}; border-radius: 12px; overflow: hidden;
+    text-decoration: none; color: inherit; margin: 1.1em 0;
+    transition: background 0.15s ${dark ? "ease" : "ease"};
+  }
+  .velq-ogp:hover { background: ${p.tableZebra}; }
+  .velq-ogp__img { width: 160px; flex: none; object-fit: cover; background: ${p.tableZebra}; }
+  .velq-ogp__text { display: flex; flex-direction: column; gap: 5px; padding: 12px 15px; min-width: 0; }
+  .velq-ogp__title { font-weight: 600; font-size: 0.98em; line-height: 1.35; }
+  .velq-ogp__desc {
+    font-size: 0.86em; color: ${p.muted}; line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .velq-ogp__host { font-size: 0.78em; color: ${p.muted}; margin-top: auto; }
   `;
 }
 

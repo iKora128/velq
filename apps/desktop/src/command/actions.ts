@@ -23,8 +23,10 @@ import {
 import { exportActive } from "@/export/exporters";
 import { openHtmlAndPackage } from "@/export/htmlPackage";
 import type { MsgKey } from "@/i18n";
-import { revealInOs } from "@/ipc/vault";
+import { renderMarkdown } from "@/ipc/render";
+import { revealInOs, writeFileContent } from "@/ipc/vault";
 import { saveVersion } from "@/ipc/vcs";
+import { saveVelqIndex, saveVelqMd } from "@/ipc/velq";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { usePalette } from "@/store/palette";
@@ -41,14 +43,34 @@ export interface Action {
   run: () => void;
 }
 
-/** Save the active document to disk (path-backed docs only; git commit is layered
- * on at M11). */
+/** Is `path` inside the vault rooted at `root`? Only vault files get save history. */
+function isUnder(path: string, root: string): boolean {
+  const r = root.endsWith("/") ? root : `${root}/`;
+  return path === root || path.startsWith(r);
+}
+
+/** Save the active document to disk. A file inside the open vault records a real
+ * version in the save history; a file OUTSIDE it (e.g. HTML extracted from a
+ * `.velq`, edited in place) is still written to disk — just without history — so
+ * edits are never silently lost when there's no vault. */
 async function saveActive() {
   const { doc, content, markSaved } = useDoc.getState();
+  if (!doc?.path) return;
   const root = useVault.getState().root?.path;
-  if (!doc?.path || !root) return;
   try {
-    await saveVersion(root, doc.path, content); // writes + records a version
+    if (doc.velqSource) {
+      // A Markdown package: re-render to HTML and store BOTH (edit source + view).
+      // An HTML package: store the edited HTML. Either way, back into the .velq.
+      if (doc.language === "markdown") {
+        await saveVelqMd(doc.velqSource, content, await renderMarkdown(content));
+      } else {
+        await saveVelqIndex(doc.velqSource, content);
+      }
+    } else if (root && isUnder(doc.path, root)) {
+      await saveVersion(root, doc.path, content); // writes + records a version
+    } else {
+      await writeFileContent(doc.path, content); // plain save, no history
+    }
     // Only clear "Editing" if nothing changed while the save was in flight and
     // we're still on the same document — otherwise edits typed during the save (or
     // another tab's) would be stranded as "saved" and never written.

@@ -1,11 +1,24 @@
-import { Check, Code, Columns2, Eye, History, Palette, PanelLeft } from "lucide-react";
+import {
+  Check,
+  Code,
+  Columns2,
+  Eye,
+  History,
+  List,
+  Palette,
+  PanelLeft,
+  PenLine,
+  Zap,
+} from "lucide-react";
 import { useState } from "react";
 import { ContextMenu } from "@/filemanager/ContextMenu";
 import type { MsgKey } from "@/i18n";
 import { useT } from "@/i18n/useT";
 import type { EditorMode, PreviewTemplate } from "@/ipc/types";
+import { containsScript } from "@/preview/scriptRuntime";
 import { useDoc } from "@/store/doc";
 import { useHistory } from "@/store/history";
+import { effectiveRunScripts, isEditing, useHtmlRuntime } from "@/store/htmlRuntime";
 import { useSettings } from "@/store/settings";
 import { useUI } from "@/store/ui";
 import { cn } from "@/util/cn";
@@ -42,13 +55,31 @@ export function Toolbar() {
   const isHtml = useDoc((s) => s.doc?.language === "html");
   const isMarkdown = useDoc((s) => s.doc?.language === "markdown");
   const isVelq = useDoc((s) => s.doc?.language === "velq");
+  const activeDocId = useDoc((s) => s.doc?.id);
+  const content = useDoc((s) => s.content);
+  const overrides = useHtmlRuntime((s) => s.overrides);
+  const setRunScripts = useHtmlRuntime((s) => s.setRunScripts);
+  const editingMap = useHtmlRuntime((s) => s.editing);
+  const setEditing = useHtmlRuntime((s) => s.setEditing);
   const [tplMenu, setTplMenu] = useState<{ x: number; y: number } | null>(null);
 
   // Templates style the rendered-Markdown iframe, which only Split shows
   // (HTML documents carry their own styles).
   const showTemplates = !diffing && isMarkdown && editorMode === "split";
 
+  // A JS-driven HTML page (a deck that fits itself to the window) only renders
+  // right with its scripts alive. Offer the toggle when the page has any and a
+  // preview is on screen (Source shows raw text — scripts are moot there).
+  const showRunScripts = !diffing && isHtml && editorMode !== "source" && containsScript(content);
+  const runScripts = effectiveRunScripts(overrides, activeDocId, content);
+
+  // The explicit Edit toggle for the rendered ("見たまま") HTML page: the page is a
+  // thing you look at until you press this, then it clearly becomes editable.
+  const showEdit = !diffing && isHtml && editorMode === "live";
+  const editing = isEditing(editingMap, activeDocId);
+
   const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
+  const fileListCollapsed = useUI((s) => s.fileListCollapsed);
 
   return (
     <div className="editor-toolbar">
@@ -61,6 +92,16 @@ export function Toolbar() {
         onClick={() => useUI.getState().toggleSidebar()}
       >
         <PanelLeft size={16} />
+      </button>
+      <button
+        type="button"
+        className={cn("icon-btn", !fileListCollapsed && "icon-btn--active")}
+        title={t("toolbar.toggleFileList")}
+        aria-label={t("toolbar.toggleFileList")}
+        aria-pressed={!fileListCollapsed}
+        onClick={() => useUI.getState().toggleFileList()}
+      >
+        <List size={16} />
       </button>
       <nav className="crumbs" aria-label={t("toolbar.locationAria")}>
         <Breadcrumb />
@@ -81,6 +122,18 @@ export function Toolbar() {
           <Palette size={16} />
         </button>
       )}
+      {showRunScripts && (
+        <button
+          type="button"
+          className={cn("icon-btn", runScripts && "icon-btn--active")}
+          title={t("toolbar.runScripts")}
+          aria-label={t("toolbar.runScripts")}
+          aria-pressed={runScripts}
+          onClick={() => activeDocId && setRunScripts(activeDocId, !runScripts)}
+        >
+          <Zap size={16} />
+        </button>
+      )}
       <button
         type="button"
         className={cn("icon-btn", historyOpen && "icon-btn--active")}
@@ -91,6 +144,18 @@ export function Toolbar() {
       >
         <History size={16} />
       </button>
+      {showEdit && (
+        <button
+          type="button"
+          className={cn("edit-toggle", editing && "edit-toggle--on")}
+          aria-pressed={editing}
+          title={editing ? t("editState.editingHint") : t("editState.editHint")}
+          onClick={() => activeDocId && setEditing(activeDocId, !editing)}
+        >
+          <PenLine size={14} />
+          {editing ? t("editState.editing") : t("editState.edit")}
+        </button>
+      )}
       {!diffing && !isVelq && (
         <div className="seg" role="group" aria-label={t("toolbar.viewModeAria")}>
           {MODES.map((m) => {

@@ -109,6 +109,110 @@ pub async fn package_html_file(app: AppHandle, html_path: String) -> Result<Pack
     })
 }
 
+/// Render a `.md`, bundle the images its links pull in, and pack a `.velq` that
+/// keeps BOTH the Markdown source (`index.md`) and the rendered `index.html`.
+async fn pack_md_bundled(input: &str, out: &str, fetch_cdn: bool) -> Result<BundleReport, String> {
+    let input_path = Path::new(input);
+    let md = std::fs::read_to_string(input_path).map_err(|e| e.to_string())?;
+    let html = crate::commands::render::render(&md);
+    let base = input_path.parent().unwrap_or_else(|| Path::new("."));
+    let result = bundle(&html, base, fetch_cdn).await;
+
+    let manifest = Manifest {
+        title: input_path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Document".into()),
+        generator: velq_core::generator_version(),
+        ..Default::default()
+    };
+    velq_core::pack_md(
+        Path::new(out),
+        &manifest,
+        md.as_bytes(),
+        result.index_html.as_bytes(),
+        &result.assets,
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(result.report)
+}
+
+/// Open-and-package a Markdown file: render it, download the images it references,
+/// and write a self-contained `.velq` (source + rendered view + assets) into the
+/// user's `Documents/Velq` staging folder.
+#[tauri::command]
+pub async fn package_md_file(app: AppHandle, md_path: String) -> Result<PackagedVelq, String> {
+    let docs = app
+        .path()
+        .document_dir()
+        .map_err(|e| format!("couldn't find your Documents folder: {e}"))?;
+    let dir = docs.join("Velq");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("couldn't create {}: {e}", dir.display()))?;
+    let stem = velq_stem(Path::new(&md_path));
+    let out = unique_velq(&dir, &stem);
+    let out_str = out.to_string_lossy().into_owned();
+
+    let report = pack_md_bundled(&md_path, &out_str, true).await?;
+    Ok(PackagedVelq {
+        out_path: out_str,
+        collected: report.collected,
+        failed: report.failed.len(),
+    })
+}
+
+/// Fetch a URL's Open Graph metadata, for rendering a link as a rich preview card.
+#[tauri::command]
+pub async fn fetch_ogp(url: String) -> Result<velq_bundler::ogp::Ogp, String> {
+    velq_bundler::ogp::fetch_ogp(&url).await
+}
+
+/// Bundle an already-rendered (and OGP-enriched) Markdown doc into a `.velq`:
+/// downloads the images its HTML references (the doc's own + baked-in OGP
+/// thumbnails), keeps the `.md` source, and stages it in `Documents/Velq`. The
+/// frontend renders + enriches so it can show per-link progress; this does the
+/// fetch-heavy image bundling and the final zip.
+#[tauri::command]
+pub async fn bundle_md_doc(
+    app: AppHandle,
+    md_path: String,
+    md: String,
+    html: String,
+) -> Result<PackagedVelq, String> {
+    let docs = app
+        .path()
+        .document_dir()
+        .map_err(|e| format!("couldn't find your Documents folder: {e}"))?;
+    let dir = docs.join("Velq");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("couldn't create {}: {e}", dir.display()))?;
+    let src = Path::new(&md_path);
+    let out = unique_velq(&dir, &velq_stem(src));
+    let out_str = out.to_string_lossy().into_owned();
+
+    let base = src.parent().unwrap_or_else(|| Path::new("."));
+    let result = bundle(&html, base, true).await;
+    let manifest = Manifest {
+        title: src
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Document".into()),
+        generator: velq_core::generator_version(),
+        ..Default::default()
+    };
+    velq_core::pack_md(
+        &out,
+        &manifest,
+        md.as_bytes(),
+        result.index_html.as_bytes(),
+        &result.assets,
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(PackagedVelq {
+        out_path: out_str,
+        collected: result.report.collected,
+        failed: result.report.failed.len(),
+    })
+}
+
 /// Bundle a raw HTML string (the in-editor document) to a `.velq`.
 #[tauri::command]
 pub async fn bundle_html_to_velq(
@@ -162,6 +266,38 @@ mod tests {
         let png = velq_core::read_file_bytes(&out, "velq-a-paper-1024.png").unwrap();
         assert!(!png.is_empty());
         // The file is left in temp on purpose — sessions may stage it for the user.
+    }
+
+    /// A Markdown file packages into a `.velq` that keeps its source (`index.md`),
+    /// a rendered `index.html`, and bundles a locally-referenced image.
+    #[test]
+    fn md_file_packages_with_source_rendered_html_and_local_image() {
+        let dir = std::env::temp_dir().join(format!("velq-md-e2e-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("pic.png"), b"PNGDATA").unwrap();
+        let md = "# Title\n\n![pic](pic.png)\n";
+        std::fs::write(dir.join("note.md"), md).unwrap();
+        let out = dir.join("note.velq");
+
+        let report = tauri::async_runtime::block_on(pack_md_bundled(
+            dir.join("note.md").to_string_lossy().as_ref(),
+            out.to_string_lossy().as_ref(),
+            false,
+        ))
+        .unwrap();
+
+        velq_core::validate(&out).unwrap();
+        assert_eq!(velq_core::read_index_md(&out).unwrap().as_deref(), Some(md)); // source kept
+        let html =
+            String::from_utf8(velq_core::read_file_bytes(&out, "index.html").unwrap()).unwrap();
+        assert!(html.contains("<h1")); // rendered view present
+        assert!(
+            report.collected >= 1,
+            "the local image bundled: {}",
+            report.collected
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]

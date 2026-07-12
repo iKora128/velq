@@ -278,11 +278,18 @@ pub fn run() {
             commands::vcs::restore_version,
             commands::velq::read_velq_manifest,
             commands::velq::unpack_velq,
+            commands::velq::read_velq_index,
+            commands::velq::save_velq_index,
+            commands::velq::read_velq_doc,
+            commands::velq::save_velq_md,
             commands::velq::open_velq_viewer,
             commands::velq::stage_velq,
             commands::bundle::bundle_to_velq,
             commands::bundle::bundle_html_to_velq,
             commands::bundle::package_html_file,
+            commands::bundle::package_md_file,
+            commands::bundle::fetch_ogp,
+            commands::bundle::bundle_md_doc,
         ])
         .setup(|app| {
             // Now that the path resolver is available, localize the menu from the

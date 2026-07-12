@@ -90,6 +90,15 @@ const VAULT: MDir = d({
   "Release notes.html": f(
     '<!doctype html>\n<html><head><meta charset="utf-8"><title>Release notes</title></head>\n<body><h1>v1.0</h1><p>Velq is here.</p></body></html>\n',
   ),
+  // Packaged docs. In the real app these are ZIPs; here we keep the inner source
+  // as the file content so read_velq_doc / save_velq_* can round-trip. An HTML
+  // package (starts with "<") edits its HTML; a Markdown package edits its .md.
+  "Deck.velq": f(
+    '<!doctype html>\n<html><head><meta charset="utf-8"><title>Deck</title></head>\n<body><h1>Deck v1</h1><p>This HTML lives inside a .velq — edit it, and saving writes back into the package.</p></body></html>\n',
+  ),
+  "Notes.velq": f(
+    "# Meeting notes\n\nThis **Markdown** lives inside a `.velq`. Edit it here; saving re-renders it and writes both the source and the rendered page back into the package.\n\nhttps://velq.sh\n\n- one\n- two\n",
+  ),
 });
 
 function resolve(path: string): MNode | null {
@@ -306,6 +315,49 @@ registerMock("watch_vault", () => null);
 registerMock("unwatch_vault", () => null);
 registerMock("write_file_binary", () => 0);
 registerMock("open_velq_viewer", () => null);
+registerMock("read_velq_index", ({ path }: { path: string }) => {
+  const node = resolve(path);
+  if (node?.kind !== "file") throw new Error(`mock: no .velq at ${path}`);
+  return node.content;
+});
+registerMock("save_velq_index", ({ path, content }: { path: string; content: string }) => {
+  const node = resolve(path);
+  if (node?.kind === "file") node.content = content;
+  return null;
+});
+registerMock("fetch_ogp", ({ url }: { url: string }) => {
+  const host = url.split("://")[1]?.split("/")[0] ?? url;
+  return {
+    url,
+    title: `${host} — page title`,
+    description: "An Open Graph preview fetched for this link.",
+    image: "",
+    siteName: host,
+  };
+});
+registerMock("package_md_file", ({ mdPath }: { mdPath: string }) => {
+  const src = resolve(mdPath);
+  const md = src?.kind === "file" ? src.content : "# (empty)\n";
+  const stem = (mdPath.split("/").pop() ?? "note").replace(/\.(md|markdown)$/i, "");
+  VAULT.children[`${stem}.velq`] = f(md); // md content → read_velq_doc opens it as Markdown
+  return { outPath: `${VAULT_ROOT}/${stem}.velq`, collected: 0, failed: 0 };
+});
+registerMock("bundle_md_doc", ({ mdPath, md }: { mdPath: string; md: string; html: string }) => {
+  const stem = (mdPath.split("/").pop() ?? "note").replace(/\.(md|markdown)$/i, "");
+  VAULT.children[`${stem}.velq`] = f(md);
+  return { outPath: `${VAULT_ROOT}/${stem}.velq`, collected: 0, failed: 0 };
+});
+registerMock("read_velq_doc", ({ path }: { path: string }) => {
+  const node = resolve(path);
+  if (node?.kind !== "file") throw new Error(`mock: no .velq at ${path}`);
+  const isHtml = node.content.trimStart().startsWith("<");
+  return { md: isHtml ? null : node.content, html: node.content };
+});
+registerMock("save_velq_md", ({ path, md }: { path: string; md: string; html: string }) => {
+  const node = resolve(path);
+  if (node?.kind === "file") node.content = md; // store the source; reopening reads md
+  return null;
+});
 registerMock(
   "stage_velq",
   () =>

@@ -14,6 +14,7 @@ export function EditorWorkspace() {
   const [sidebarW, setSidebarW] = useState(240);
   const [listW, setListW] = useState(280);
   const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
+  const fileListCollapsed = useUI((s) => s.fileListCollapsed);
   const historyOpen = useHistory((s) => s.open);
   const hasSecond = useDoc((s) => !!s.secondaryId);
   const [secondW, setSecondW] = useState(460);
@@ -26,16 +27,16 @@ export function EditorWorkspace() {
 
   return (
     <div className="app-body" style={vars}>
-      {/* ⌘\ (or the toolbar panel button) hides the WHOLE left rail — tree and
-          list together, VS Code-style. Hiding only the tree left an unclosable
-          column, which read as broken. */}
+      {/* The two left panes close independently (tree vs. file list). Both toggles
+          also live in the toolbar, so a hidden pane is always one click from
+          returning — no unclosable/unreopenable column. */}
       {!sidebarCollapsed && (
         <>
           <Sidebar />
           <PaneDivider value={sidebarW} min={180} max={420} onChange={setSidebarW} />
         </>
       )}
-      {!historyOpen && !sidebarCollapsed && (
+      {!historyOpen && !fileListCollapsed && (
         <>
           <FileListPane />
           <PaneDivider value={listW} min={220} max={520} onChange={setListW} />

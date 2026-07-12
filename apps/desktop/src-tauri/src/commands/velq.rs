@@ -68,6 +68,51 @@ pub fn unpack_velq(path: String, out_dir: String) -> Result<(), String> {
     velq_core::unpack(Path::new(&path), Path::new(&out_dir)).map_err(|e| e.to_string())
 }
 
+/// Read the HTML inside a `.velq` — so a package can be OPENED as an editable
+/// document (its inner `index.html`), not just viewed read-only.
+#[tauri::command]
+pub fn read_velq_index(path: String) -> Result<String, String> {
+    let bytes =
+        velq_core::read_file_bytes(Path::new(&path), "index.html").map_err(|e| e.to_string())?;
+    String::from_utf8(bytes).map_err(|e| e.to_string())
+}
+
+/// What a `.velq` holds for editing: its Markdown source (`md`, when it IS a
+/// Markdown doc) and the rendered HTML (`html`). The frontend edits `md` in the
+/// Markdown editor when present, else edits `html`.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VelqDoc {
+    pub md: Option<String>,
+    pub html: String,
+}
+
+/// Read a `.velq` for editing — its Markdown source (if any) plus its HTML.
+#[tauri::command]
+pub fn read_velq_doc(path: String) -> Result<VelqDoc, String> {
+    let p = Path::new(&path);
+    let md = velq_core::read_index_md(p).map_err(|e| e.to_string())?;
+    let html =
+        String::from_utf8(velq_core::read_file_bytes(p, "index.html").map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
+    Ok(VelqDoc { md, html })
+}
+
+/// Write edited HTML back into a `.velq`, keeping its manifest and assets — the
+/// "edit the HTML inside the package, save updates the package" write-back.
+#[tauri::command]
+pub fn save_velq_index(path: String, content: String) -> Result<(), String> {
+    velq_core::update_index(Path::new(&path), content.as_bytes()).map_err(|e| e.to_string())
+}
+
+/// Write an edited Markdown doc back into a `.velq`: both the `md` source and its
+/// freshly rendered `html` (the frontend renders and passes both).
+#[tauri::command]
+pub fn save_velq_md(path: String, md: String, html: String) -> Result<(), String> {
+    velq_core::update_md(Path::new(&path), md.as_bytes(), html.as_bytes())
+        .map_err(|e| e.to_string())
+}
+
 /// Validate a `.velq` and register it for `velq://` serving; returns the content
 /// URL. Shared by the standalone viewer window and the in-tab viewer (the main
 /// window loads it in a `sandbox="allow-scripts"` iframe — scripts run, but the

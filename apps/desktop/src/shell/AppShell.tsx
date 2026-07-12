@@ -14,6 +14,7 @@ import { useUI } from "@/store/ui";
 import { ActivityBar } from "./ActivityBar";
 import { EditorWorkspace } from "./EditorWorkspace";
 import { ExplorerView } from "./ExplorerView";
+import { PackagingOverlay } from "./PackagingOverlay";
 import { SettingsView } from "./SettingsView";
 import "./shell.css";
 import { StatusBar } from "./StatusBar";
@@ -67,6 +68,7 @@ export function AppShell() {
       <Cheatsheet />
       <PluginsPanel />
       <BatchRenameDialog />
+      <PackagingOverlay />
       <Toaster />
       {dragging && (
         <div className="dropzone" aria-hidden="true">

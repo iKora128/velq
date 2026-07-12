@@ -2,6 +2,7 @@ import type { EditorView } from "@codemirror/view";
 import { useCallback, useRef, useState } from "react";
 import { PreviewPane } from "@/preview/PreviewPane";
 import { type Doc, useDoc } from "@/store/doc";
+import { effectiveRunScripts, useHtmlRuntime } from "@/store/htmlRuntime";
 import { useSettings } from "@/store/settings";
 import { CodeMirror } from "./CodeMirror";
 
@@ -35,6 +36,8 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
   }, []);
 
   const font = doc.language === "html" || !proseFont ? "mono" : "prose";
+  const overrides = useHtmlRuntime((s) => s.overrides);
+  const runScripts = doc.language === "html" && effectiveRunScripts(overrides, doc.id, content);
 
   return (
     <div className="split">
@@ -60,6 +63,7 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
           viewRef={viewRef}
           editable={doc.language === "html"}
           onEdit={onPreviewEdit}
+          runScripts={runScripts}
         />
       </div>
     </div>

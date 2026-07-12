@@ -178,11 +178,18 @@ export const en = {
   "toolbar.locationAria": "Location",
   "toolbar.viewModeAria": "Editor view mode",
   "toolbar.previewTemplate": "Preview template",
+  "toolbar.toggleFileList": "Show / hide the file list",
+  "toolbar.runScripts": "Run the page's scripts so it displays correctly",
+  "editState.edit": "Edit",
+  "editState.editing": "Editing",
+  "editState.editHint": "Turn this page into an editing surface — then click any text and type",
+  "editState.editingHint": "Editing on — click any text and type. Press again to stop editing.",
 
   // ---- .velq tab view ----
   "velqview.readonly": "Sealed package · read-only",
   "velqview.popout": "Open in new window",
   "velqview.editOriginal": "Edit the original HTML",
+  "velqview.editExtract": "Extract & edit",
 
   // ---- One-shot hints ----
   "hint.renderedEdit":
@@ -307,6 +314,9 @@ export const en = {
   "toast.packaged": "Packaged {name}.velq{note}",
   "toast.cantPackageVelq": "Couldn't package the .velq.",
   "toast.packaging": "Packaging {name}…",
+  "packaging.rendering": "Rendering…",
+  "packaging.ogp": "Fetching link previews…",
+  "packaging.bundling": "Downloading images & packaging…",
   "toast.savedToVelq": "Saved to Documents/Velq · {count} files{skipped}",
   "toast.cantPackageNamed": "Couldn't package {name}: {error}",
   "toast.linksSkippedOne": " ({count} link skipped)",

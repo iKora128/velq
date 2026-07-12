@@ -2,7 +2,7 @@ import { ExternalLink, Package, PenLine } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useT } from "@/i18n/useT";
 import { openVelqViewer, stageVelq } from "@/ipc/velq";
-import { describeError, openPathForEdit } from "@/store/doc";
+import { describeError, openPathForEdit, unpackVelqAndEdit } from "@/store/doc";
 
 /** A `.velq` opened as a tab: the package is served over the `velq://` scheme and
  * shown in a sandboxed iframe — scripts run, but the frame has no IPC and the
@@ -34,7 +34,9 @@ export function VelqView({ path, name, origin }: { path: string; name: string; o
         <span className="velq-view__name">{name}</span>
         <span className="velq-view__ro">{t("velqview.readonly")}</span>
         <span className="velq-view__spacer" />
-        {origin && (
+        {/* A package is read-only, but editing is never a dead end: edit the known
+            source if we have it, else extract the HTML from the package and edit that. */}
+        {origin ? (
           <button
             type="button"
             className="btn btn--sm btn--primary"
@@ -42,6 +44,15 @@ export function VelqView({ path, name, origin }: { path: string; name: string; o
           >
             <PenLine size={13} aria-hidden />
             {t("velqview.editOriginal")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn--sm btn--primary"
+            onClick={() => void unpackVelqAndEdit(path)}
+          >
+            <PenLine size={13} aria-hidden />
+            {t("velqview.editExtract")}
           </button>
         )}
         <button type="button" className="btn btn--sm" onClick={() => void openVelqViewer(path)}>

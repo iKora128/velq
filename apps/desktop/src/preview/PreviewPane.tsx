@@ -8,7 +8,9 @@ import { isMac } from "@/util/platform";
 import { useResolvedDark } from "@/util/theme";
 import { attachElementSelect } from "./elementSelect";
 import { extractBodyTextRuns, rebuildHtml, replaceBodyHtml } from "./htmlTextMap";
+import { enrichOgpCards } from "./ogpCards";
 import { buildPreviewDoc, htmlDocument } from "./previewStyles";
+import { collectScriptNodes, serializeBodyInnerClean } from "./scriptRuntime";
 import "./preview.css";
 
 interface Props {
@@ -22,6 +24,10 @@ interface Props {
   editable?: boolean;
   /** Called with the rewritten source after an in-preview edit. */
   onEdit?: (nextSource: string) => void;
+  /** HTML only: run the page's own scripts so a JS-driven layout (a deck that
+   * fits its slides to the window, a self-building widget) renders correctly.
+   * Runtime-generated nodes are kept out of every write-back (`scriptRuntime`). */
+  runScripts?: boolean;
 }
 
 /** The iframe's visible text nodes, in document order, minus script/style bodies —
@@ -60,6 +66,7 @@ function attachEditable(
   iframe: HTMLIFrameElement,
   liveSource: { current: string },
   onEditRef: { current: ((s: string) => void) | undefined },
+  scriptNodes?: Set<Node>,
 ): () => void {
   const idoc = iframe.contentDocument;
   const body = idoc?.body;
@@ -87,9 +94,11 @@ function attachEditable(
         next = null;
       }
     } else {
-      const inner = body.innerHTML
-        .replaceAll(' data-velq-hover=""', "")
-        .replaceAll(' data-velq-sel=""', "");
+      // Structural edit → re-serialize the body. With scripts running, strip the
+      // nodes they generated first so runtime-only DOM never lands in the file.
+      const inner = scriptNodes
+        ? serializeBodyInnerClean(body, scriptNodes)
+        : body.innerHTML.replaceAll(' data-velq-hover=""', "").replaceAll(' data-velq-sel=""', "");
       next = replaceBodyHtml(liveSource.current, inner);
     }
     if (next == null || next === liveSource.current) return;
@@ -155,12 +164,27 @@ function attachEditable(
  * itself becomes the editor — text, structure, ⌘B/I/U — and every edit flows back
  * to source (W6).
  */
-export function PreviewPane({ source, language, viewRef, editable = false, onEdit }: Props) {
+export function PreviewPane({
+  source,
+  language,
+  viewRef,
+  editable = false,
+  onEdit,
+  runScripts = false,
+}: Props) {
   const t = useT();
   const dark = useResolvedDark();
   const template = useSettings((s) => s.previewTemplate);
+  // Scripts run only for HTML. `allow-scripts` alongside `allow-same-origin` lets
+  // the page's JS reach the parent — acceptable for the user's own local files
+  // (the same trust any editor extends to a file it opens), and gated behind the
+  // per-doc toggle. The iframe is keyed on `sandbox` so flipping it remounts a
+  // fresh browsing context (sandbox flags are fixed at context creation).
+  const scriptsOn = language === "html" && runScripts;
+  const sandbox = scriptsOn ? "allow-same-origin allow-scripts" : "allow-same-origin";
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const initialized = useRef(false);
+  const lastSandbox = useRef(sandbox);
   const lastDark = useRef(dark);
   const lastLang = useRef(language);
   const lastTemplate = useRef(template);
@@ -176,6 +200,13 @@ export function PreviewPane({ source, language, viewRef, editable = false, onEdi
     const iframe = iframeRef.current;
     if (!iframe) return;
     const my = ++seq.current;
+
+    // A sandbox flip remounts the iframe (keyed below) → its document is fresh, so
+    // force a full write instead of an in-place update against the old contents.
+    if (lastSandbox.current !== sandbox) {
+      initialized.current = false;
+      lastSandbox.current = sandbox;
+    }
 
     const writeDoc = (full: string, attachSync: boolean) => {
       const idoc = iframe.contentDocument;
@@ -215,7 +246,19 @@ export function PreviewPane({ source, language, viewRef, editable = false, onEdi
       const canEdit = /<html[\s>]/i.test(source) ? /<body[\s>]/i.test(source) : true;
       if (editable && canEdit) {
         liveSource.current = source;
-        const teardown = attachEditable(iframe, liveSource, onEditRef);
+        // With scripts on, snapshot what they generated so structural write-backs
+        // can strip it. Synchronous scripts (the deck's `fit()` + nav dots) are in
+        // by now; a deferred pass catches DOMContentLoaded/onload/rAF additions,
+        // still before any user edit so the diff stays clean.
+        const lbody = iframe.contentDocument?.body;
+        const scriptNodes = scriptsOn && lbody ? collectScriptNodes(lbody, source) : undefined;
+        const teardown = attachEditable(iframe, liveSource, onEditRef, scriptNodes);
+        if (scriptNodes && lbody) {
+          requestAnimationFrame(() => {
+            if (my !== seq.current) return;
+            for (const n of collectScriptNodes(lbody, source)) scriptNodes.add(n);
+          });
+        }
         const prev = cleanup.current;
         cleanup.current = () => {
           prev?.();
@@ -226,6 +269,7 @@ export function PreviewPane({ source, language, viewRef, editable = false, onEdi
     }
 
     renderMarkdown(source)
+      .then(enrichOgpCards) // bare-URL paragraphs → rich OGP link cards
       .then((bodyHtml) => {
         if (my !== seq.current) return; // out-of-order render — drop
         const idoc = iframe.contentDocument;
@@ -243,16 +287,17 @@ export function PreviewPane({ source, language, viewRef, editable = false, onEdi
         }
       })
       .catch((e) => console.error("preview render failed", e));
-  }, [source, language, dark, template, viewRef, editable]);
+  }, [source, language, dark, template, viewRef, editable, sandbox, scriptsOn]);
 
   useEffect(() => () => cleanup.current?.(), []);
 
   return (
     <iframe
+      key={sandbox}
       ref={iframeRef}
       className="preview-iframe"
       title={t("preview.frameTitle")}
-      sandbox="allow-same-origin"
+      sandbox={sandbox}
     />
   );
 }
