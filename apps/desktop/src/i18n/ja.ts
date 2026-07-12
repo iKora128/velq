@@ -237,6 +237,7 @@ export const ja: Dict = {
   // ---- コンテキストメニュー（右クリック）----
   "contextmenu.aria": "コンテキストメニュー",
   "contextmenu.open": "開く",
+  "contextmenu.convertToVelq": ".velq に変換",
   "contextmenu.rename": "名前を変更",
   "contextmenu.duplicate": "複製",
   "contextmenu.revealMac": "Finder で表示",
@@ -319,6 +320,7 @@ export const ja: Dict = {
   "packaging.ogp": "リンクプレビューを取得中…",
   "packaging.bundling": "画像を取得してパッケージ中…",
   "toast.savedToVelq": "Documents/Velq に保存 · {count} ファイル{skipped}",
+  "toast.convertedToVelq": "{name} を .velq に変換しました",
   "toast.cantPackageNamed": "{name} をパッケージできませんでした: {error}",
   "toast.linksSkippedOne": "（{count} 件のリンクをスキップ）",
   "toast.linksSkippedMany": "（{count} 件のリンクをスキップ）",

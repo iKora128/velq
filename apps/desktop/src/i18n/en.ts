@@ -239,6 +239,7 @@ export const en = {
   // ---- Context menu (right-click a file / folder) ----
   "contextmenu.aria": "Context menu",
   "contextmenu.open": "Open",
+  "contextmenu.convertToVelq": "Convert to .velq",
   "contextmenu.rename": "Rename",
   "contextmenu.duplicate": "Duplicate",
   "contextmenu.revealMac": "Reveal in Finder",
@@ -321,6 +322,7 @@ export const en = {
   "packaging.ogp": "Fetching link previews…",
   "packaging.bundling": "Downloading images & packaging…",
   "toast.savedToVelq": "Saved to Documents/Velq · {count} files{skipped}",
+  "toast.convertedToVelq": "Converted {name} to .velq",
   "toast.cantPackageNamed": "Couldn't package {name}: {error}",
   "toast.linksSkippedOne": " ({count} link skipped)",
   "toast.linksSkippedMany": " ({count} links skipped)",

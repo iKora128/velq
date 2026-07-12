@@ -1,4 +1,5 @@
-import { Copy, FilePlus, FolderPlus, Pencil, Trash2 } from "lucide-react";
+import { Copy, FilePlus, FolderPlus, Package, Pencil, Trash2 } from "lucide-react";
+import { canConvertToVelq, convertToVelq } from "@/export/convert";
 import type { MsgKey } from "@/i18n";
 import type { FileNode } from "@/ipc/types";
 import { revealInOs } from "@/ipc/vault";
@@ -57,6 +58,14 @@ export function fileMenuEntries(node: FileNode | null, t: TFn, emptyDir?: string
       label: t("contextmenu.open"),
       onClick: () => void openFile(node, { preview: false }),
     });
+    // Explicit, opt-in packaging. Opening the file never does this — only this click.
+    if (canConvertToVelq(node.name)) {
+      entries.push({
+        label: t("contextmenu.convertToVelq"),
+        icon: <Package size={15} />,
+        onClick: () => void convertToVelq(node.path),
+      });
+    }
     entries.push({ separator: true });
   }
   if (target) {

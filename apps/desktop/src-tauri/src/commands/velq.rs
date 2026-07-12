@@ -113,6 +113,31 @@ pub fn save_velq_md(path: String, md: String, html: String) -> Result<(), String
         .map_err(|e| e.to_string())
 }
 
+/// Create a fresh, empty Markdown `.velq` in `parentPath` (name normalized to a
+/// de-duplicated `<stem>.velq`) and return its file node. New documents ARE `.velq`
+/// — the working format — but ONLY when the user explicitly creates one. Opening an
+/// existing file never converts it.
+#[tauri::command]
+pub fn new_velq(
+    parent_path: String,
+    name: String,
+) -> Result<crate::commands::vault::FileNode, String> {
+    let stem = Path::new(&name)
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "Untitled".into());
+    let out = crate::commands::bundle::unique_velq(Path::new(&parent_path), &stem);
+    let manifest = Manifest {
+        title: stem,
+        generator: velq_core::generator_version(),
+        ..Default::default()
+    };
+    let html = crate::commands::render::render("");
+    velq_core::pack_md(&out, &manifest, b"", html.as_bytes(), &[]).map_err(|e| e.to_string())?;
+    crate::commands::vault::make_node(&out).ok_or_else(|| "created .velq is unreadable".into())
+}
+
 /// Validate a `.velq` and register it for `velq://` serving; returns the content
 /// URL. Shared by the standalone viewer window and the in-tab viewer (the main
 /// window loads it in a `sandbox="allow-scripts"` iframe — scripts run, but the

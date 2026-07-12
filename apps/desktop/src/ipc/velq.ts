@@ -1,5 +1,5 @@
 import { invoke } from "./tauri";
-import type { Manifest } from "./types";
+import type { FileNode, Manifest } from "./types";
 
 export const openVelqViewer = (path: string) => invoke<void>("open_velq_viewer", { path });
 /** Register a .velq for serving and get its velq:// URL (for the in-tab viewer). */
@@ -24,3 +24,7 @@ export const readVelqDoc = (path: string) => invoke<VelqDoc>("read_velq_doc", { 
 /** Write an edited Markdown .velq: its source AND freshly rendered HTML. */
 export const saveVelqMd = (path: string, md: string, html: string) =>
   invoke<void>("save_velq_md", { path, md, html });
+/** Create a fresh, empty Markdown `.velq` in `parentPath` and return its node.
+ * New documents ARE `.velq` — but only ones the user explicitly creates. */
+export const newVelq = (parentPath: string, name: string) =>
+  invoke<FileNode>("new_velq", { parentPath, name });
