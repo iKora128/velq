@@ -9,7 +9,6 @@ import { PreviewPane } from "@/preview/PreviewPane";
 import { useDoc } from "@/store/doc";
 import { effectiveRunScripts, useHtmlRuntime } from "@/store/htmlRuntime";
 import { useSettings } from "@/store/settings";
-import { VelqView } from "./VelqView";
 
 /** W3 — the right-hand pane of a split: a full editor for one more open tab.
  * Edits flow through `reportChangeFor`, so dirty state, autosave and history
@@ -62,14 +61,12 @@ export function SecondPane() {
         {/* The same tab on both sides would mean two uncontrolled editors on one
             buffer — divergence, then data loss. Same-tab split is therefore a
             LIVE PREVIEW: edit left, watch the rendered result track you here. */}
-        {isActiveToo && doc.language !== "velq" ? (
+        {isActiveToo ? (
           <PreviewPane
             source={tab.content}
             language={doc.language === "html" ? "html" : "markdown"}
             runScripts={runScripts}
           />
-        ) : doc.language === "velq" && doc.path ? (
-          <VelqView key={key} path={doc.path} name={doc.name} />
         ) : effective === "rendered" ? (
           <RenderedView
             key={key}

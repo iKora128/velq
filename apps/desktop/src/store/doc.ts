@@ -4,9 +4,8 @@ import { t } from "@/i18n";
 import type { EditorMode, FileNode } from "@/ipc/types";
 import { readFile } from "@/ipc/vault";
 import { saveVersion } from "@/ipc/vcs";
-import { openVelqViewer, readVelqDoc, unpackVelq } from "@/ipc/velq";
+import { openVelqViewer, readVelqDoc } from "@/ipc/velq";
 import { countWords } from "@/util/text";
-import { useHtmlRuntime } from "./htmlRuntime";
 import { useSettings } from "./settings";
 import { useToast } from "./toast";
 import { useUI } from "./ui";
@@ -158,43 +157,6 @@ export async function openVelq(
   } catch (e) {
     console.error("read_velq_doc failed", path, e);
     useToast.getState().push(t("toast.cantOpen", { name, error: describeError(e) }));
-  }
-}
-
-/** Open a file for EDITING, bypassing the auto-package rule — the explicit
- * "edit the original HTML" path from a package tab. */
-export async function openPathForEdit(path: string): Promise<void> {
-  const name = path.split(/[/\\]/).pop() ?? path;
-  try {
-    const fc = await readFile(path);
-    const language = langFromName(name);
-    useDoc.getState().open({ id: path, path, name, language }, fc.content);
-    // An explicit "edit" gesture lands you ready to type, not in look-only view.
-    if (language === "html") useHtmlRuntime.getState().setEditing(path, true);
-  } catch (e) {
-    console.error("openPathForEdit failed", path, e);
-    useToast.getState().push(t("toast.cantOpen", { name, error: describeError(e) }));
-  }
-}
-
-/** Extract a sealed `.velq` back to editable files and open its HTML — the escape
- * hatch when a package has no known source (opened straight from disk), so a
- * `.velq` is never a dead end for editing. Unpacks beside the package into a
- * "<name> (editable)" folder; edits land there, not in the sealed package. */
-export async function unpackVelqAndEdit(velqPath: string): Promise<void> {
-  const sep = Math.max(velqPath.lastIndexOf("/"), velqPath.lastIndexOf("\\"));
-  const dir = sep >= 0 ? velqPath.slice(0, sep) : ".";
-  const stem = (velqPath.split(/[/\\]/).pop() ?? velqPath).replace(/\.velq$/i, "");
-  const outDir = `${dir}/${stem} (editable)`;
-  const htmlPath = `${outDir}/index.html`;
-  try {
-    await unpackVelq(velqPath, outDir);
-    await useDoc.getState().openByPath(htmlPath);
-    // You pressed "extract & edit" — so land ready to type, edit mode already on.
-    useHtmlRuntime.getState().setEditing(htmlPath, true);
-  } catch (e) {
-    console.error("unpackVelqAndEdit failed", velqPath, e);
-    useToast.getState().push(t("toast.cantOpen", { name: stem, error: describeError(e) }));
   }
 }
 

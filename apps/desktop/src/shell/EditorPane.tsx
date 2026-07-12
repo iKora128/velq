@@ -16,7 +16,6 @@ import { fmtShortcut } from "@/util/platform";
 import { ConflictBanner } from "./ConflictBanner";
 import { TabBar } from "./TabBar";
 import { Toolbar } from "./Toolbar";
-import { VelqView } from "./VelqView";
 
 export function EditorPane() {
   const doc = useDoc((s) => s.doc);
@@ -57,8 +56,6 @@ export function EditorPane() {
       <div className="editor-body">
         {!doc ? (
           <Welcome />
-        ) : doc.language === "velq" && doc.path ? (
-          <VelqView key={key} path={doc.path} name={doc.name} origin={doc.origin} />
         ) : showDiff ? (
           <DiffView base={baseContent} current={content} language={doc.language} />
         ) : effective === "split" ? (
