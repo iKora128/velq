@@ -355,6 +355,11 @@ registerMock("new_velq", ({ parentPath, name }: { parentPath: string; name: stri
   dir.children[uname] = f(""); // empty markdown .velq → opens blank in the Markdown editor
   return toFileNode(`${parentPath}/${uname}`, uname, dir.children[uname]);
 });
+registerMock("save_new_velq", ({ path, md }: { path: string; md: string; html: string }) => {
+  const parent = parentDirOf(path);
+  if (parent) parent.children[basename(path)] = f(md); // md content → opens as Markdown
+  return null;
+});
 registerMock("read_velq_doc", ({ path }: { path: string }) => {
   const node = resolve(path);
   if (node?.kind !== "file") throw new Error(`mock: no .velq at ${path}`);

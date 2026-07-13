@@ -28,3 +28,7 @@ export const saveVelqMd = (path: string, md: string, html: string) =>
  * New documents ARE `.velq` — but only ones the user explicitly creates. */
 export const newVelq = (parentPath: string, name: string) =>
   invoke<FileNode>("new_velq", { parentPath, name });
+/** Write a Markdown `.velq` at an exact path (overwriting) — for saving an untitled
+ * scratch to the `.velq` the user picked in the Save dialog. */
+export const saveNewVelq = (path: string, md: string, html: string) =>
+  invoke<void>("save_new_velq", { path, md, html });

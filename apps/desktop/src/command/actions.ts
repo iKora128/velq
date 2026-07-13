@@ -23,11 +23,12 @@ import {
 import { exportActive } from "@/export/exporters";
 import { openHtmlAndPackage } from "@/export/htmlPackage";
 import type { MsgKey } from "@/i18n";
+import { dirOf, pickSaveFile } from "@/ipc/dialog";
 import { renderMarkdown } from "@/ipc/render";
 import { revealInOs, writeFileContent } from "@/ipc/vault";
 import { saveVersion } from "@/ipc/vcs";
-import { saveVelqIndex, saveVelqMd } from "@/ipc/velq";
-import { useDoc } from "@/store/doc";
+import { saveNewVelq, saveVelqIndex, saveVelqMd } from "@/ipc/velq";
+import { openVelq, useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { usePalette } from "@/store/palette";
 import { useSettings } from "@/store/settings";
@@ -49,13 +50,49 @@ function isUnder(path: string, root: string): boolean {
   return path === root || path.startsWith(r);
 }
 
+/** A filesystem-safe file stem from a scratch's first heading (else "Untitled"). */
+function scratchTitle(content: string): string {
+  const m = content.match(/^\s*#\s+(.+)$/m);
+  const raw = (m?.[1] ?? "").replace(/[#*`_]/g, "").trim();
+  return (
+    (raw || "Untitled")
+      .replace(/[\\/:*?"<>|]/g, "")
+      .slice(0, 60)
+      .trim() || "Untitled"
+  );
+}
+
+/** Saving an untitled scratch = "Save As a .velq": the quick note becomes a real
+ * `.velq` (its Markdown kept as the source). Opens the saved package so further
+ * saves write back into it. */
+async function saveScratchAsVelq(scratchId: string, content: string) {
+  const root = useVault.getState().root?.path ?? null;
+  const path = await pickSaveFile(`${scratchTitle(content)}.velq`, "velq", root);
+  if (!path) return; // cancelled
+  try {
+    await saveNewVelq(path, content, await renderMarkdown(content));
+    useDoc.getState().markSaved();
+    if (root && isUnder(path, root)) await useFiles.getState().loadDir(dirOf(path));
+    await openVelq(path, { preview: false });
+    useDoc.getState().close(scratchId);
+  } catch (e) {
+    console.error("save scratch as .velq failed", e);
+  }
+}
+
 /** Save the active document to disk. A file inside the open vault records a real
  * version in the save history; a file OUTSIDE it (e.g. HTML extracted from a
  * `.velq`, edited in place) is still written to disk — just without history — so
- * edits are never silently lost when there's no vault. */
+ * edits are never silently lost when there's no vault. An untitled scratch is
+ * saved as a new `.velq`. */
 async function saveActive() {
   const { doc, content, markSaved } = useDoc.getState();
-  if (!doc?.path) return;
+  if (!doc) return;
+  // An untitled Markdown scratch: "save" means "save as a .velq".
+  if (!doc.path) {
+    if (doc.language === "markdown") await saveScratchAsVelq(doc.id, content);
+    return;
+  }
   const root = useVault.getState().root?.path;
   try {
     if (doc.velqSource) {

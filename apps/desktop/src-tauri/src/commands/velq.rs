@@ -138,6 +138,23 @@ pub fn new_velq(
     crate::commands::vault::make_node(&out).ok_or_else(|| "created .velq is unreadable".into())
 }
 
+/// Write a Markdown `.velq` at an EXACT path (overwriting) — for saving an untitled
+/// scratch to the `.velq` the user picked in the Save dialog. The scratch is a quick
+/// note; the moment it's saved it becomes a `.velq`, source and rendered view kept.
+#[tauri::command]
+pub fn save_new_velq(path: String, md: String, html: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    let manifest = Manifest {
+        title: p
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Document".into()),
+        generator: velq_core::generator_version(),
+        ..Default::default()
+    };
+    velq_core::pack_md(p, &manifest, md.as_bytes(), html.as_bytes(), &[]).map_err(|e| e.to_string())
+}
+
 /// Validate a `.velq` and register it for `velq://` serving; returns the content
 /// URL. Shared by the standalone viewer window and the in-tab viewer (the main
 /// window loads it in a `sandbox="allow-scripts"` iframe — scripts run, but the

@@ -283,6 +283,7 @@ pub fn run() {
             commands::velq::read_velq_doc,
             commands::velq::save_velq_md,
             commands::velq::new_velq,
+            commands::velq::save_new_velq,
             commands::velq::open_velq_viewer,
             commands::velq::stage_velq,
             commands::bundle::bundle_to_velq,
