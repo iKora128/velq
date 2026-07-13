@@ -11,8 +11,11 @@ interface Props {
 const { lang, title, description, ogImage } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const ogImageAbs = new URL(ogImage, Astro.site).href;
-const enUrl = new URL("/", Astro.site).href;
-const jaUrl = new URL("/ja/", Astro.site).href;
+// hreflang alternates for the current page: "/x/" ⇄ "/ja/x/".
+const path = Astro.url.pathname;
+const enPath = path.startsWith("/ja/") ? path.slice(3) : path;
+const enUrl = new URL(enPath, Astro.site).href;
+const jaUrl = new URL(`/ja${enPath}`, Astro.site).href;
 
 const fonts =
   lang === "ja"

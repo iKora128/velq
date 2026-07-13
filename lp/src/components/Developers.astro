@@ -1,0 +1,651 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { GITHUB, RELEASES, type Copy } from "../data/copy";
+import type { DevCopy } from "../data/devCopy";
+import { icons, githubPath } from "../data/icons";
+
+interface Props {
+  t: DevCopy;
+  base: Copy;
+}
+const { t, base } = Astro.props;
+
+const ic = (name: string, size = 18) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] ?? ""}</svg>`;
+const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="${githubPath}"/></svg>`;
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const ISSUES = `${GITHUB}/issues/new`;
+const home = t.lang === "ja" ? "/ja/" : "/";
+
+const manifestExample = `{
+  "title": "Q3 report",
+  "created": 1783814400,
+  "updated": 1783814400,
+  "sourceUrl": null,
+  "generator": "velq-core 0.1.1",
+  "tags": ["report", "finance"],
+  "custom": { "com.example.mytool": { "reviewed": true } }
+}`;
+
+const cargoExample = `# Cargo.toml — not on crates.io yet, so pull it straight from the repo
+[dependencies]
+velq-core = { git = "https://github.com/iKora128/velq" }`;
+
+const rustExample = `use std::path::Path;
+use velq_core::{pack, read_manifest, validate, Asset, Manifest};
+
+let manifest = Manifest { title: "Q3 report".into(), ..Manifest::default() };
+let assets = [Asset {
+    path: "assets/css/main.css".into(),
+    bytes: b"body{margin:2rem}".to_vec(),
+}];
+
+pack(Path::new("report.velq"), &manifest, b"<h1>Q3</h1>", &assets)?;
+validate(Path::new("report.velq"))?;          // manifest.json + index.html: ok
+let title = read_manifest(Path::new("report.velq"))?.title;`;
+
+const pluginExample = `import { usePlugins } from "@/plugins/runtime";
+import type { VelqPlugin } from "@/plugins/api";
+
+const myPlugin: VelqPlugin = {
+  id: "highlight-todo",
+  name: "TODO highlighter",
+  description: "Tint TODO and FIXME markers.",
+  extension: todoHighlightExtension, // any CodeMirror 6 extension
+};
+
+usePlugins.register(myPlugin);`;
+---
+
+<BaseLayout lang={t.lang} title={t.meta.title} description={t.meta.description} ogImage={t.meta.ogImage}>
+  <nav class="nav">
+    <div class="wrap nav__inner">
+      <a class="brand" href={home}>
+        <img src="/brand/favicon-64.png" alt="" width="27" height="27" />
+        <span>Velq</span>
+        <span class="brand__page">/ developers</span>
+      </a>
+      <div class="nav__links">
+        <a href="#glance">{t.nav.format}</a>
+        <a href="#spec">{t.nav.spec}</a>
+        <a href="#conformance">{t.nav.conformance}</a>
+        <a href="#library">{t.nav.library}</a>
+        <a href="#plugins">{t.nav.plugins}</a>
+        <a href="#naming">{t.nav.naming}</a>
+      </div>
+      <div class="nav__actions">
+        <a class="lang" href={t.nav.lang.href} title={t.nav.lang.title}>
+          <span set:html={ic("languages", 15)} />{t.nav.lang.label}
+        </a>
+        <a class="nav__gh" href={GITHUB} aria-label="GitHub" set:html={gh} />
+        <a class="btn btn--primary btn--sm" href={RELEASES}>{t.nav.cta}</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="dev-hero">
+    <div class="hero__glow" aria-hidden="true"></div>
+    <div class="wrap">
+      <p class="kicker" data-reveal>{t.hero.kicker}</p>
+      <h1 data-reveal>{t.hero.title}</h1>
+      <p class="dev-lede" data-reveal set:html={t.hero.lede} />
+      <div class="chips" data-reveal>
+        {t.hero.chips.map((c) => <span class="chip">{c}</span>)}
+      </div>
+      <div class="hero__cta" data-reveal>
+        <a class="btn btn--primary btn--lg" href={GITHUB}><span set:html={gh} />{t.hero.ctaPrimary}</a>
+        <a class="btn btn--lg" href="#spec"><span set:html={ic("file-code", 17)} />{t.hero.ctaSecondary}</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="block block--glance" id="glance">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="kicker">{t.glance.kicker}</p>
+        <h2>{t.glance.title}</h2>
+        <p>{t.glance.sub}</p>
+      </div>
+      <div class="dev-glance" data-reveal>
+        <div class="tree" aria-hidden="true">
+          <b>{t.glance.treeTitle}</b>
+          <span>├─ manifest.json</span>
+          <span>├─ <b>index.html</b></span>
+          <span>├─ index.md</span>
+          <span>└─ assets/</span>
+          <span class="tree__sub">├─ css/ ─ js/</span>
+          <span class="tree__sub">└─ img/ ─ fonts/</span>
+        </div>
+        <div class="dev-roles">
+          {
+            t.glance.roles.map((r) => (
+              <div>
+                <code>{r.file}</code>
+                <p>{r.role}</p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+      <p class="dev-tryit" data-reveal set:html={t.glance.tryIt} />
+    </div>
+  </section>
+
+  <section class="dev-spec" id="spec">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="kicker">{t.spec.kicker}</p>
+        <h2>{t.spec.title}</h2>
+      </div>
+      <p class="spec-status" data-reveal><span set:html={ic("badge-check", 14)} />{t.spec.status}</p>
+      <p class="spec-note" data-reveal>{t.spec.rfcNote}</p>
+
+      {
+        t.spec.sections.map((s) => (
+          <article class="spec-sec" id={`spec-${s.id}`} data-reveal>
+            <h3>{s.title}</h3>
+            <ul class="rules">
+              {s.rules.map((r) => (
+                <li set:html={r} />
+              ))}
+            </ul>
+            {s.id === "manifest" && (
+              <>
+                <div class="table-scroll">
+                  <table class="man-table">
+                    <thead>
+                      <tr>
+                        <th>{t.spec.manifestCols.field}</th>
+                        <th>{t.spec.manifestCols.type}</th>
+                        <th>{t.spec.manifestCols.default}</th>
+                        <th>{t.spec.manifestCols.meaning}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {t.spec.manifestRows.map((row) => (
+                        <tr>
+                          <td><code>{row.field}</code></td>
+                          <td class="t-mono">{row.type}</td>
+                          <td class="t-mono">{row.default}</td>
+                          <td>{row.meaning}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p class="man-note">{t.spec.manifestNote}</p>
+                <h4 class="code-title">{t.spec.exampleTitle}</h4>
+                <pre class="code" set:html={esc(manifestExample)} />
+              </>
+            )}
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="block" id="conformance">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="kicker">{t.conformance.kicker}</p>
+        <h2>{t.conformance.title}</h2>
+        <p>{t.conformance.sub}</p>
+      </div>
+      <div class="conf-grid" data-reveal>
+        {
+          [t.conformance.readers, t.conformance.writers].map((list) => (
+            <article class="conf">
+              <h3>{list.title}</h3>
+              <ul class="checks">
+                {list.items.map((item) => (
+                  <li>
+                    <span class="check" set:html={ic("check", 13)} />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))
+        }
+      </div>
+      <p class="conf-note" data-reveal set:html={t.conformance.fixture} />
+      <p class="badge-line" data-reveal set:html={t.conformance.badgeLine} />
+    </div>
+  </section>
+
+  <section class="dev-lib" id="library">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="kicker">{t.library.kicker}</p>
+        <h2>{t.library.title}</h2>
+        <p set:html={t.library.body} />
+      </div>
+      <div class="lib-grid" data-reveal>
+        <div>
+          <h4 class="code-title">{t.library.installTitle}</h4>
+          <pre class="code" set:html={esc(cargoExample)} />
+          <h4 class="code-title">{t.library.exampleTitle}</h4>
+          <pre class="code" set:html={esc(rustExample)} />
+        </div>
+        <div class="api-list">
+          <h4 class="code-title">{t.library.apiTitle}</h4>
+          {
+            t.library.apiItems.map((a) => (
+              <div class="api">
+                <span class="sig">{a.sig}</span>
+                <p>{a.what}</p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+      <p class="conf-note" data-reveal>{t.library.portNote}</p>
+    </div>
+  </section>
+
+  <section class="block" id="plugins">
+    <div class="wrap wrap--narrow">
+      <div class="section-head" data-reveal>
+        <p class="kicker">{t.plugins.kicker}</p>
+        <h2>{t.plugins.title}</h2>
+        <p>{t.plugins.body}</p>
+      </div>
+      <pre class="code" data-reveal set:html={esc(pluginExample)} />
+      <ul class="rules rules--loose" data-reveal>
+        {t.plugins.rules.map((r) => <li>{r}</li>)}
+      </ul>
+      <p class="conf-note" data-reveal set:html={t.plugins.link} />
+    </div>
+  </section>
+
+  <section class="dev-naming" id="naming">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="kicker">{t.naming.kicker}</p>
+        <h2>{t.naming.title}</h2>
+        <p>{t.naming.sub}</p>
+      </div>
+      <div class="pillars">
+        {
+          t.naming.cards.map((c) => (
+            <article class="pillar" data-reveal>
+              <span class="pillar__ic" set:html={ic(c.icon, 20)} />
+              <h3>{c.title}</h3>
+              <p>{c.body}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="finale finale--dev">
+    <div class="wrap" data-reveal>
+      <img class="finale__mark" src="/brand/icon-256.png" alt="" width="72" height="72" />
+      <p class="finale__line">{t.cta.line}</p>
+      <div class="hero__cta">
+        <a class="btn btn--primary btn--lg" href={GITHUB}><span set:html={gh} />{t.cta.button}</a>
+        <a class="btn btn--lg" href={ISSUES}><span set:html={ic("arrow-right", 17)} />{t.cta.secondary}</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap footer__inner">
+      <div class="footer__brand">
+        <img src="/brand/favicon-64.png" alt="" width="20" height="20" />
+        <span>{base.footer.legal}</span>
+      </div>
+      <div class="footer__links">
+        {base.footer.links.map((l) => <a href={l.href}>{l.label}</a>)}
+        <a href={t.nav.lang.href}>{t.nav.lang.label}</a>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>
+
+<style is:global>
+  /* ---------- developers page ---------- */
+  .brand__page {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-3);
+    margin-left: 2px;
+    transform: translateY(1px);
+  }
+
+  .dev-hero {
+    position: relative;
+    text-align: center;
+    padding: 84px 0 72px;
+    overflow: clip;
+    border-bottom: 1px solid var(--border);
+  }
+  .dev-hero > .wrap {
+    position: relative;
+  }
+  .dev-hero h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(36px, 5.4vw, 60px);
+    line-height: 1.08;
+    letter-spacing: -0.012em;
+  }
+  html[lang="ja"] .dev-hero h1 {
+    font-size: clamp(30px, 4.6vw, 50px);
+    line-height: 1.22;
+    letter-spacing: 0.01em;
+  }
+  .dev-lede {
+    max-width: 680px;
+    margin: 20px auto 0;
+    font-size: clamp(15px, 2vw, 17px);
+    color: var(--text-2);
+  }
+  .chips {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 26px;
+  }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-2);
+    background: var(--bg-soft);
+    border: 1px solid var(--border-2);
+    border-radius: 999px;
+    padding: 5px 13px;
+  }
+  .dev-hero .hero__cta {
+    margin-top: 30px;
+  }
+
+  .block--glance {
+    padding-bottom: 96px;
+  }
+  .dev-glance {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 38px;
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 34px 36px;
+    box-shadow: 0 1px 2px rgba(14, 23, 38, 0.03);
+    max-width: 920px;
+    margin: 0 auto;
+  }
+  .dev-roles {
+    display: grid;
+    gap: 17px;
+  }
+  .dev-roles p {
+    font-size: 14px;
+    color: var(--text-2);
+    margin-top: 3px;
+  }
+  .dev-tryit {
+    text-align: center;
+    margin: 24px auto 0;
+    max-width: 640px;
+    font-size: 14px;
+    color: var(--text-2);
+  }
+
+  /* spec band */
+  .dev-spec {
+    padding: 108px 0 116px;
+    background:
+      radial-gradient(900px 420px at 50% 0%, rgba(37, 99, 235, 0.05), transparent 70%),
+      linear-gradient(180deg, #f6f9ff 0%, #fbfcff 55%, #ffffff 100%);
+    border-top: 1px solid #e9eefb;
+    border-bottom: 1px solid var(--border);
+  }
+  .dev-spec .section-head {
+    margin-bottom: 18px;
+  }
+  .spec-status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    width: fit-content;
+    margin: 0 auto;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent-deep);
+    background: var(--accent-tint);
+    border: 1px solid #dbe7ff;
+    border-radius: 999px;
+    padding: 5px 14px;
+  }
+  .spec-note {
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--text-3);
+    max-width: 620px;
+    margin: 16px auto 40px;
+  }
+  .spec-sec {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 30px 32px 32px;
+    box-shadow: 0 1px 2px rgba(14, 23, 38, 0.03);
+    max-width: 860px;
+    margin: 0 auto 18px;
+  }
+  .spec-sec h3 {
+    font-size: 16.5px;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    margin-bottom: 16px;
+  }
+  .rules {
+    list-style: none;
+    display: grid;
+    gap: 13px;
+  }
+  .rules li {
+    font-size: 14.5px;
+    color: var(--text-2);
+    padding-left: 16px;
+    border-left: 2px solid #d6e4ff;
+  }
+  .rules li strong {
+    color: var(--ink);
+    font-weight: 650;
+  }
+  .rules--loose {
+    margin-top: 26px;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    margin-top: 24px;
+  }
+  .man-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    min-width: 560px;
+  }
+  .man-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-2);
+  }
+  .man-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-2);
+    vertical-align: top;
+  }
+  .man-table .t-mono {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    white-space: nowrap;
+    color: var(--text-3);
+  }
+  .man-note {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--text-3);
+  }
+
+  .code-title {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin: 26px 0 9px;
+  }
+  pre.code {
+    font-family: var(--font-mono);
+    font-size: 12.8px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 21px;
+    overflow-x: auto;
+  }
+  #plugins pre.code {
+    margin-top: 6px;
+  }
+
+  /* conformance */
+  .conf-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    max-width: 920px;
+    margin: 0 auto;
+  }
+  .conf {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 28px 28px 30px;
+  }
+  .conf h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .conf .checks {
+    margin-top: 0;
+  }
+  .conf .checks li {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  .conf-note {
+    text-align: center;
+    max-width: 720px;
+    margin: 26px auto 0;
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  .conf-note a,
+  .badge-line a {
+    color: var(--accent-deep);
+    border-bottom: 1px solid #c7dbff;
+  }
+  .badge-line {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 15px;
+  }
+  .badge-line strong {
+    color: var(--accent-deep);
+  }
+
+  /* library */
+  .dev-lib {
+    padding: 108px 0;
+    background: linear-gradient(180deg, #fff, #f8fafd 70%, #fff);
+    border-bottom: 1px solid var(--border);
+  }
+  .dev-lib .section-head p {
+    max-width: 640px;
+    margin-inline: auto;
+  }
+  .lib-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 40px;
+    align-items: start;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .lib-grid .code-title:first-child {
+    margin-top: 0;
+  }
+  .api-list {
+    display: grid;
+    gap: 15px;
+    align-content: start;
+  }
+  .api-list .code-title {
+    margin: 0 0 2px;
+  }
+  .api .sig {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .api p {
+    font-size: 13.5px;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+
+  /* naming */
+  .dev-naming {
+    padding: 108px 0 116px;
+  }
+  .dev-naming .pillars {
+    margin-top: 0;
+  }
+  .finale--dev {
+    padding: 104px 0 116px;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 880px) {
+    .dev-glance {
+      grid-template-columns: 1fr;
+      gap: 26px;
+    }
+    .dev-glance .tree {
+      max-width: 300px;
+    }
+    .conf-grid,
+    .lib-grid {
+      grid-template-columns: 1fr;
+    }
+    .dev-spec,
+    .dev-lib,
+    .dev-naming {
+      padding: 76px 0;
+    }
+    .brand__page {
+      display: none;
+    }
+  }
+</style>

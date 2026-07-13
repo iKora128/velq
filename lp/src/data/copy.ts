@@ -21,6 +21,7 @@ export interface Copy {
     velq: string;
     download: string;
     faq: string;
+    developers: { label: string; href: string };
     lang: { label: string; href: string; title: string };
     cta: string;
   };
@@ -91,6 +92,7 @@ export const en: Copy = {
     velq: ".velq",
     download: "Download",
     faq: "FAQ",
+    developers: { label: "Developers", href: "/developers/" },
     lang: { label: "日本語", href: "/ja/", title: "日本語版を開く" },
     cta: "Download",
   },
@@ -245,7 +247,7 @@ export const en: Copy = {
       { icon: "files", title: "Plain files on disk", body: "No proprietary silo." },
       { icon: "keyboard", title: "Keyboard-first", body: "Every action has a shortcut." },
       { icon: "wifi-off", title: "Offline-first", body: "No account. No cloud required." },
-      { icon: "badge-check", title: "Open source", body: "Apache-2.0, plugins exempt." },
+      { icon: "badge-check", title: "Open source", body: "Apache-2.0; plugins are their authors' own." },
     ],
   },
   faq: {
@@ -294,11 +296,11 @@ export const en: Copy = {
     secondary: "Star on GitHub",
   },
   footer: {
-    legal: "© 2026 Velq · Apache-2.0 (plugin exception)",
+    legal: "© 2026 Velq · Apache-2.0",
     links: [
       { label: "GitHub", href: GITHUB },
       { label: "Releases", href: `${GITHUB}/releases` },
-      { label: "Plugin API", href: `${GITHUB}/blob/main/docs/plugin-api.md` },
+      { label: "Developers", href: "/developers/" },
       { label: "License", href: `${GITHUB}/blob/main/LICENSE` },
     ],
   },
@@ -318,6 +320,7 @@ export const ja: Copy = {
     velq: ".velq とは",
     download: "ダウンロード",
     faq: "よくある質問",
+    developers: { label: "開発者向け", href: "/ja/developers/" },
     lang: { label: "English", href: "/", title: "Open the English version" },
     cta: "ダウンロード",
   },
@@ -468,7 +471,7 @@ export const ja: Copy = {
       { icon: "files", title: "ファイルはプレーンなまま", body: "独自形式に閉じ込めない。" },
       { icon: "keyboard", title: "キーボード第一", body: "すべての操作にショートカット。" },
       { icon: "wifi-off", title: "オフラインファースト", body: "アカウント不要。クラウド不要。" },
-      { icon: "badge-check", title: "オープンソース", body: "Apache-2.0(プラグインは例外規定)。" },
+      { icon: "badge-check", title: "オープンソース", body: "Apache-2.0。プラグインは作者のライセンスで。" },
     ],
   },
   faq: {
@@ -517,11 +520,11 @@ export const ja: Copy = {
     secondary: "GitHub でスターする",
   },
   footer: {
-    legal: "© 2026 Velq · Apache-2.0(プラグイン例外あり)",
+    legal: "© 2026 Velq · Apache-2.0",
     links: [
       { label: "GitHub", href: GITHUB },
       { label: "リリース一覧", href: `${GITHUB}/releases` },
-      { label: "プラグイン API", href: `${GITHUB}/blob/main/docs/plugin-api.md` },
+      { label: "開発者向け", href: "/ja/developers/" },
       { label: "ライセンス", href: `${GITHUB}/blob/main/LICENSE` },
     ],
   },

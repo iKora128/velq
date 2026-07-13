@@ -3,6 +3,11 @@
 > Velq's core IP. A `.velq` packages an HTML (or rendered Markdown) document together
 > with **all of its dependencies** so it works completely offline, and previews safely
 > in a permission-zero viewer. Implemented in `crates/velq-core`.
+>
+> **The public, normative spec lives at <https://velq.sh/developers/>** (source:
+> `lp/src/data/devCopy.ts`). This file is the internal engineering view; when they
+> disagree, fix whichever is wrong, but the public page is what third parties build
+> against — change it deliberately (additive-only within format version 1).
 
 ## Container
 
@@ -13,8 +18,10 @@
 ## Internal structure
 
 ```
-manifest.json          # metadata (see below)
-index.html             # the main document, links rewritten to assets/
+manifest.json          # metadata (see below) — required
+index.html             # the main document, links rewritten to assets/ — required
+index.md               # Markdown source (only in Markdown-backed packages; the
+                       # canonical "edit"; index.html stays the canonical "view")
 assets/
   css/  js/  img/  fonts/
 ```
