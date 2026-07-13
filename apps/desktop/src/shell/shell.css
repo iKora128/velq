@@ -808,53 +808,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* .velq opened as a tab (VelqView): thin identity bar + sandboxed content frame. */
-.velq-view {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-.velq-view__bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-muted);
-  font-size: 12.5px;
-  flex: none;
-}
-.velq-view__name {
-  color: var(--text);
-  font-weight: 600;
-}
-.velq-view__ro {
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-size: 11px;
-}
-.velq-view__spacer {
-  flex: 1;
-}
-.velq-view__bar .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.velq-view__frame {
-  flex: 1;
-  width: 100%;
-  border: none;
-  background: #fff;
-}
-.velq-view__error {
-  padding: 24px;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
 /* W3 — split: one more open tab, full-height, to the right of the editor. */
 .second-pane {
   width: var(--second-w, 460px);
