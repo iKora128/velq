@@ -9,6 +9,38 @@ use tauri::{AppHandle, Manager};
 use velq_bundler::{bundle, BundleReport};
 use velq_core::Manifest;
 
+/// Run a packaging job so that a panic inside it reaches the user as an ordinary error.
+///
+/// A `#[tauri::command]` that panics never sends its response, so the frontend's `await`
+/// stays unsettled forever: the progress overlay sits there and nothing is ever reported.
+/// Running the work as its own task turns that silence into an `Err` the UI can show.
+/// (The release profile is `panic = "unwind"`, so the task unwinds rather than aborting.)
+async fn guarded<T, F>(fut: F) -> Result<T, String>
+where
+    F: std::future::Future<Output = Result<T, String>> + Send + 'static,
+    T: Send + 'static,
+{
+    match tauri::async_runtime::spawn(fut).await {
+        Ok(r) => r,
+        Err(e) => Err(format!(
+            "Velq hit an internal error on this file ({e}). This is a bug — please report it."
+        )),
+    }
+}
+
+/// `Documents/Velq/<stem>.velq`, uniquified; the staging folder is created if missing.
+fn staged_out_path(app: &AppHandle, src: &Path) -> Result<String, String> {
+    let docs = app
+        .path()
+        .document_dir()
+        .map_err(|e| format!("couldn't find your Documents folder: {e}"))?;
+    let dir = docs.join("Velq");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("couldn't create {}: {e}", dir.display()))?;
+    Ok(unique_velq(&dir, &velq_stem(src))
+        .to_string_lossy()
+        .into_owned())
+}
+
 async fn pack_bundled(input: &str, out: &str, fetch_cdn: bool) -> Result<BundleReport, String> {
     let input_path = Path::new(input);
     let html = std::fs::read_to_string(input_path).map_err(|e| e.to_string())?;
@@ -39,7 +71,7 @@ pub async fn bundle_to_velq(
     out: String,
     fetch_cdn: Option<bool>,
 ) -> Result<BundleReport, String> {
-    pack_bundled(&input, &out, fetch_cdn.unwrap_or(true)).await
+    guarded(async move { pack_bundled(&input, &out, fetch_cdn.unwrap_or(true)).await }).await
 }
 
 #[derive(Serialize)]
@@ -91,17 +123,9 @@ fn velq_stem(html_path: &Path) -> String {
 /// `.velq` into the user's `Documents/Velq` staging folder (created if needed).
 #[tauri::command]
 pub async fn package_html_file(app: AppHandle, html_path: String) -> Result<PackagedVelq, String> {
-    let docs = app
-        .path()
-        .document_dir()
-        .map_err(|e| format!("couldn't find your Documents folder: {e}"))?;
-    let dir = docs.join("Velq");
-    std::fs::create_dir_all(&dir).map_err(|e| format!("couldn't create {}: {e}", dir.display()))?;
-    let stem = velq_stem(Path::new(&html_path));
-    let out = unique_velq(&dir, &stem);
-    let out_str = out.to_string_lossy().into_owned();
-
-    let report = pack_bundled(&html_path, &out_str, true).await?;
+    let out_str = staged_out_path(&app, Path::new(&html_path))?;
+    let out = out_str.clone();
+    let report = guarded(async move { pack_bundled(&html_path, &out, true).await }).await?;
     Ok(PackagedVelq {
         out_path: out_str,
         collected: report.collected,
@@ -142,17 +166,9 @@ async fn pack_md_bundled(input: &str, out: &str, fetch_cdn: bool) -> Result<Bund
 /// user's `Documents/Velq` staging folder.
 #[tauri::command]
 pub async fn package_md_file(app: AppHandle, md_path: String) -> Result<PackagedVelq, String> {
-    let docs = app
-        .path()
-        .document_dir()
-        .map_err(|e| format!("couldn't find your Documents folder: {e}"))?;
-    let dir = docs.join("Velq");
-    std::fs::create_dir_all(&dir).map_err(|e| format!("couldn't create {}: {e}", dir.display()))?;
-    let stem = velq_stem(Path::new(&md_path));
-    let out = unique_velq(&dir, &stem);
-    let out_str = out.to_string_lossy().into_owned();
-
-    let report = pack_md_bundled(&md_path, &out_str, true).await?;
+    let out_str = staged_out_path(&app, Path::new(&md_path))?;
+    let out = out_str.clone();
+    let report = guarded(async move { pack_md_bundled(&md_path, &out, true).await }).await?;
     Ok(PackagedVelq {
         out_path: out_str,
         collected: report.collected,
@@ -178,38 +194,35 @@ pub async fn bundle_md_doc(
     md: String,
     html: String,
 ) -> Result<PackagedVelq, String> {
-    let docs = app
-        .path()
-        .document_dir()
-        .map_err(|e| format!("couldn't find your Documents folder: {e}"))?;
-    let dir = docs.join("Velq");
-    std::fs::create_dir_all(&dir).map_err(|e| format!("couldn't create {}: {e}", dir.display()))?;
-    let src = Path::new(&md_path);
-    let out = unique_velq(&dir, &velq_stem(src));
-    let out_str = out.to_string_lossy().into_owned();
-
-    let base = src.parent().unwrap_or_else(|| Path::new("."));
-    let result = bundle(&html, base, true).await;
-    let manifest = Manifest {
-        title: src
-            .file_stem()
-            .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "Document".into()),
-        generator: velq_core::generator_version(),
-        ..Default::default()
-    };
-    velq_core::pack_md(
-        &out,
-        &manifest,
-        md.as_bytes(),
-        result.index_html.as_bytes(),
-        &result.assets,
-    )
-    .map_err(|e| e.to_string())?;
+    let out_str = staged_out_path(&app, Path::new(&md_path))?;
+    let out = out_str.clone();
+    let report = guarded(async move {
+        let src = Path::new(&md_path);
+        let base = src.parent().unwrap_or_else(|| Path::new("."));
+        let result = bundle(&html, base, true).await;
+        let manifest = Manifest {
+            title: src
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "Document".into()),
+            generator: velq_core::generator_version(),
+            ..Default::default()
+        };
+        velq_core::pack_md(
+            Path::new(&out),
+            &manifest,
+            md.as_bytes(),
+            result.index_html.as_bytes(),
+            &result.assets,
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(result.report)
+    })
+    .await?;
     Ok(PackagedVelq {
         out_path: out_str,
-        collected: result.report.collected,
-        failed: result.report.failed.len(),
+        collected: report.collected,
+        failed: report.failed.len(),
     })
 }
 
@@ -221,25 +234,55 @@ pub async fn bundle_html_to_velq(
     base_dir: Option<String>,
     fetch_cdn: Option<bool>,
 ) -> Result<BundleReport, String> {
-    let base = base_dir.unwrap_or_else(|| ".".into());
-    let result = bundle(&html, Path::new(&base), fetch_cdn.unwrap_or(true)).await;
-    let manifest = Manifest {
-        generator: velq_core::generator_version(),
-        ..Default::default()
-    };
-    velq_core::pack(
-        Path::new(&out),
-        &manifest,
-        result.index_html.as_bytes(),
-        &result.assets,
-    )
-    .map_err(|e| e.to_string())?;
-    Ok(result.report)
+    guarded(async move {
+        let base = base_dir.unwrap_or_else(|| ".".into());
+        let result = bundle(&html, Path::new(&base), fetch_cdn.unwrap_or(true)).await;
+        let manifest = Manifest {
+            generator: velq_core::generator_version(),
+            ..Default::default()
+        };
+        velq_core::pack(
+            Path::new(&out),
+            &manifest,
+            result.index_html.as_bytes(),
+            &result.assets,
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(result.report)
+    })
+    .await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    async fn boom() -> Result<(), String> {
+        panic!("simulated packaging crash");
+    }
+
+    /// A panic inside a packaging job must come back as an `Err` the UI can show.
+    /// Unguarded, the command never responds: the progress overlay stays up and the
+    /// user is told nothing at all. (This test prints a panic backtrace — expected.)
+    #[test]
+    fn guarded_turns_a_panic_into_a_reportable_error() {
+        let err = tauri::async_runtime::block_on(guarded(boom()))
+            .expect_err("a panicking job must surface as Err, not hang");
+        assert!(err.contains("internal error"), "{err}");
+    }
+
+    /// The ordinary failure path still reports rather than panicking.
+    #[test]
+    fn missing_input_file_is_a_plain_error() {
+        let err = tauri::async_runtime::block_on(guarded(async {
+            pack_bundled("/definitely/not/here.html", "/tmp/never.velq", false).await
+        }))
+        .expect_err("a missing source file must be an error");
+        assert!(
+            !err.contains("internal error"),
+            "should not look like a crash: {err}"
+        );
+    }
 
     /// End-to-end on the real repo file the user tests with: the icon gallery,
     /// whose `<img>` tags are ALL built by inline JS from a template literal

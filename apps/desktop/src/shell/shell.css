@@ -760,6 +760,14 @@
   color: var(--accent);
   background: var(--accent-subtle);
   animation: packaging-pulse 1.4s ease-in-out infinite;
+  transition:
+    transform 0.3s ease,
+    background 0.3s ease;
+}
+/* Settling on "done" should feel like an arrival, not a hard stop. */
+.packaging__spinner[data-done] {
+  animation: none;
+  transform: scale(1.06);
 }
 @keyframes packaging-pulse {
   0%,
@@ -778,34 +786,65 @@
   text-align: center;
 }
 .packaging__bar {
+  position: relative;
   width: 100%;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--surface-sunken);
   overflow: hidden;
 }
 .packaging__fill {
+  position: relative;
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--accent);
-  transition: width 0.25s ease;
+  /* Matches the ~130ms tick, so the bar glides between steps instead of jumping. */
+  transition: width 0.18s linear;
+  overflow: hidden;
 }
-.packaging__bar--indeterminate .packaging__fill {
-  width: 40%;
-  animation: packaging-slide 1.1s ease-in-out infinite;
+.packaging__fill[data-done] {
+  transition: width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-@keyframes packaging-slide {
-  0% {
-    margin-left: -40%;
-  }
-  100% {
-    margin-left: 100%;
+/* A sheen travelling the filled span — the "still working" cue, now that the bar
+   itself is always determinate. */
+.packaging__fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--text-on-accent) 42%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: packaging-sheen 1.25s ease-in-out infinite;
+}
+.packaging__fill[data-done]::after {
+  animation: none;
+  opacity: 0;
+}
+@keyframes packaging-sheen {
+  to {
+    transform: translateX(100%);
   }
 }
 .packaging__count {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .packaging__spinner {
+    animation: none;
+  }
+  .packaging__fill::after {
+    animation: none;
+    opacity: 0;
+  }
+  .packaging__fill {
+    transition: none;
+  }
 }
 
 /* W3 — split: one more open tab, full-height, to the right of the editor. */

@@ -145,29 +145,34 @@ fn asset_path(kind: Kind, url: &str, bytes: &[u8]) -> String {
 }
 
 /// Rewrite `url(...)` references inside a CSS string using `map` (original → asset path).
+///
+/// Walks by `find` rather than by byte index: CSS carries arbitrary UTF-8 (a `図` in a
+/// comment, a `content:"…"`), and both slicing a `&str` at a byte offset and widening a
+/// lone byte to `char` are wrong on anything non-ASCII.
 fn rewrite_css(css: &str, map: &BTreeMap<String, String>) -> String {
     let mut out = String::with_capacity(css.len());
-    let bytes = css.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if css[i..].starts_with("url(") {
-            if let Some(close) = css[i + 4..].find(')') {
-                let inner = &css[i + 4..i + 4 + close];
-                let trimmed = inner.trim().trim_matches(['"', '\'']);
-                if let Some(asset) = map.get(trimmed) {
-                    out.push_str("url(");
-                    out.push_str(asset);
-                    out.push(')');
-                } else {
-                    out.push_str(&css[i..i + 4 + close + 1]);
-                }
-                i += 4 + close + 1;
-                continue;
+    let mut rest = css;
+    while let Some(pos) = rest.find("url(") {
+        out.push_str(&rest[..pos]);
+        rest = &rest[pos..];
+        let after = &rest[4..];
+        let Some(close) = after.find(')') else {
+            // No closing paren anywhere after this, so nothing further can match either;
+            // the trailing push copies this `url(` and everything past it verbatim.
+            break;
+        };
+        let trimmed = after[..close].trim().trim_matches(['"', '\'']);
+        match map.get(trimmed) {
+            Some(asset) => {
+                out.push_str("url(");
+                out.push_str(asset);
+                out.push(')');
             }
+            None => out.push_str(&rest[..4 + close + 1]),
         }
-        out.push(bytes[i] as char);
-        i += 1;
+        rest = &after[close + 1..];
     }
+    out.push_str(rest);
     out
 }
 
@@ -618,6 +623,36 @@ mod tests {
         ));
         std::fs::create_dir_all(&p).unwrap();
         p
+    }
+
+    /// A `図` in a CSS comment used to land `rewrite_css`'s cursor mid-character and
+    /// panic the whole packaging run — on a page with no `url()` to rewrite at all.
+    #[test]
+    fn rewrite_css_keeps_non_ascii_intact() {
+        let mut map = BTreeMap::new();
+        map.insert("bg.png".to_string(), "assets/img/ab.png".to_string());
+
+        let css = "/* Phase 図 */\n.a { content:\"日本語\"; background:url(bg.png) }\n/* 終 */";
+        let out = rewrite_css(css, &map);
+
+        assert!(out.contains("/* Phase 図 */"), "{out}");
+        assert!(out.contains("content:\"日本語\""), "{out}");
+        assert!(out.contains("/* 終 */"), "{out}");
+        assert!(out.contains("url(assets/img/ab.png)"), "{out}");
+    }
+
+    /// Non-ASCII with nothing to rewrite must come back byte-for-byte unchanged.
+    #[test]
+    fn rewrite_css_without_urls_is_identity() {
+        let css = "/* Phase 図 */\n.diagram { border:1px solid #ccc; }\n/* 図表 ✓ é */";
+        assert_eq!(rewrite_css(css, &BTreeMap::new()), css);
+    }
+
+    /// An unterminated `url(` must not duplicate or drop the surrounding text.
+    #[test]
+    fn rewrite_css_unclosed_url_is_preserved() {
+        let css = "/* 図 */ .a { background:url(broken.png";
+        assert_eq!(rewrite_css(css, &BTreeMap::new()), css);
     }
 
     #[tokio::test]
