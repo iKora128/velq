@@ -24,7 +24,7 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 serde = { workspace = true }
 serde_json = { workspace = true }
-comrak = "0.52"
+comrak = "0.54"
 trash = "5"
 url = "2"
 base64 = "0.22"
