@@ -110,3 +110,34 @@ textarea {
   user-select: text;
   cursor: auto;
 }
+
+/* ---- Dragging files ----
+   The window keeps Tauri's native drag-and-drop (so the OS can drop files on us),
+   which turns DOM drag-and-drop off — so file drags are driven by pointer events and
+   carry this label instead of a browser drag image. See filemanager/useFileDnd.ts. */
+.drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-dialog);
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: var(--shadow-md);
+  /* Never let the label shadow the folder the cursor is really over. */
+  pointer-events: none;
+}
+.drag-ghost[data-copy]::after {
+  content: " +";
+  font-weight: var(--weight-semibold);
+}
+body.is-dragging-files {
+  cursor: grabbing;
+  user-select: none;
+}
