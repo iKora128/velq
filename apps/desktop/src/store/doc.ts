@@ -45,6 +45,9 @@ interface DocState {
   activeId: string | null;
   /** W3: a second tab shown side-by-side to the right (null = no split). */
   secondaryId: string | null;
+  /** Tab ids, most recently visited first. Closing the tab you're in hands you back
+   * to the one you came from, rather than whichever tab happens to sit next to it. */
+  mru: string[];
   // ---- mirror of the active tab (keeps the simple selector API) ----
   doc: Doc | null;
   content: string;
@@ -81,6 +84,13 @@ interface DocState {
   reloadTab: (path: string) => Promise<void>;
   flagConflict: (path: string) => void;
   keepMine: (path: string) => void;
+}
+
+/** `id` to the front of the visit history, with any tab that is no longer open dropped
+ * (a preview tab replaced in place leaves its id behind otherwise). */
+function touch(mru: string[], tabs: Tab[], id: string): string[] {
+  const live = new Set(tabs.map((t) => t.doc.id));
+  return [id, ...mru.filter((x) => x !== id && live.has(x))];
 }
 
 function mirror(tabs: Tab[], activeId: string | null) {
@@ -176,6 +186,7 @@ export const useDoc = create<DocState>((set, get) => ({
   tabs: [],
   activeId: null,
   secondaryId: null,
+  mru: [],
   doc: null,
   content: "",
   dirty: false,
@@ -196,7 +207,12 @@ export const useDoc = create<DocState>((set, get) => ({
           !preview && existing.preview
             ? s.tabs.map((t) => (t.doc.id === doc.id ? { ...t, preview: false } : t))
             : s.tabs;
-        return { tabs, activeId: doc.id, ...mirror(tabs, doc.id) };
+        return {
+          tabs,
+          activeId: doc.id,
+          mru: touch(s.mru, tabs, doc.id),
+          ...mirror(tabs, doc.id),
+        };
       }
       // HTML is a "page you edit," so it always opens in the rendered (live) view
       // — never inheriting the Markdown/global mode. Carried as a per-tab override
@@ -216,7 +232,12 @@ export const useDoc = create<DocState>((set, get) => ({
       } else {
         tabs = [...s.tabs, tab];
       }
-      return { tabs, activeId: doc.id, ...mirror(tabs, doc.id) };
+      return {
+        tabs,
+        activeId: doc.id,
+        mru: touch(s.mru, tabs, doc.id),
+        ...mirror(tabs, doc.id),
+      };
     });
   },
 
@@ -292,7 +313,8 @@ export const useDoc = create<DocState>((set, get) => ({
       SAMPLE_PLUGINS,
     ),
 
-  activate: (id) => set((s) => ({ activeId: id, ...mirror(s.tabs, id) })),
+  activate: (id) =>
+    set((s) => ({ activeId: id, mru: touch(s.mru, s.tabs, id), ...mirror(s.tabs, id) })),
 
   close: (id) => {
     // Flush unsaved edits before the tab (and its in-memory content) disappears —
@@ -307,13 +329,16 @@ export const useDoc = create<DocState>((set, get) => ({
       const idx = s.tabs.findIndex((t) => t.doc.id === id);
       if (idx < 0) return {};
       const tabs = s.tabs.filter((t) => t.doc.id !== id);
+      const mru = s.mru.filter((x) => x !== id);
       let activeId = s.activeId;
       if (activeId === id) {
-        const next = tabs[idx] ?? tabs[idx - 1] ?? null;
-        activeId = next ? next.doc.id : null;
+        // Hand back the tab you came from. Only when there's no history to go on
+        // (a restored session, say) fall back to the neighbour beside this one.
+        const back = mru.find((x) => tabs.some((t) => t.doc.id === x));
+        activeId = back ?? tabs[idx]?.doc.id ?? tabs[idx - 1]?.doc.id ?? null;
       }
       const secondaryId = s.secondaryId === id ? null : s.secondaryId;
-      return { tabs, activeId, secondaryId, ...mirror(tabs, activeId) };
+      return { tabs, activeId, secondaryId, mru, ...mirror(tabs, activeId) };
     });
     // Closing your last document takes you home to the file browser (not a blank editor).
     if (get().tabs.length === 0 && useUI.getState().view === "editor") {
@@ -340,7 +365,8 @@ export const useDoc = create<DocState>((set, get) => ({
       );
       const activeId = s.activeId === oldId ? newPath : s.activeId;
       const secondaryId = s.secondaryId === oldId ? newPath : s.secondaryId;
-      return { tabs, activeId, secondaryId, ...mirror(tabs, activeId) };
+      const mru = s.mru.map((x) => (x === oldId ? newPath : x));
+      return { tabs, activeId, secondaryId, mru, ...mirror(tabs, activeId) };
     }),
 
   togglePin: (id) =>

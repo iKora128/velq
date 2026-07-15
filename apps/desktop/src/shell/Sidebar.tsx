@@ -8,6 +8,7 @@ import {
   PanelLeft,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import velqMark from "@/assets/velq-mark.png";
 import { Tree } from "@/filemanager/Tree";
 import { useT } from "@/i18n/useT";
 import type { SidebarView } from "@/ipc/types";
@@ -33,7 +34,7 @@ export function Sidebar({ finder = false }: { finder?: boolean }) {
     <aside className="sidebar" data-view={view}>
       <div className="pane-head">
         <div className="brand">
-          <span className="brand__mark" aria-hidden />
+          <img className="brand__mark" src={velqMark} alt="" width={22} height={22} aria-hidden />
           Velq
         </div>
         <button

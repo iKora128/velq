@@ -146,13 +146,14 @@
   flex: 1;
   min-width: 0;
 }
+/* The real app mark (the folded-paper V), same artwork as the bundle icon. It is
+   already a rounded tile with its own ground, so it needs no radius or shadow here. */
 .brand__mark {
   width: 22px;
   height: 22px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, #6366f1, var(--blue-600));
-  box-shadow: var(--shadow-sm);
   flex: none;
+  object-fit: contain;
+  -webkit-user-drag: none;
 }
 
 /* Buttons */
