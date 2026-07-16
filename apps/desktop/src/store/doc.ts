@@ -424,21 +424,32 @@ export const useDoc = create<DocState>((set, get) => ({
   reloadTab: async (path) => {
     if (!get().tabs.some((t) => t.doc.path === path)) return;
     try {
-      const fc = await readFile(path);
+      // A `.velq` tab edits the package's INNER document, not the raw ZIP on disk.
+      // Reading the file as bytes (`readFile`) would hand the editor the binary ZIP
+      // — which lands as garbage and renders blank. Reload the inner md/html the
+      // same way it was opened. (Freshly-packaged velqs echo an `fs:changed` right
+      // after they open; without this the just-opened tab went white.)
+      let next: string;
+      if (/\.velq$/i.test(path)) {
+        const vd = await readVelqDoc(path);
+        next = vd.md ?? vd.html;
+      } else {
+        next = (await readFile(path)).content;
+      }
       set((s) => {
         const tabs = s.tabs.map((t) => {
           if (t.doc.path !== path) return t;
           // Identical bytes (e.g. an echoed save that slipped past the self-write
           // window) → just clear the flags; bumping rev would remount the editor.
-          if (t.content === fc.content) return { ...t, dirty: false, conflict: false };
+          if (t.content === next) return { ...t, dirty: false, conflict: false };
           return {
             ...t,
-            content: fc.content,
+            content: next,
             rev: t.rev + 1,
             dirty: false,
             conflict: false,
-            wordCount: countWords(fc.content),
-            charCount: fc.content.length,
+            wordCount: countWords(next),
+            charCount: next.length,
           };
         });
         return { tabs, ...mirror(tabs, s.activeId) };
