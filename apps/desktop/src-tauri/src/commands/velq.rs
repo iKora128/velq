@@ -48,7 +48,11 @@ pub fn content_type(path: &str) -> &'static str {
 pub fn serve(app: &AppHandle, id: &str, path: &str) -> Option<(Vec<u8>, String)> {
     let viewers = app.state::<VelqViewers>();
     let (velq, index_path) = viewers.0.lock().ok()?.get(id).cloned()?;
-    let name = if path.is_empty() { index_path } else { path.to_string() };
+    let name = if path.is_empty() {
+        index_path
+    } else {
+        path.to_string()
+    };
     let bytes = velq_core::read_file_bytes(&velq, &name).ok()?;
     Some((bytes, name))
 }

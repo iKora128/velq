@@ -443,7 +443,10 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
     let collect_settings = RewriteStrSettings::new()
         .append_element_content_handler(element!("link[href]", |el| {
             if let Some(h) = el.get_attribute("href") {
-                let rel = el.get_attribute("rel").unwrap_or_default().to_ascii_lowercase();
+                let rel = el
+                    .get_attribute("rel")
+                    .unwrap_or_default()
+                    .to_ascii_lowercase();
                 // Connection hints / navigation preloads point at an origin or a page,
                 // not a packageable file — fetching them just 404s (and a `preconnect`
                 // to a font CDN would even be counted as a "failed" asset). Skip them.
@@ -557,15 +560,14 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
                             .filter(|i| matches!(classify(i, base_dir), Source::Remote(_)))
                             .filter(|i| seen.insert(i.clone()))
                             .collect();
-                        let fetched =
-                            futures::future::join_all(targets.into_iter().map(|inner| {
-                                let client = &client;
-                                async move {
-                                    let src = classify(&inner, base_dir);
-                                    (inner, fetch(client, &src, fetch_cdn).await)
-                                }
-                            }))
-                            .await;
+                        let fetched = futures::future::join_all(targets.into_iter().map(|inner| {
+                            let client = &client;
+                            async move {
+                                let src = classify(&inner, base_dir);
+                                (inner, fetch(client, &src, fetch_cdn).await)
+                            }
+                        }))
+                        .await;
                         let mut css_map: BTreeMap<String, String> = BTreeMap::new();
                         for (inner, result) in fetched {
                             match result {
@@ -574,7 +576,10 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
                                     report.bytes += ib.len() as u64;
                                     report.collected += 1;
                                     css_map.insert(inner.clone(), relative_to_css(&ip));
-                                    assets.push(Asset { path: ip, bytes: ib });
+                                    assets.push(Asset {
+                                        path: ip,
+                                        bytes: ib,
+                                    });
                                 }
                                 Err(reason) => report.failed.push(FailedUrl { url: inner, reason }),
                             }
@@ -631,7 +636,10 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
         };
         if kind == Kind::Css {
             let css = String::from_utf8_lossy(&bytes);
-            let css_dir = np.parent().map(Path::to_path_buf).unwrap_or_else(|| root.clone());
+            let css_dir = np
+                .parent()
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|| root.clone());
             for inner in collect_css_urls(&css) {
                 if let Source::Local(ip) = classify(&inner, &css_dir) {
                     let inp = normalize(&ip);
@@ -865,7 +873,11 @@ mod tests {
         assert!(res.index_html.contains(r#"src="img/bg.png""#));
         assert!(!res.index_html.contains("assets/"));
         // The CSS keeps its own relative url(); its target is packaged too.
-        let css = res.assets.iter().find(|a| a.path == "css/site.css").unwrap();
+        let css = res
+            .assets
+            .iter()
+            .find(|a| a.path == "css/site.css")
+            .unwrap();
         let css_text = String::from_utf8_lossy(&css.bytes);
         assert!(css_text.contains("url('../img/bg.png')"), "{css_text}");
 
