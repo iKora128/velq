@@ -53,6 +53,8 @@ async fn pack_bundled(input: &str, out: &str, fetch_cdn: bool) -> Result<BundleR
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_else(|| "Document".into()),
         generator: velq_core::generator_version(),
+        // Mirror layout: the HTML may sit below root so its `../` refs resolve.
+        index_path: result.index_path.clone(),
         ..Default::default()
     };
     velq_core::pack(
@@ -80,6 +82,12 @@ pub struct PackagedVelq {
     pub out_path: String,
     pub collected: usize,
     pub failed: usize,
+    /// Total bytes of bundled assets — so the UI can show the package's heft
+    /// ("同梱 27 MB"), the deciding factor for whether big web fonts are worth embedding.
+    pub bytes: u64,
+    /// Which references could not be bundled, and why — surfaced so the user sees
+    /// exactly what's missing (a not-found local image) instead of a bare count.
+    pub failures: Vec<velq_bundler::FailedUrl>,
 }
 
 /// A non-colliding `<stem>.velq` (then `<stem> 2.velq`, …) inside `dir`.
@@ -130,6 +138,8 @@ pub async fn package_html_file(app: AppHandle, html_path: String) -> Result<Pack
         out_path: out_str,
         collected: report.collected,
         failed: report.failed.len(),
+        bytes: report.bytes,
+        failures: report.failed,
     })
 }
 
@@ -148,6 +158,7 @@ async fn pack_md_bundled(input: &str, out: &str, fetch_cdn: bool) -> Result<Bund
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_else(|| "Document".into()),
         generator: velq_core::generator_version(),
+        index_path: result.index_path.clone(),
         ..Default::default()
     };
     velq_core::pack_md(
@@ -173,6 +184,8 @@ pub async fn package_md_file(app: AppHandle, md_path: String) -> Result<Packaged
         out_path: out_str,
         collected: report.collected,
         failed: report.failed.len(),
+        bytes: report.bytes,
+        failures: report.failed,
     })
 }
 
@@ -206,6 +219,7 @@ pub async fn bundle_md_doc(
                 .map(|s| s.to_string_lossy().into_owned())
                 .unwrap_or_else(|| "Document".into()),
             generator: velq_core::generator_version(),
+            index_path: result.index_path.clone(),
             ..Default::default()
         };
         velq_core::pack_md(
@@ -223,6 +237,8 @@ pub async fn bundle_md_doc(
         out_path: out_str,
         collected: report.collected,
         failed: report.failed.len(),
+        bytes: report.bytes,
+        failures: report.failed,
     })
 }
 
@@ -239,6 +255,7 @@ pub async fn bundle_html_to_velq(
         let result = bundle(&html, Path::new(&base), fetch_cdn.unwrap_or(true)).await;
         let manifest = Manifest {
             generator: velq_core::generator_version(),
+            index_path: result.index_path.clone(),
             ..Default::default()
         };
         velq_core::pack(

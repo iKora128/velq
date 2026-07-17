@@ -38,6 +38,12 @@ pub struct Manifest {
     pub generator: String,
     pub tags: Vec<String>,
     pub custom: serde_json::Value,
+    /// Where `index.html` lives inside the package (default root `"index.html"`).
+    /// HTML packages that mirror the source's on-disk relative layout place it
+    /// deeper (e.g. `"docs/mock-html/index.html"`) so the document's `../` asset
+    /// references resolve against the same structure they had on disk. Missing in
+    /// older packages → defaults to `"index.html"` (backward compatible).
+    pub index_path: String,
 }
 
 impl Default for Manifest {
@@ -50,6 +56,7 @@ impl Default for Manifest {
             generator: generator_version(),
             tags: Vec::new(),
             custom: serde_json::Value::Null,
+            index_path: "index.html".into(),
         }
     }
 }
@@ -103,7 +110,10 @@ fn pack_docs(
         zip.start_file("index.md", options())?;
         zip.write_all(md)?;
     }
-    zip.start_file("index.html", options())?;
+    // The HTML lives at `manifest.index_path` (root `index.html` by default; deeper
+    // when a bundle mirrors the source's relative layout). `zip` creates any parent
+    // dirs implied by the name.
+    zip.start_file(&manifest.index_path, options())?;
     zip.write_all(index_html)?;
     for a in assets {
         zip.start_file(&a.path, options())?;
@@ -147,6 +157,7 @@ pub fn unpack(velq: &Path, out_dir: &Path) -> Result<()> {
 /// Every bundled asset — all members except the manifest and the index document(s).
 /// Directory entries are skipped (`pack` recreates paths from the asset names).
 pub fn read_assets(velq: &Path) -> Result<Vec<Asset>> {
+    let index_path = read_manifest(velq)?.index_path;
     let mut archive = open(velq)?;
     let mut assets = Vec::new();
     for i in 0..archive.len() {
@@ -155,7 +166,7 @@ pub fn read_assets(velq: &Path) -> Result<Vec<Asset>> {
             continue;
         }
         let name = entry.name().to_string();
-        if matches!(name.as_str(), "manifest.json" | "index.html" | "index.md") {
+        if matches!(name.as_str(), "manifest.json" | "index.md") || name == index_path {
             continue;
         }
         let mut bytes = Vec::new();
@@ -210,8 +221,9 @@ fn write_atomic(velq: &Path, write: impl FnOnce(&Path) -> Result<()>) -> Result<
 
 /// A `.velq` is valid if it has both required members.
 pub fn validate(velq: &Path) -> Result<()> {
+    let index_path = read_manifest(velq)?.index_path;
     let mut archive = open(velq)?;
-    for required in ["manifest.json", "index.html"] {
+    for required in ["manifest.json", index_path.as_str()] {
         archive
             .by_name(required)
             .map_err(|_| VelqError::Missing(required.into()))?;
@@ -359,6 +371,76 @@ mod tests {
         zip.write_all(b"{}").unwrap();
         zip.finish().unwrap();
         assert!(validate(&out).is_err()); // no index.html
+        std::fs::remove_file(&out).ok();
+    }
+
+    #[test]
+    fn deep_index_path_mirrors_relative_layout() {
+        // A bundle mirroring `…/docs/mock-html/x.html` + `../../brand/logo.svg`
+        // places the HTML deep and the asset where `../../brand/logo.svg` (resolved
+        // from docs/mock-html/) normalizes to on the viewer's origin.
+        let out = tmp("deep.velq");
+        let manifest = Manifest {
+            title: "Deep".into(),
+            index_path: "docs/mock-html/index.html".into(),
+            ..Default::default()
+        };
+        let assets = vec![Asset {
+            path: "brand/logo.svg".into(),
+            bytes: b"<svg/>".to_vec(),
+        }];
+        pack(&out, &manifest, b"<h1>deep</h1>", &assets).unwrap();
+
+        // The HTML landed at the deep path, not root.
+        assert_eq!(
+            read_file_bytes(&out, "docs/mock-html/index.html").unwrap(),
+            b"<h1>deep</h1>"
+        );
+        assert!(read_file_bytes(&out, "index.html").is_err());
+        // The sibling asset is reachable at its mirror path.
+        assert_eq!(read_file_bytes(&out, "brand/logo.svg").unwrap(), b"<svg/>");
+
+        validate(&out).unwrap();
+        assert_eq!(
+            read_manifest(&out).unwrap().index_path,
+            "docs/mock-html/index.html"
+        );
+        // read_assets excludes the deep index.html; only the real asset remains.
+        let a = read_assets(&out).unwrap();
+        assert_eq!(a.len(), 1);
+        assert_eq!(a[0].path, "brand/logo.svg");
+
+        // Editing in place rewrites the deep index and keeps the asset.
+        update_index(&out, b"<h1>edited</h1>").unwrap();
+        assert_eq!(
+            read_file_bytes(&out, "docs/mock-html/index.html").unwrap(),
+            b"<h1>edited</h1>"
+        );
+        assert_eq!(read_assets(&out).unwrap().len(), 1);
+
+        std::fs::remove_file(&out).ok();
+    }
+
+    #[test]
+    fn legacy_manifest_without_index_path_defaults_to_root() {
+        // An older package's manifest.json has no `indexPath`; it must still read
+        // and validate as a root `index.html` (forward-compatible default).
+        let out = tmp("legacy.velq");
+        let file = std::fs::File::create(&out).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        zip.start_file("manifest.json", options()).unwrap();
+        zip.write_all(br#"{"title":"Legacy"}"#).unwrap();
+        zip.start_file("index.html", options()).unwrap();
+        zip.write_all(b"<h1>legacy</h1>").unwrap();
+        zip.finish().unwrap();
+
+        assert_eq!(read_manifest(&out).unwrap().index_path, "index.html");
+        validate(&out).unwrap();
+        assert_eq!(
+            read_file_bytes(&out, "index.html").unwrap(),
+            b"<h1>legacy</h1>"
+        );
+
         std::fs::remove_file(&out).ok();
     }
 }

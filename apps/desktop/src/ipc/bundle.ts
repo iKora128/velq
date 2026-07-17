@@ -11,10 +11,20 @@ export const bundleHtmlToVelq = (
   fetchCdn = true,
 ) => invoke<BundleReport>("bundle_html_to_velq", { html, out, baseDir, fetchCdn });
 
+export interface FailedRef {
+  url: string;
+  reason: string;
+}
+
 export interface PackagedVelq {
   outPath: string;
   collected: number;
   failed: number;
+  /** Total bytes of bundled assets — for showing the package's heft ("同梱 27 MB"). */
+  bytes: number;
+  /** References that couldn't be bundled (not-found local files, fetch errors) — so
+   * the user sees exactly what's missing, not just a count. */
+  failures: FailedRef[];
 }
 
 /** Trace an HTML file's dependencies and write a .velq into Documents/Velq. */

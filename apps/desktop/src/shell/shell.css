@@ -240,6 +240,28 @@
   min-width: 0;
 }
 
+/* Script-run offer: amber (a caution — "run only if you trust it") to set it apart
+ * from the blue convert offer. Same layout as convert-banner otherwise. */
+.script-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--warning) 32%, transparent);
+  font-size: var(--text-sm);
+  color: var(--text);
+  flex: none;
+}
+.script-banner__icon {
+  color: var(--warning);
+  flex: none;
+}
+.script-banner__text {
+  flex: 1;
+  min-width: 0;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;
@@ -320,6 +342,20 @@
 }
 .edit-toggle--on:hover {
   background: var(--accent-hover);
+}
+
+/* Narrow toolbar: the labelled chips (Edit / Run scripts) drop to icon-only so the
+   text never crushes. Each keeps its tooltip, so the meaning is a hover away. */
+@container toolbar (max-width: 640px) {
+  .edit-toggle {
+    width: 28px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+  .edit-toggle .toggle-label {
+    display: none;
+  }
 }
 
 /* ---- Vault header (above the file tree) ---- */
@@ -485,6 +521,9 @@
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
   flex: none;
+  /* A size container so the labelled chips (Edit / Run scripts) can drop to
+     icon-only when the toolbar gets too narrow to show text without crushing it. */
+  container: toolbar / inline-size;
 }
 .editor-toolbar__spacer {
   flex: 1;

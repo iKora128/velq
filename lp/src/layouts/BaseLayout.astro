@@ -81,6 +81,15 @@ const fonts =
       const onScroll = () => nav?.classList.toggle("is-scrolled", window.scrollY > 8);
       onScroll();
       addEventListener("scroll", onScroll, { passive: true });
+
+      // Remember an explicit language choice so the edge redirect stops overriding
+      // it (see functions/_middleware.js). The destination href encodes the target.
+      document.addEventListener("click", (e) => {
+        const link = (e.target as HTMLElement)?.closest?.("a[data-lang-switch]") as HTMLAnchorElement | null;
+        if (!link) return;
+        const lang = (link.getAttribute("href") || "").startsWith("/ja") ? "ja" : "en";
+        document.cookie = `velq_lang=${lang}; path=/; max-age=31536000; samesite=lax`;
+      });
     </script>
   </body>
 </html>

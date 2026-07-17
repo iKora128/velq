@@ -38,6 +38,11 @@ function loadSettings(): Settings {
 
 registerMock("get_settings", () => loadSettings());
 registerMock("apply_menu_language", () => null);
+registerMock("export_pdf", () => {
+  // No native webview in the browser demo — fall back to the print dialog.
+  window.print();
+  return null;
+});
 registerMock("set_settings", ({ settings }: { settings: Settings }) => {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   return null;
@@ -340,12 +345,12 @@ registerMock("package_md_file", ({ mdPath }: { mdPath: string }) => {
   const md = src?.kind === "file" ? src.content : "# (empty)\n";
   const stem = (mdPath.split("/").pop() ?? "note").replace(/\.(md|markdown)$/i, "");
   VAULT.children[`${stem}.velq`] = f(md); // md content → read_velq_doc opens it as Markdown
-  return { outPath: `${VAULT_ROOT}/${stem}.velq`, collected: 0, failed: 0 };
+  return { outPath: `${VAULT_ROOT}/${stem}.velq`, collected: 0, failed: 0, bytes: 0, failures: [] };
 });
 registerMock("bundle_md_doc", ({ mdPath, md }: { mdPath: string; md: string; html: string }) => {
   const stem = (mdPath.split("/").pop() ?? "note").replace(/\.(md|markdown)$/i, "");
   VAULT.children[`${stem}.velq`] = f(md);
-  return { outPath: `${VAULT_ROOT}/${stem}.velq`, collected: 0, failed: 0 };
+  return { outPath: `${VAULT_ROOT}/${stem}.velq`, collected: 0, failed: 0, bytes: 0, failures: [] };
 });
 registerMock("new_velq", ({ parentPath, name }: { parentPath: string; name: string }) => {
   const dir = resolve(parentPath);

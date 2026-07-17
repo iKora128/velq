@@ -8,7 +8,7 @@ pub mod ogp;
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use lol_html::html_content::ContentType;
 use lol_html::{element, rewrite_str, text, RewriteStrSettings};
@@ -54,6 +54,11 @@ pub struct FailedUrl {
 
 pub struct BundleResult {
     pub index_html: String,
+    /// Where `index.html` sits inside the package — root `"index.html"` normally,
+    /// or a deeper mirror path (e.g. `"docs/mock-html/index.html"`) when the
+    /// document reaches assets via `../`. Placing the HTML at its original depth is
+    /// what lets those `../` references resolve unchanged in the viewer.
+    pub index_path: String,
     pub assets: Vec<Asset>,
     pub report: BundleReport,
 }
@@ -75,6 +80,62 @@ fn classify(url: &str, base: &Path) -> Source {
     } else {
         Source::Local(base.join(u.split(['?', '#']).next().unwrap_or(u)))
     }
+}
+
+/// Lexically fold `.`/`..` — no filesystem access (refs may point at paths that only
+/// make sense relative to the document, and we just need a normal form to compare
+/// and re-root). Leading `..` that can't be folded away are kept.
+fn normalize(p: &Path) -> PathBuf {
+    let mut out: Vec<Component> = Vec::new();
+    for comp in p.components() {
+        match comp {
+            Component::CurDir => {}
+            Component::ParentDir => match out.last() {
+                Some(Component::Normal(_)) => {
+                    out.pop();
+                }
+                _ => out.push(Component::ParentDir),
+            },
+            c => out.push(c),
+        }
+    }
+    out.iter().collect()
+}
+
+/// Make `base` absolute (against the process CWD) then normalize it.
+fn abs_norm(base: &Path) -> PathBuf {
+    let abs = if base.is_absolute() {
+        base.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_default().join(base)
+    };
+    normalize(&abs)
+}
+
+/// The deepest directory containing every path — the component-wise longest common
+/// prefix. Used as the package root, so each reference keeps its position relative
+/// to it (and the document's own `../` links resolve the same way they did on disk).
+fn common_ancestor(paths: &[PathBuf]) -> Option<PathBuf> {
+    let mut iter = paths.iter();
+    let mut prefix: Vec<Component> = iter.next()?.components().collect();
+    for p in iter {
+        let comps: Vec<Component> = p.components().collect();
+        let keep = prefix
+            .iter()
+            .zip(&comps)
+            .take_while(|(a, b)| a == b)
+            .count();
+        prefix.truncate(keep);
+    }
+    (!prefix.is_empty()).then(|| prefix.iter().collect())
+}
+
+/// `path` relative to `base` with `/` separators, if `base` is an ancestor (both
+/// normalized absolute paths). `None` means `path` escapes the package root.
+fn rel_from(base: &Path, path: &Path) -> Option<String> {
+    let rel = path.strip_prefix(base).ok()?;
+    let s = rel.to_string_lossy().replace('\\', "/");
+    (!s.is_empty()).then_some(s)
 }
 
 async fn fetch(
@@ -260,6 +321,22 @@ fn looks_like_asset(s: &str) -> bool {
     }
 }
 
+/// Like `looks_like_asset` but permits `..` segments. Script refs may point up the
+/// tree (`../../brand/logo.svg`); safety is enforced later by placing every asset
+/// relative to the package root and dropping anything that escapes it (`rel_from`),
+/// so a `..` that leaves the bundle is never collected. Absolute paths still refused.
+fn token_is_assetish(s: &str) -> bool {
+    if s.is_empty() || s.len() > 260 || s.starts_with('/') {
+        return false;
+    }
+    match s.rsplit_once('.') {
+        Some((stem, ext)) if !stem.is_empty() && !stem.ends_with('/') => SCRIPT_ASSET_EXTS
+            .iter()
+            .any(|e| ext.eq_ignore_ascii_case(e)),
+        _ => false,
+    }
+}
+
 /// `velq-${k}-1024.png` → `velq-*-1024.png`; None if the token has no `${…}` hole
 /// (or unbalanced braces).
 fn template_to_glob(token: &str) -> Option<String> {
@@ -366,13 +443,24 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
     let collect_settings = RewriteStrSettings::new()
         .append_element_content_handler(element!("link[href]", |el| {
             if let Some(h) = el.get_attribute("href") {
-                let rel = el.get_attribute("rel").unwrap_or_default();
-                let kind = if rel.contains("stylesheet") {
-                    Kind::Css
-                } else {
-                    Kind::Other
-                };
-                refs.borrow_mut().push((h, kind));
+                let rel = el.get_attribute("rel").unwrap_or_default().to_ascii_lowercase();
+                // Connection hints / navigation preloads point at an origin or a page,
+                // not a packageable file — fetching them just 404s (and a `preconnect`
+                // to a font CDN would even be counted as a "failed" asset). Skip them.
+                let is_hint = rel.split_whitespace().any(|t| {
+                    matches!(
+                        t,
+                        "preconnect" | "dns-prefetch" | "prefetch" | "prerender" | "modulepreload"
+                    )
+                });
+                if !is_hint {
+                    let kind = if rel.contains("stylesheet") {
+                        Kind::Css
+                    } else {
+                        Kind::Other
+                    };
+                    refs.borrow_mut().push((h, kind));
+                }
             }
             Ok(())
         }))
@@ -416,79 +504,155 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
         }));
     let _ = rewrite_str(html, collect_settings);
 
-    // Resolve every reference (dedup by original URL).
-    let mut map: BTreeMap<String, String> = BTreeMap::new();
+    // The document's own directory (absolute, normalized). Its position under the
+    // common root becomes `index.html`'s home, so the document's `../` refs resolve
+    // there exactly as they did on disk.
+    let base_root = abs_norm(base_dir);
+
+    // Remote (CDN) refs are still localized to `assets/<hash>` and rewritten. Local
+    // refs keep their on-disk relative structure and are NOT rewritten — the whole
+    // layout is mirrored into the package, so authored links resolve unchanged.
+    let mut remote_map: BTreeMap<String, String> = BTreeMap::new();
     let mut assets: Vec<Asset> = Vec::new();
     let mut report = BundleReport::default();
     let mut seen = std::collections::BTreeSet::new();
+
+    // Local refs are deferred until the common root is known. CSS seeds the queue so
+    // its own `url()` targets get collected too.
+    let mut local_paths: Vec<PathBuf> = vec![base_root.clone()];
+    let mut local_queue: Vec<(PathBuf, Kind)> = Vec::new();
 
     for (url, kind) in refs.into_inner() {
         if !seen.insert(url.clone()) {
             continue;
         }
-        let source = classify(&url, base_dir);
-        if matches!(source, Source::Inline) {
-            continue;
-        }
-        match fetch(&client, &source, fetch_cdn).await {
-            Ok(mut bytes) => {
-                // For CSS, recurse into url() references, then rewrite the CSS itself.
-                if kind == Kind::Css {
-                    let css = String::from_utf8_lossy(&bytes).into_owned();
-                    let css_base = match &source {
-                        Source::Local(p) => p.parent().unwrap_or(base_dir).to_path_buf(),
-                        _ => base_dir.to_path_buf(),
-                    };
-                    let mut css_map: BTreeMap<String, String> = BTreeMap::new();
-                    for inner in collect_css_urls(&css) {
-                        if seen.contains(&inner) {
-                            continue;
-                        }
-                        let inner_src = classify(&inner, &css_base);
-                        if matches!(inner_src, Source::Inline) {
-                            continue;
-                        }
-                        if let Ok(ib) = fetch(&client, &inner_src, fetch_cdn).await {
-                            seen.insert(inner.clone());
-                            let p = asset_path(kind_from_url(&inner), &inner, &ib);
-                            report.bytes += ib.len() as u64;
-                            report.collected += 1;
-                            css_map.insert(inner.clone(), relative_to_css(&p));
-                            assets.push(Asset { path: p, bytes: ib });
-                        } else {
-                            report.failed.push(FailedUrl {
-                                url: inner,
-                                reason: "fetch failed".into(),
-                            });
-                        }
+        match classify(&url, base_dir) {
+            Source::Inline => {}
+            Source::Local(p) => {
+                let np = normalize(&p);
+                local_paths.push(np.clone());
+                // Local JS may build the DOM at runtime — read its text now so its
+                // `img.src = "…"` targets join the root calculation below and get
+                // collected (a `../` in one must widen the root to include it).
+                if kind == Kind::Js {
+                    if let Ok(bytes) = std::fs::read(&np) {
+                        scripts_text
+                            .borrow_mut()
+                            .push_str(&String::from_utf8_lossy(&bytes));
+                        scripts_text.borrow_mut().push('\n');
                     }
-                    bytes = rewrite_css(&css, &css_map).into_bytes();
                 }
-                // Local JS may build DOM at runtime — scan its text too (refs in
-                // JS resolve against the *document*, so base_dir stays the base).
-                if kind == Kind::Js && matches!(source, Source::Local(_)) {
-                    scripts_text
-                        .borrow_mut()
-                        .push_str(&String::from_utf8_lossy(&bytes));
-                    scripts_text.borrow_mut().push('\n');
-                }
-                let p = asset_path(kind, &url, &bytes);
-                report.bytes += bytes.len() as u64;
-                report.collected += 1;
-                map.insert(url.clone(), p.clone());
-                assets.push(Asset { path: p, bytes });
+                local_queue.push((np, kind));
             }
-            Err(reason) => report.failed.push(FailedUrl { url, reason }),
+            Source::Remote(u) => match fetch(&client, &Source::Remote(u), fetch_cdn).await {
+                Ok(mut bytes) => {
+                    // Remote CSS: fetch its (remote) url() targets CONCURRENTLY, then
+                    // rewrite. Google Fonts ships one @font-face per weight and a full
+                    // Noto Sans JP ttf is ~5MB each — fetched serially the packager
+                    // looks hung, so we join them into one round-trip's worth of wait.
+                    if kind == Kind::Css {
+                        let css = String::from_utf8_lossy(&bytes).into_owned();
+                        let targets: Vec<String> = collect_css_urls(&css)
+                            .into_iter()
+                            .filter(|i| matches!(classify(i, base_dir), Source::Remote(_)))
+                            .filter(|i| seen.insert(i.clone()))
+                            .collect();
+                        let fetched =
+                            futures::future::join_all(targets.into_iter().map(|inner| {
+                                let client = &client;
+                                async move {
+                                    let src = classify(&inner, base_dir);
+                                    (inner, fetch(client, &src, fetch_cdn).await)
+                                }
+                            }))
+                            .await;
+                        let mut css_map: BTreeMap<String, String> = BTreeMap::new();
+                        for (inner, result) in fetched {
+                            match result {
+                                Ok(ib) => {
+                                    let ip = asset_path(kind_from_url(&inner), &inner, &ib);
+                                    report.bytes += ib.len() as u64;
+                                    report.collected += 1;
+                                    css_map.insert(inner.clone(), relative_to_css(&ip));
+                                    assets.push(Asset { path: ip, bytes: ib });
+                                }
+                                Err(reason) => report.failed.push(FailedUrl { url: inner, reason }),
+                            }
+                        }
+                        bytes = rewrite_css(&css, &css_map).into_bytes();
+                    }
+                    let p = asset_path(kind, &url, &bytes);
+                    report.bytes += bytes.len() as u64;
+                    report.collected += 1;
+                    remote_map.insert(url.clone(), p.clone());
+                    assets.push(Asset { path: p, bytes });
+                }
+                Err(reason) => report.failed.push(FailedUrl { url, reason }),
+            },
         }
     }
 
-    // Script-referenced assets: tokens like `cat.png` or `velq-${k}-1024.png` in
-    // any script. Stored at their ORIGINAL relative paths (JS can't be rewritten,
-    // so the runtime reference must keep resolving); existence on disk decides.
-    let mut seen_original = std::collections::BTreeSet::new();
+    // The package root: the deepest directory containing the document and every STATIC
+    // local ref. A static `../` — authored, or present in the post-script DOM the
+    // frontend hands us — is a trusted part of the document and widens the root so it
+    // resolves unchanged in the viewer. A script *token* the scan merely guessed from
+    // JS text does NOT widen the root; a guessed `../` that leaves the tree is refused
+    // below (the escape guard), so scanning can't be tricked into exfiltrating files.
+    let root = common_ancestor(&local_paths).unwrap_or_else(|| base_root.clone());
+    let index_path = match rel_from(&root, &base_root) {
+        Some(dir) => format!("{dir}/index.html"),
+        None => "index.html".to_string(),
+    };
+
+    // Place local assets at their root-relative paths (no rewrite). Local CSS also
+    // seeds its own `url()` targets — they keep their relative form, resolved against
+    // the CSS's preserved location.
+    let mut placed: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    while let Some((np, kind)) = local_queue.pop() {
+        let Some(rel) = rel_from(&root, &np) else {
+            report.failed.push(FailedUrl {
+                url: np.to_string_lossy().into_owned(),
+                reason: "reference escapes the package root".into(),
+            });
+            continue;
+        };
+        if rel == index_path || !placed.insert(rel.clone()) {
+            continue;
+        }
+        let bytes = match std::fs::read(&np) {
+            Ok(b) => b,
+            Err(e) => {
+                report.failed.push(FailedUrl {
+                    url: rel,
+                    reason: e.to_string(),
+                });
+                continue;
+            }
+        };
+        if kind == Kind::Css {
+            let css = String::from_utf8_lossy(&bytes);
+            let css_dir = np.parent().map(Path::to_path_buf).unwrap_or_else(|| root.clone());
+            for inner in collect_css_urls(&css) {
+                if let Source::Local(ip) = classify(&inner, &css_dir) {
+                    let inp = normalize(&ip);
+                    if rel_from(&root, &inp).is_some() {
+                        local_queue.push((inp, kind_from_url(&inner)));
+                    }
+                }
+            }
+        }
+        report.bytes += bytes.len() as u64;
+        report.collected += 1;
+        assets.push(Asset { path: rel, bytes });
+    }
+
+    // Script-referenced assets: tokens like `cat.png`, `velq-${k}-1024.png`, or a
+    // `../` path a JS `img.src` emits. Placed at their root-relative paths so a runtime
+    // ref, resolved against index.html's location, finds them. A guessed `..` that
+    // escapes the root is dropped (it never widened the root) — the escape guard.
     let scripts = scripts_text.into_inner();
     for token in scan_script_tokens(&scripts) {
-        let matches: Vec<(String, PathBuf)> = match template_to_glob(&token) {
+        let abs_matches: Vec<PathBuf> = match template_to_glob(&token) {
             Some(glob) if looks_like_asset(&glob) => {
                 let hits = glob_collect(base_dir, &glob);
                 if hits.len() > GLOB_CAP {
@@ -498,24 +662,27 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
                     });
                     continue;
                 }
-                hits
+                hits.into_iter().map(|(_, abs)| abs).collect()
             }
             Some(_) => continue,
-            None if looks_like_asset(&token) => {
-                let p = base_dir.join(&token);
+            None if token_is_assetish(&token) => {
+                let p = normalize(&base_dir.join(&token));
                 if p.is_file() {
-                    vec![(token.clone(), p)]
+                    vec![p]
                 } else {
                     Vec::new()
                 }
             }
             None => continue,
         };
-        for (rel, abs) in matches {
-            if rel == "index.html" || rel.ends_with(".velq") || !seen_original.insert(rel.clone()) {
+        for np in abs_matches {
+            let Some(rel) = rel_from(&root, &np) else {
+                continue; // escapes the package root — never collect it
+            };
+            if rel == index_path || rel.ends_with(".velq") || !placed.insert(rel.clone()) {
                 continue;
             }
-            if let Ok(bytes) = std::fs::read(&abs) {
+            if let Ok(bytes) = std::fs::read(&np) {
                 report.bytes += bytes.len() as u64;
                 report.collected += 1;
                 assets.push(Asset { path: rel, bytes });
@@ -523,49 +690,57 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
         }
     }
 
-    // Pass 2 — rewrite the HTML to point at assets/.
-    let style_buf2 = RefCell::new(String::new());
-    let rewrite_settings = RewriteStrSettings::new()
-        .append_element_content_handler(rewrite_attr("link[href]", "href", &map))
-        .append_element_content_handler(rewrite_attr("script[src]", "src", &map))
-        .append_element_content_handler(rewrite_attr("img[src]", "src", &map))
-        .append_element_content_handler(element!("img[srcset], source[srcset]", |el| {
-            if let Some(s) = el.get_attribute("srcset") {
-                let rewritten: Vec<String> = s
-                    .split(',')
-                    .map(|part| {
-                        let mut it = part.split_whitespace();
-                        match (it.next(), it.next()) {
-                            (Some(u), d) => {
-                                let nu = map.get(u).map(String::as_str).unwrap_or(u);
-                                match d {
-                                    Some(desc) => format!("{nu} {desc}"),
-                                    None => nu.to_string(),
+    // Pass 2 — rewrite ONLY remote refs to their `assets/<hash>` paths. Local refs
+    // are left exactly as authored (their targets are packaged at the same relative
+    // location, so they resolve unchanged). With no remotes, skip the pass entirely.
+    let index_html = if remote_map.is_empty() {
+        html.to_string()
+    } else {
+        let map = &remote_map;
+        let style_buf2 = RefCell::new(String::new());
+        let rewrite_settings = RewriteStrSettings::new()
+            .append_element_content_handler(rewrite_attr("link[href]", "href", map))
+            .append_element_content_handler(rewrite_attr("script[src]", "src", map))
+            .append_element_content_handler(rewrite_attr("img[src]", "src", map))
+            .append_element_content_handler(element!("img[srcset], source[srcset]", |el| {
+                if let Some(s) = el.get_attribute("srcset") {
+                    let rewritten: Vec<String> = s
+                        .split(',')
+                        .map(|part| {
+                            let mut it = part.split_whitespace();
+                            match (it.next(), it.next()) {
+                                (Some(u), d) => {
+                                    let nu = map.get(u).map(String::as_str).unwrap_or(u);
+                                    match d {
+                                        Some(desc) => format!("{nu} {desc}"),
+                                        None => nu.to_string(),
+                                    }
                                 }
+                                _ => part.trim().to_string(),
                             }
-                            _ => part.trim().to_string(),
-                        }
-                    })
-                    .collect();
-                el.set_attribute("srcset", &rewritten.join(", "))?;
-            }
-            Ok(())
-        }))
-        .append_element_content_handler(text!("style", |t| {
-            style_buf2.borrow_mut().push_str(t.as_str());
-            if t.last_in_text_node() {
-                let rewritten = rewrite_css(&style_buf2.borrow(), &map);
-                t.replace(&rewritten, ContentType::Html);
-                style_buf2.borrow_mut().clear();
-            } else {
-                t.remove();
-            }
-            Ok(())
-        }));
-    let index_html = rewrite_str(html, rewrite_settings).unwrap_or_else(|_| html.to_string());
+                        })
+                        .collect();
+                    el.set_attribute("srcset", &rewritten.join(", "))?;
+                }
+                Ok(())
+            }))
+            .append_element_content_handler(text!("style", |t| {
+                style_buf2.borrow_mut().push_str(t.as_str());
+                if t.last_in_text_node() {
+                    let rewritten = rewrite_css(&style_buf2.borrow(), map);
+                    t.replace(&rewritten, ContentType::Html);
+                    style_buf2.borrow_mut().clear();
+                } else {
+                    t.remove();
+                }
+                Ok(())
+            }));
+        rewrite_str(html, rewrite_settings).unwrap_or_else(|_| html.to_string())
+    };
 
     BundleResult {
         index_html,
+        index_path,
         assets,
         report,
     }
@@ -656,7 +831,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn collects_and_rewrites_local_assets_offline() {
+    async fn collects_and_mirrors_local_assets_offline() {
         let dir = tmpdir();
         std::fs::create_dir_all(dir.join("css")).unwrap();
         std::fs::write(
@@ -674,20 +849,25 @@ mod tests {
 
         // css, js, png (referenced twice but deduped) collected; nothing failed.
         assert!(res.report.failed.is_empty(), "{:?}", res.report.failed);
-        assert!(res.report.collected >= 3);
-        // HTML now points at assets/.
-        assert!(res.index_html.contains("assets/css/"));
-        assert!(res.index_html.contains("assets/js/"));
-        assert!(res.index_html.contains("assets/img/"));
-        assert!(!res.index_html.contains("css/site.css"));
-        // The CSS asset's url() was rewritten to ../img/…
-        let css = res
-            .assets
-            .iter()
-            .find(|a| a.path.contains("/css/"))
-            .unwrap();
+        // Everything sits below the doc, so the root IS the doc dir: index at root,
+        // assets keep their on-disk relative paths.
+        assert_eq!(res.index_path, "index.html");
+        assert!(res.assets.iter().any(|a| a.path == "css/site.css"));
+        assert!(res.assets.iter().any(|a| a.path == "img/bg.png"));
+        assert!(res.assets.iter().any(|a| a.path == "app.js"));
+        // Local refs are NOT rewritten — they resolve as authored against the
+        // mirrored layout, so nothing gets moved under `assets/`.
+        assert!(
+            res.index_html.contains(r#"href="css/site.css""#),
+            "{}",
+            res.index_html
+        );
+        assert!(res.index_html.contains(r#"src="img/bg.png""#));
+        assert!(!res.index_html.contains("assets/"));
+        // The CSS keeps its own relative url(); its target is packaged too.
+        let css = res.assets.iter().find(|a| a.path == "css/site.css").unwrap();
         let css_text = String::from_utf8_lossy(&css.bytes);
-        assert!(css_text.contains("url(../img/"), "{css_text}");
+        assert!(css_text.contains("url('../img/bg.png')"), "{css_text}");
 
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -703,16 +883,18 @@ mod tests {
         let out = dir.join("doc.velq");
         let manifest = velq_core::Manifest {
             title: "T".into(),
+            index_path: res.index_path.clone(),
             ..Default::default()
         };
         velq_core::pack(&out, &manifest, res.index_html.as_bytes(), &res.assets).unwrap();
 
         velq_core::validate(&out).unwrap();
         assert_eq!(velq_core::read_manifest(&out).unwrap().title, "T");
-        // The bundled CSS is in the package and the index points at it.
+        // The bundled CSS sits at its original path; the index references it unchanged.
+        assert!(res.assets.iter().any(|a| a.path == "style.css"));
         let idx =
-            String::from_utf8(velq_core::read_file_bytes(&out, "index.html").unwrap()).unwrap();
-        assert!(idx.contains("assets/css/"));
+            String::from_utf8(velq_core::read_file_bytes(&out, &res.index_path).unwrap()).unwrap();
+        assert!(idx.contains("style.css"));
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -791,6 +973,84 @@ mod tests {
             res.assets.iter().map(|a| &a.path).collect::<Vec<_>>()
         );
         std::fs::remove_file(&outside).ok();
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// The heart of the mirror layout: a document that reaches an asset via `../`.
+    /// index.html must land at its original depth and the asset above it, so the
+    /// `../` link resolves unchanged in the viewer — never rewritten, never flattened.
+    #[tokio::test]
+    async fn dotdot_refs_mirror_the_source_layout() {
+        let dir = tmpdir();
+        std::fs::create_dir_all(dir.join("brand")).unwrap();
+        std::fs::write(dir.join("brand/logo.svg"), b"<svg/>").unwrap();
+        let doc_dir = dir.join("docs/page");
+        std::fs::create_dir_all(&doc_dir).unwrap();
+        let html = r#"<html><body><img src="../../brand/logo.svg"></body></html>"#;
+
+        let res = bundle(html, &doc_dir, false).await;
+
+        assert!(res.report.failed.is_empty(), "{:?}", res.report.failed);
+        // The doc dir is two levels below the common root, so the HTML lands deep and
+        // the asset lands where `../../brand/logo.svg` resolves.
+        assert_eq!(res.index_path, "docs/page/index.html");
+        assert!(
+            res.assets.iter().any(|a| a.path == "brand/logo.svg"),
+            "{:?}",
+            res.assets.iter().map(|a| &a.path).collect::<Vec<_>>()
+        );
+        // The `../` reference is left exactly as written.
+        assert!(res.index_html.contains(r#"src="../../brand/logo.svg""#));
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// The real-world case that started this work: an `<img>` reaching an asset via
+    /// `../`, as it appears in the POST-SCRIPT DOM. The frontend runs the page, then
+    /// hands the rendered HTML to the bundler — so a JS-built `<img>` is static markup
+    /// by the time we see it. The static `../` widens the root and the asset mirrors.
+    #[tokio::test]
+    async fn dotdot_image_from_rendered_dom_is_mirrored() {
+        let dir = tmpdir();
+        std::fs::create_dir_all(dir.join("brand")).unwrap();
+        std::fs::write(dir.join("brand/mark.svg"), b"<svg/>").unwrap();
+        let doc_dir = dir.join("docs/mock");
+        std::fs::create_dir_all(&doc_dir).unwrap();
+        // As serialized after scripts ran: the <img> is now static markup.
+        let html =
+            r#"<html><body><div id="r"><img src="../../brand/mark.svg"></div></body></html>"#;
+
+        let res = bundle(html, &doc_dir, false).await;
+
+        assert_eq!(res.index_path, "docs/mock/index.html");
+        assert!(
+            res.assets.iter().any(|a| a.path == "brand/mark.svg"),
+            "{:?}",
+            res.assets.iter().map(|a| &a.path).collect::<Vec<_>>()
+        );
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// `<link rel="preconnect">` / `dns-prefetch` point at an origin, not a file.
+    /// They must never be fetched (a `preconnect` to a CDN would 404 and show up as a
+    /// spurious "failed" asset the user can't act on).
+    #[tokio::test]
+    async fn connection_hints_are_not_fetched() {
+        let dir = tmpdir();
+        let html = r#"<html><head>
+            <link rel="preconnect" href="https://fonts.gstatic.com">
+            <link rel="dns-prefetch" href="https://cdn.example.com">
+            <link rel="stylesheet" href="local.css">
+        </head><body>hi</body></html>"#;
+        std::fs::write(dir.join("local.css"), "body{margin:0}").unwrap();
+
+        let res = bundle(html, &dir, true).await; // online, yet the hints are skipped
+
+        // Only the real stylesheet is handled; the two hints never became failures.
+        assert!(res.report.failed.is_empty(), "{:?}", res.report.failed);
+        assert!(res.assets.iter().any(|a| a.path == "local.css"));
+        assert_eq!(res.assets.len(), 1);
+
         std::fs::remove_dir_all(&dir).ok();
     }
 
