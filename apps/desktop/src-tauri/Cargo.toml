@@ -24,7 +24,7 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 serde = { workspace = true }
 serde_json = { workspace = true }
-comrak = "0.52"
+comrak = "0.54"
 trash = "5"
 url = "2"
 base64 = "0.22"
@@ -53,8 +53,8 @@ objc2-web-kit = { version = "0.3", features = ["WKWebView", "WKPDFConfiguration"
 block2 = "0.6"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-webview2-com = "0.38"
-windows = "0.61"
+webview2-com = "0.39"
+windows = "0.62"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
