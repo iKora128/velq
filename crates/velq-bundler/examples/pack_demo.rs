@@ -10,9 +10,11 @@ async fn main() {
     let html = std::fs::read_to_string(p).expect("read html");
     let base = p.parent().unwrap_or_else(|| Path::new("."));
 
-    // fetch_cdn = false → only local files, so this runs fully offline.
-    let res = bundle(&html, base, false).await;
+    // Offline by default (local files only); set VELQ_ONLINE=1 to also fetch CDN deps.
+    let fetch_cdn = std::env::var("VELQ_ONLINE").is_ok();
+    let res = bundle(&html, base, fetch_cdn).await;
 
+    println!("index_path: {}", res.index_path);
     println!(
         "collected {} assets ({} bytes); {} failed",
         res.report.collected,
@@ -31,5 +33,21 @@ async fn main() {
         if t.contains("<img") || t.contains("<script") || t.contains("<link") {
             println!("  {t}");
         }
+    }
+
+    // Optional second arg: write a real .velq so its ZIP layout can be inspected.
+    if let Some(out) = std::env::args().nth(2) {
+        let manifest = velq_core::Manifest {
+            index_path: res.index_path.clone(),
+            ..Default::default()
+        };
+        velq_core::pack(
+            Path::new(&out),
+            &manifest,
+            res.index_html.as_bytes(),
+            &res.assets,
+        )
+        .expect("pack .velq");
+        println!("wrote {out}");
     }
 }

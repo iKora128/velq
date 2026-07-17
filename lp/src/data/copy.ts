@@ -238,14 +238,14 @@ export const en: Copy = {
     items: [
       { icon: "moon-star", title: "Dark & light", body: "Follows the system, or your pick." },
       { icon: "puzzle", title: "Plugins are just extensions", body: "KaTeX & Mermaid ship as references." },
-      { icon: "file-down", title: "PDF export", body: "Markdown, HTML, .velq or PDF." },
+      { icon: "file-down", title: "Export", body: "Markdown, HTML or .velq." },
       { icon: "square-terminal", title: "Vim mode", body: "One toggle away." },
       { icon: "languages", title: "English & 日本語", body: "Fully localized UI." },
-      { icon: "refresh-cw", title: "Auto-updates", body: "New releases install themselves." },
+      { icon: "refresh-cw", title: "Auto-updates", body: "New releases, one click away." },
       { icon: "laptop-minimal", title: "Cross-platform", body: "macOS, Windows and Linux." },
       { icon: "accessibility", title: "WCAG-AA text", body: "Reduced-motion aware, too." },
       { icon: "files", title: "Plain files on disk", body: "No proprietary silo." },
-      { icon: "keyboard", title: "Keyboard-first", body: "Every action has a shortcut." },
+      { icon: "keyboard", title: "Keyboard-first", body: "⌘K for commands, ⌘P for files." },
       { icon: "wifi-off", title: "Offline-first", body: "No account. No cloud required." },
       { icon: "badge-check", title: "Open source", body: "Apache-2.0; plugins are their authors' own." },
     ],
@@ -271,7 +271,7 @@ export const en: Copy = {
       },
       {
         q: "Which platforms are supported?",
-        a: "macOS (Apple Silicon & Intel), Windows 64-bit, and Linux (.AppImage / .deb), all with automatic updates. Velq is early 0.x — macOS is the platform it's developed and used on daily.",
+        a: "macOS (Apple Silicon), Windows 64-bit, and Linux (.AppImage / .deb), all with automatic updates. Velq is early 0.x — macOS is the platform it's developed and used on daily.",
       },
       {
         q: "Does my writing leave my machine?",
@@ -288,7 +288,7 @@ export const en: Copy = {
       { os: "Linux", meta: ".AppImage / .deb", cta: "Download", key: "linux" },
     ],
     autoCta: "Download for %s",
-    note: "Early 0.x — macOS is the daily-driven platform; Windows and Linux ship from the same CI.",
+    note: "Early 0.x, in active development.",
   },
   cta: {
     line: "Calm is a feature.",
@@ -462,14 +462,14 @@ export const ja: Copy = {
     items: [
       { icon: "moon-star", title: "ダーク & ライト", body: "システム追従も、固定も。" },
       { icon: "puzzle", title: "プラグインは“ただの拡張”", body: "KaTeX と Mermaid を参考実装として同梱。" },
-      { icon: "file-down", title: "PDF 書き出し", body: "Markdown・HTML・.velq・PDF へ。" },
+      { icon: "file-down", title: "書き出し", body: "Markdown・HTML・.velq に。" },
       { icon: "square-terminal", title: "Vim モード", body: "トグルひとつで。" },
       { icon: "languages", title: "日本語 & English", body: "UI は完全ローカライズ。" },
-      { icon: "refresh-cw", title: "自動アップデート", body: "新しいリリースは自動で届く。" },
+      { icon: "refresh-cw", title: "自動アップデート", body: "ワンクリックで更新。" },
       { icon: "laptop-minimal", title: "マルチプラットフォーム", body: "macOS・Windows・Linux。" },
       { icon: "accessibility", title: "WCAG-AA", body: "視差軽減設定にも追従。" },
       { icon: "files", title: "ファイルはプレーンなまま", body: "独自形式に閉じ込めない。" },
-      { icon: "keyboard", title: "キーボード第一", body: "すべての操作にショートカット。" },
+      { icon: "keyboard", title: "キーボード第一", body: "⌘K でコマンド、⌘P でファイル。" },
       { icon: "wifi-off", title: "オフラインファースト", body: "アカウント不要。クラウド不要。" },
       { icon: "badge-check", title: "オープンソース", body: "Apache-2.0。プラグインは作者のライセンスで。" },
     ],
@@ -495,7 +495,7 @@ export const ja: Copy = {
       },
       {
         q: "対応プラットフォームは?",
-        a: "macOS(Apple Silicon & Intel)、Windows 64-bit、Linux(.AppImage / .deb)。いずれも自動アップデート付きです。現在 0.x で、日々開発・常用しているのは macOS 版です。",
+        a: "macOS(Apple Silicon)、Windows 64-bit、Linux(.AppImage / .deb)。いずれも自動アップデート付きです。現在 0.x で、日々開発・常用しているのは macOS 版です。",
       },
       {
         q: "書いた内容が外部に送信されることは?",
@@ -512,7 +512,7 @@ export const ja: Copy = {
       { os: "Linux", meta: ".AppImage / .deb", cta: "ダウンロード", key: "linux" },
     ],
     autoCta: "%s 版をダウンロード",
-    note: "いまは 0.x。日々使い込んでいるのは macOS 版で、Windows / Linux も同じ CI から出荷しています。",
+    note: "現在 0.x、活発に開発中です。",
   },
   cta: {
     line: "静けさは、機能です。",

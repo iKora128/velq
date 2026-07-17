@@ -8,7 +8,7 @@ import {
   Palette,
   PanelLeft,
   PenLine,
-  Zap,
+  Play,
 } from "lucide-react";
 import { useState } from "react";
 import { ContextMenu } from "@/filemanager/ContextMenu";
@@ -125,13 +125,15 @@ export function Toolbar() {
       {showRunScripts && (
         <button
           type="button"
-          className={cn("icon-btn", runScripts && "icon-btn--active")}
-          title={t("toolbar.runScripts")}
-          aria-label={t("toolbar.runScripts")}
+          className={cn("edit-toggle", runScripts && "edit-toggle--on")}
           aria-pressed={runScripts}
+          title={t("toolbar.runScripts")}
           onClick={() => activeDocId && setRunScripts(activeDocId, !runScripts)}
         >
-          <Zap size={16} />
+          <Play size={14} />
+          <span className="toggle-label">
+            {runScripts ? t("toolbar.scriptsOn") : t("toolbar.scriptsOff")}
+          </span>
         </button>
       )}
       <button
@@ -153,7 +155,9 @@ export function Toolbar() {
           onClick={() => activeDocId && setEditing(activeDocId, !editing)}
         >
           <PenLine size={14} />
-          {editing ? t("editState.editing") : t("editState.edit")}
+          <span className="toggle-label">
+            {editing ? t("editState.editing") : t("editState.edit")}
+          </span>
         </button>
       )}
       {!diffing && !isVelq && (

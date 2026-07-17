@@ -3,6 +3,7 @@
 
 pub mod app;
 pub mod bundle;
+pub mod export;
 pub mod render;
 pub mod search;
 pub mod vault;

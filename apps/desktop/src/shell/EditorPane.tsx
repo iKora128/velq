@@ -8,15 +8,18 @@ import { DiffBar } from "@/history/DiffBar";
 import { DiffView } from "@/history/DiffView";
 import { t as tr } from "@/i18n";
 import { useT } from "@/i18n/useT";
+import { containsScript } from "@/preview/scriptRuntime";
 import { useConvertBanner } from "@/store/convertBanner";
 import { useDoc } from "@/store/doc";
 import { useHistory } from "@/store/history";
+import { effectiveRunScripts, isScriptPromptDismissed, useHtmlRuntime } from "@/store/htmlRuntime";
 import { useSettings } from "@/store/settings";
 import { useToast } from "@/store/toast";
 import { useVault } from "@/store/vault";
 import { fmtShortcut } from "@/util/platform";
 import { ConflictBanner } from "./ConflictBanner";
 import { ConvertBanner } from "./ConvertBanner";
+import { ScriptBanner } from "./ScriptBanner";
 import { TabBar } from "./TabBar";
 import { Toolbar } from "./Toolbar";
 
@@ -61,12 +64,29 @@ export function EditorPane() {
     !bannerDismissed &&
     canConvertToVelq(doc.name);
 
+  // A page that paints itself in JavaScript is blank until its scripts run — but we
+  // never run them automatically (an external page's JS could be hostile). Offer an
+  // explicit "run to display" when the doc is HTML, carries a <script>, isn't already
+  // running, and the offer wasn't dismissed.
+  const overrides = useHtmlRuntime((s) => s.overrides);
+  const scriptPromptDismissed = useHtmlRuntime((s) =>
+    isScriptPromptDismissed(s.promptDismissed, doc?.id),
+  );
+  const showScriptBanner =
+    doc != null &&
+    doc.language === "html" &&
+    !showDiff &&
+    containsScript(content) &&
+    !effectiveRunScripts(overrides, doc.id, content) &&
+    !scriptPromptDismissed;
+
   return (
     <section className="editor-pane">
       <Toolbar />
       {hasTabs && <TabBar />}
       {conflict && doc?.path && !showDiff && <ConflictBanner path={doc.path} />}
       {showConvertBanner && doc?.path && <ConvertBanner docId={doc.id} path={doc.path} />}
+      {showScriptBanner && doc && <ScriptBanner docId={doc.id} velqSource={doc.velqSource} />}
       {showDiff && <DiffBar version={diffVersion} />}
       <div className="editor-body">
         {!doc ? (

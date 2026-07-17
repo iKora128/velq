@@ -28,7 +28,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
         <a href={t.nav.developers.href}>{t.nav.developers.label}</a>
       </div>
       <div class="nav__actions">
-        <a class="lang" href={t.nav.lang.href} title={t.nav.lang.title}>
+        <a class="lang" href={t.nav.lang.href} title={t.nav.lang.title} data-lang-switch>
           <span set:html={ic("languages", 15)} />{t.nav.lang.label}
         </a>
         <a class="nav__gh" href={GITHUB} aria-label="GitHub" set:html={gh} />
@@ -273,7 +273,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
       </div>
       <div class="footer__links">
         {t.footer.links.map((l) => <a href={l.href}>{l.label}</a>)}
-        <a href={t.nav.lang.href}>{t.nav.lang.label}</a>
+        <a href={t.nav.lang.href} data-lang-switch>{t.nav.lang.label}</a>
       </div>
     </div>
   </footer>

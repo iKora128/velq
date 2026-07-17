@@ -11,9 +11,11 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use velq_core::Manifest;
 
-/// Maps a viewer id (the `velq://<id>/` host) to the `.velq` file it serves.
+/// Maps a viewer id (the `velq://<id>/` host) to (the `.velq` file it serves, its
+/// inner `index.html` path). The index path lets an empty request (`velq://<id>/`)
+/// resolve to the document's real entry — which a mirror layout places below root.
 #[derive(Default)]
-pub struct VelqViewers(pub Mutex<HashMap<String, PathBuf>>);
+pub struct VelqViewers(pub Mutex<HashMap<String, (PathBuf, String)>>);
 
 static VIEWER_SEQ: AtomicU32 = AtomicU32::new(1);
 
@@ -40,11 +42,19 @@ pub fn content_type(path: &str) -> &'static str {
     }
 }
 
-/// Look up the bytes for a `velq://<id>/<path>` request.
-pub fn serve(app: &AppHandle, id: &str, path: &str) -> Option<Vec<u8>> {
+/// Look up the bytes (and the resolved entry name, for content-type) for a
+/// `velq://<id>/<path>` request. An empty path resolves to the package's index
+/// path (root `index.html`, or a deeper mirror-layout entry).
+pub fn serve(app: &AppHandle, id: &str, path: &str) -> Option<(Vec<u8>, String)> {
     let viewers = app.state::<VelqViewers>();
-    let velq = viewers.0.lock().ok()?.get(id).cloned()?;
-    velq_core::read_file_bytes(&velq, path).ok()
+    let (velq, index_path) = viewers.0.lock().ok()?.get(id).cloned()?;
+    let name = if path.is_empty() {
+        index_path
+    } else {
+        path.to_string()
+    };
+    let bytes = velq_core::read_file_bytes(&velq, &name).ok()?;
+    Some((bytes, name))
 }
 
 /// The CSP for served `.velq` content. Sources are pinned to THIS package's
@@ -72,8 +82,11 @@ pub fn unpack_velq(path: String, out_dir: String) -> Result<(), String> {
 /// document (its inner `index.html`), not just viewed read-only.
 #[tauri::command]
 pub fn read_velq_index(path: String) -> Result<String, String> {
-    let bytes =
-        velq_core::read_file_bytes(Path::new(&path), "index.html").map_err(|e| e.to_string())?;
+    let p = Path::new(&path);
+    let index_path = velq_core::read_manifest(p)
+        .map(|m| m.index_path)
+        .map_err(|e| e.to_string())?;
+    let bytes = velq_core::read_file_bytes(p, &index_path).map_err(|e| e.to_string())?;
     String::from_utf8(bytes).map_err(|e| e.to_string())
 }
 
@@ -91,10 +104,12 @@ pub struct VelqDoc {
 #[tauri::command]
 pub fn read_velq_doc(path: String) -> Result<VelqDoc, String> {
     let p = Path::new(&path);
+    let manifest = velq_core::read_manifest(p).map_err(|e| e.to_string())?;
     let md = velq_core::read_index_md(p).map_err(|e| e.to_string())?;
-    let html =
-        String::from_utf8(velq_core::read_file_bytes(p, "index.html").map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+    let html = String::from_utf8(
+        velq_core::read_file_bytes(p, &manifest.index_path).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
     Ok(VelqDoc { md, html })
 }
 
@@ -161,13 +176,16 @@ pub fn save_new_velq(path: String, md: String, html: String) -> Result<(), Strin
 /// scheme's CSP still says `connect-src 'none'` and the frame has no IPC).
 fn register(app: &AppHandle, path: &str) -> Result<String, String> {
     velq_core::validate(Path::new(path)).map_err(|e| e.to_string())?;
+    let index_path = velq_core::read_manifest(Path::new(path))
+        .map(|m| m.index_path)
+        .map_err(|e| e.to_string())?;
     let id = format!("v{}", VIEWER_SEQ.fetch_add(1, Ordering::Relaxed));
     app.state::<VelqViewers>()
         .0
         .lock()
         .unwrap()
-        .insert(id.clone(), PathBuf::from(path));
-    Ok(format!("velq://{id}/index.html"))
+        .insert(id.clone(), (PathBuf::from(path), index_path.clone()));
+    Ok(format!("velq://{id}/{index_path}"))
 }
 
 /// Register a `.velq` for in-tab viewing and hand back its `velq://` URL.

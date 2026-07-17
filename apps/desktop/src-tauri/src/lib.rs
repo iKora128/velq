@@ -225,15 +225,15 @@ pub fn run() {
         .manage(OpenedFilesState::default())
         .register_uri_scheme_protocol("velq", |ctx, request| {
             let id = request.uri().host().unwrap_or("").to_string();
-            let mut path = request.uri().path().trim_start_matches('/').to_string();
-            if path.is_empty() {
-                path = "index.html".into();
-            }
+            // An empty path (`velq://<id>/`) is resolved to the package's index
+            // path inside `serve`, which returns the name it actually read so the
+            // content-type matches the served entry (not the empty request path).
+            let path = request.uri().path().trim_start_matches('/').to_string();
             match commands::velq::serve(ctx.app_handle(), &id, &path) {
-                Some(bytes) => tauri::http::Response::builder()
+                Some((bytes, name)) => tauri::http::Response::builder()
                     .header(
                         tauri::http::header::CONTENT_TYPE,
-                        commands::velq::content_type(&path),
+                        commands::velq::content_type(&name),
                     )
                     .header(
                         tauri::http::header::CONTENT_SECURITY_POLICY,
@@ -253,6 +253,7 @@ pub fn run() {
             commands::app::get_settings,
             commands::app::set_settings,
             commands::render::render_markdown,
+            commands::export::export_pdf,
             commands::search::search_filenames,
             commands::vault::open_vault,
             commands::vault::read_dir,

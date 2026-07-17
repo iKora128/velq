@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset"] }
+tauri = { version = "2", features = ["protocol-asset", "webview-data-url"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
@@ -41,3 +41,21 @@ velq-bundler = { path = "../../../crates/velq-bundler" }
 velq-search = { path = "../../../crates/velq-search" }
 notify = "8.2.0"
 notify-debouncer-full = "0.7.0"
+
+# Native "render webview to PDF" for PDF export, per platform. Each unifies with
+# the same webview stack wry already pulls in for that OS. (Windows/Linux compile
+# only on their own OS — CI is their first build.) Keep these tables last so they
+# don't absorb the shared dependencies above.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSData", "NSError"] }
+objc2-web-kit = { version = "0.3", features = ["WKWebView", "WKPDFConfiguration", "block2"] }
+block2 = "0.6"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+webview2-com = "0.38"
+windows = "0.61"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = "2.0"
+gtk = "0.18"

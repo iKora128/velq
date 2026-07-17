@@ -75,7 +75,7 @@ usePlugins.register(myPlugin);`;
         <a href="#naming">{t.nav.naming}</a>
       </div>
       <div class="nav__actions">
-        <a class="lang" href={t.nav.lang.href} title={t.nav.lang.title}>
+        <a class="lang" href={t.nav.lang.href} title={t.nav.lang.title} data-lang-switch>
           <span set:html={ic("languages", 15)} />{t.nav.lang.label}
         </a>
         <a class="nav__gh" href={GITHUB} aria-label="GitHub" set:html={gh} />
@@ -299,7 +299,7 @@ usePlugins.register(myPlugin);`;
       </div>
       <div class="footer__links">
         {base.footer.links.map((l) => <a href={l.href}>{l.label}</a>)}
-        <a href={t.nav.lang.href}>{t.nav.lang.label}</a>
+        <a href={t.nav.lang.href} data-lang-switch>{t.nav.lang.label}</a>
       </div>
     </div>
   </footer>
