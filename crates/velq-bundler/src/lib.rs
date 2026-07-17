@@ -428,6 +428,10 @@ fn glob_collect(base: &Path, pattern: &str) -> Vec<(String, PathBuf)> {
 /// Bundle `html` (with assets resolved relative to `base_dir`) into an offline package.
 /// Network fetches are async; the caller drives them on its own runtime.
 pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResult {
+    // Anchor + fold `..` once, up front: every path below (glob hits, classify joins)
+    // inherits `base_dir`'s components, and the root/escape math compares against
+    // normalized paths — a raw `..` in the base makes every good ref look like an escape.
+    let base_dir = &abs_norm(base_dir);
     // One client (and connection pool) for every fetch in this bundle.
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(20))
@@ -510,7 +514,7 @@ pub async fn bundle(html: &str, base_dir: &Path, fetch_cdn: bool) -> BundleResul
     // The document's own directory (absolute, normalized). Its position under the
     // common root becomes `index.html`'s home, so the document's `../` refs resolve
     // there exactly as they did on disk.
-    let base_root = abs_norm(base_dir);
+    let base_root = base_dir.clone();
 
     // Remote (CDN) refs are still localized to `assets/<hash>` and rewritten. Local
     // refs keep their on-disk relative structure and are NOT rewritten — the whole
