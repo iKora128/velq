@@ -278,14 +278,20 @@
   height: 34px;
   flex: none;
   border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+/* Only lights up when there's something to send; a spinner shows while the agent works. */
+.agent-compose__send.is-ready {
   background: var(--accent);
   color: var(--text-on-accent);
+  border-color: var(--accent);
 }
-.agent-compose__send:hover {
+.agent-compose__send.is-ready:hover {
   background: var(--accent-hover);
 }
 .agent-compose__send:disabled {
-  opacity: 0.45;
   cursor: default;
 }
 

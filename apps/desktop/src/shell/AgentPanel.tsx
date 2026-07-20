@@ -139,11 +139,11 @@ export function AgentPanel() {
         />
         <button
           type="submit"
-          className="agent-compose__send"
-          aria-label={t("agent.send")}
-          disabled={!input.trim()}
+          className={cn("agent-compose__send", input.trim() && !running && "is-ready")}
+          aria-label={running ? t("agent.thinking") : t("agent.send")}
+          disabled={!input.trim() || running}
         >
-          <Send size={15} />
+          {running ? <Loader2 size={15} className="agent-spin" /> : <Send size={15} />}
         </button>
       </form>
     </aside>

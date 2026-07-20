@@ -14,6 +14,7 @@ import {
   startAgentSession,
   stopAgentSession,
 } from "@/ipc/acp";
+import { useDoc } from "./doc";
 import { useSettings } from "./settings";
 import { useToast } from "./toast";
 import { useVault } from "./vault";
@@ -74,6 +75,32 @@ function appendText(entries: Entry[], kind: "agent" | "thought", text: string): 
     return [...entries.slice(0, -1), { ...last, text: last.text + text }];
   }
   return [...entries, { id: entrySeq++, kind, text }];
+}
+
+/**
+ * A short context block prepended to each prompt so the agent knows which file the user
+ * is looking at (it then edits that file directly). For a `.velq` — a ZIP whose inner
+ * content isn't a plain file on disk — we include the current content inline instead.
+ */
+function editorContext(): string {
+  const doc = useDoc.getState().doc;
+  if (!doc) return "";
+  const root = useVault.getState().root?.path ?? "";
+  const rel = (p: string) => (root && p.startsWith(`${root}/`) ? p.slice(root.length + 1) : p);
+  const parts: string[] = [];
+  if (doc.path) {
+    parts.push(
+      `The user is currently viewing \`${rel(doc.path)}\` (${doc.language}) in the editor. Unless they say otherwise, make your changes to this file.`,
+    );
+  }
+  if (doc.velqSource) {
+    const fence = doc.language === "html" ? "html" : "markdown";
+    parts.push(
+      `This document is packaged inside a .velq (a ZIP archive), so its ${doc.language} content is not a plain file you can read or write on disk. Here is the current content — for this one, propose changes as text rather than editing files:\n\n\`\`\`${fence}\n${useDoc.getState().content}\n\`\`\``,
+    );
+  }
+  if (parts.length === 0) return "";
+  return `<editor-context>\n${parts.join("\n\n")}\n</editor-context>\n\n`;
 }
 
 export const useAcp = create<AcpState>((set, get) => ({
@@ -144,7 +171,7 @@ export const useAcp = create<AcpState>((set, get) => ({
       running: true,
     }));
     try {
-      await sendAgentPrompt(trimmed);
+      await sendAgentPrompt(editorContext() + trimmed);
     } catch (e) {
       set((s) => ({
         entries: [...s.entries, { id: entrySeq++, kind: "agent", text: `⚠️ ${String(e)}` }],
