@@ -411,4 +411,16 @@ export const ja: Dict = {
     "先にフォルダを開いてください — アシスタントは開いているフォルダ内のファイルを編集します。",
   "agent.emptyHint":
     "「導入を短く」「about.md を作って」のように言葉で頼めます。編集は開いているドキュメントに反映されます。",
+  "agent.notReady": "{agent} はまだこの PC に用意できていません。",
+  "agent.openSettings": "アシスタントの設定を開く",
+  "settings.agents": "AI アシスタント",
+  "settings.agents.desc":
+    "ファイルを編集するエージェントを選びます。ログインは各エージェント側で行い、Velq は鍵を持ちません。",
+  "settings.agents.installed": "使用可能",
+  "settings.agents.npx": "初回に取得",
+  "settings.agents.missing": "未導入",
+  "settings.agents.setDefault": "既定にする",
+  "settings.agents.default": "既定",
+  "settings.agents.login": "ログイン",
+  "settings.agents.install": "入れ方",
 };

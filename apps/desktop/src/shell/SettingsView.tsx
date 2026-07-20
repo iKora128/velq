@@ -12,6 +12,7 @@ import type {
 } from "@/ipc/types";
 import { useSettings } from "@/store/settings";
 import { cn } from "@/util/cn";
+import { AgentSettings } from "./AgentSettings";
 import "./settings-view.css";
 
 const THEMES: { value: ThemePref; labelKey: MsgKey }[] = [
@@ -166,6 +167,10 @@ export function SettingsView() {
               ]}
             />
           </Field>
+        </Section>
+
+        <Section title={t("settings.agents")} desc={t("settings.agents.desc")}>
+          <AgentSettings />
         </Section>
       </div>
     </div>

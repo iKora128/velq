@@ -264,6 +264,44 @@ pub fn agent_stop_session(state: State<AcpState>) -> Result<(), String> {
     Ok(())
 }
 
+/// Open the OS terminal running `command` — used to install or log in to an agent's
+/// CLI, which is interactive (e.g. `claude` opens a browser login). We hold no keys,
+/// so setup rides the vendor CLI's own flow (same as shirushi). Best-effort per platform.
+#[tauri::command]
+pub fn agent_open_terminal(command: String) -> Result<(), String> {
+    open_terminal_impl(&command).map_err(|e| e.to_string())
+}
+
+#[cfg(target_os = "macos")]
+fn open_terminal_impl(command: &str) -> std::io::Result<()> {
+    let escaped = command.replace('\\', "\\\\").replace('"', "\\\"");
+    let script =
+        format!("tell application \"Terminal\"\nactivate\ndo script \"{escaped}\"\nend tell");
+    std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(script)
+        .spawn()?;
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn open_terminal_impl(command: &str) -> std::io::Result<()> {
+    std::process::Command::new("cmd")
+        .args(["/C", "start", "cmd", "/K", command])
+        .spawn()?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn open_terminal_impl(command: &str) -> std::io::Result<()> {
+    let inner = command.replace('\'', "'\\''");
+    std::process::Command::new("x-terminal-emulator")
+        .arg("-e")
+        .arg(format!("sh -c '{inner}; exec bash'"))
+        .spawn()?;
+    Ok(())
+}
+
 // ---- helpers ----
 
 fn with_command_tx<F>(state: &State<AcpState>, f: F) -> Result<(), String>

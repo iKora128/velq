@@ -83,6 +83,8 @@ export interface Settings {
   /** Template for rendered Markdown: preview, Quick Look, HTML/PDF export. */
   previewTemplate: PreviewTemplate;
   velqOpenIn: VelqOpenIn;
+  /** The default AI assistant agent (label, e.g. "Claude Code"). */
+  agentLabel: string;
   /** One-shot: the "this page is directly editable" hint was shown. */
   hintedRenderedEdit: boolean;
   /** UI language. */
@@ -113,6 +115,7 @@ export const DEFAULT_SETTINGS: Settings = {
   spellcheck: false,
   previewTemplate: "paper",
   velqOpenIn: "tab",
+  agentLabel: "Claude Code",
   hintedRenderedEdit: false,
   locale: "system",
   lastVault: null,

@@ -412,6 +412,18 @@ export const en = {
     "Open a folder first — the assistant edits the files in the folder you have open.",
   "agent.emptyHint":
     "Ask in plain language, like “shorten the intro” or “create about.md”. Edits appear in your open document.",
+  "agent.notReady": "{agent} isn't set up on this computer yet.",
+  "agent.openSettings": "Open assistant settings",
+  "settings.agents": "AI assistant",
+  "settings.agents.desc":
+    "Choose the agent that edits your files. Signing in happens in the agent's own tool — Velq keeps no keys.",
+  "settings.agents.installed": "Ready",
+  "settings.agents.npx": "Fetched on first use",
+  "settings.agents.missing": "Not installed",
+  "settings.agents.setDefault": "Set as default",
+  "settings.agents.default": "Default",
+  "settings.agents.login": "Log in",
+  "settings.agents.install": "Install",
 } as const;
 
 /** Every key defined in the English catalog. */

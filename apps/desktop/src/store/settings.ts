@@ -27,6 +27,7 @@ function pickSettings(s: SettingsState): Settings {
     spellcheck: s.spellcheck,
     previewTemplate: s.previewTemplate,
     velqOpenIn: s.velqOpenIn,
+    agentLabel: s.agentLabel,
     hintedRenderedEdit: s.hintedRenderedEdit,
     locale: s.locale,
     lastVault: s.lastVault,

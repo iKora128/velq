@@ -46,6 +46,8 @@ pub struct Settings {
     pub locale: String,
     /// Where a `.velq` opens: "tab" (in the main window) | "window".
     pub velq_open_in: String,
+    /// Default AI assistant agent (label, e.g. "Claude Code").
+    pub agent_label: String,
     /// One-shot: the "this page is directly editable" hint was already shown.
     pub hinted_rendered_edit: bool,
     pub last_vault: Option<String>,
@@ -73,6 +75,7 @@ impl Default for Settings {
             preview_template: "paper".into(),
             locale: "system".into(),
             velq_open_in: "tab".into(),
+            agent_label: "Claude Code".into(),
             hinted_rendered_edit: false,
             last_vault: None,
             last_export_dir: None,

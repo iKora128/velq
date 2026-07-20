@@ -14,6 +14,7 @@ import {
   startAgentSession,
   stopAgentSession,
 } from "@/ipc/acp";
+import { useSettings } from "./settings";
 import { useToast } from "./toast";
 import { useVault } from "./vault";
 
@@ -36,7 +37,6 @@ let entrySeq = 0;
 interface AcpState {
   open: boolean;
   agents: AgentInfo[];
-  agentLabel: string;
   /** A resident session is running for the current folder. */
   sessionActive: boolean;
   /** A prompt→response turn is in flight. */
@@ -56,7 +56,8 @@ interface AcpState {
   hide: () => void;
   init: () => Promise<void>;
   setInput: (v: string) => void;
-  setAgent: (label: string) => void;
+  /** Change the persisted default agent (drops any running session so the next prompt restarts). */
+  setDefaultAgent: (label: string) => void;
   send: (text: string) => Promise<void>;
   setMode: (id: string) => void;
   setConfig: (configId: string, valueId: string) => void;
@@ -78,7 +79,6 @@ function appendText(entries: Entry[], kind: "agent" | "thought", text: string): 
 export const useAcp = create<AcpState>((set, get) => ({
   open: false,
   agents: [],
-  agentLabel: "Claude Code",
   sessionActive: false,
   running: false,
   entries: [],
@@ -104,21 +104,18 @@ export const useAcp = create<AcpState>((set, get) => ({
 
   init: async () => {
     try {
-      const agents = await listAgents();
-      set({ agents });
-      // Default the picker to an agent that's actually ready, if the current one isn't.
-      const current = agents.find((a) => a.label === get().agentLabel);
-      if (!current || current.availability === "missing") {
-        const ready = agents.find((a) => a.availability !== "missing");
-        if (ready) set({ agentLabel: ready.label });
-      }
+      set({ agents: await listAgents() });
     } catch (e) {
       console.error("agent_list_agents failed", e);
     }
   },
 
   setInput: (v) => set({ input: v }),
-  setAgent: (label) => set({ agentLabel: label }),
+  setDefaultAgent: (label) => {
+    useSettings.getState().update({ agentLabel: label });
+    // A running session keeps its agent; drop it so the next prompt restarts with the new one.
+    if (get().sessionActive) get().stop();
+  },
 
   send: async (text) => {
     const trimmed = text.trim();
@@ -131,7 +128,8 @@ export const useAcp = create<AcpState>((set, get) => ({
     // Lazily (re)start the resident session with the open folder as its working dir.
     if (!get().sessionActive) {
       try {
-        await startAgentSession(root, get().agentLabel);
+        const agentLabel = useSettings.getState().agentLabel || "Claude Code";
+        await startAgentSession(root, agentLabel);
         set({ sessionActive: true });
       } catch (e) {
         set((s) => ({

@@ -12,45 +12,45 @@
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
   letter-spacing: -0.02em;
-  text-align: center;
   margin-bottom: var(--space-7);
 }
 
-/* Centered single column: each section is a full-width header stacked above its
- * centered controls (the layout the user picked). */
+/* The column is centered on screen (max-width + margin:auto on __inner); the
+ * content inside reads normally — left-aligned section headers, and each field a
+ * row with its label on the left and the control on the right. Wide controls
+ * (theme cards, the preview-template set) wrap onto their own line, left-aligned. */
 .settings-section {
   padding: var(--space-7) 0;
   border-top: 1px solid var(--border-subtle);
 }
 .settings-section__head {
-  text-align: center;
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 .settings-section__title {
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
 }
 .settings-section__desc {
-  max-width: 52ch;
-  margin: var(--space-2) auto 0;
+  max-width: 60ch;
+  margin: var(--space-2) 0 0;
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 .settings-section__body {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-6);
+  gap: var(--space-5);
 }
 
 .settings-field {
   display: flex;
-  flex-direction: column;
+  flex-flow: row wrap;
   align-items: center;
-  gap: var(--space-3);
-  text-align: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
 }
 .settings-field__meta {
+  flex: 1 1 240px;
   min-width: 0;
 }
 .settings-field__label {
@@ -61,6 +61,9 @@
   margin-top: 2px;
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+.settings-field__control {
+  flex: 0 1 auto;
 }
 
 /* Theme cards */

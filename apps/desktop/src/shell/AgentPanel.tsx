@@ -2,8 +2,11 @@ import { Bot, CircleCheck, CircleDashed, CircleDot, Loader2, Send, X } from "luc
 import { useEffect, useRef } from "react";
 import { useT } from "@/i18n/useT";
 import { type Entry, useAcp } from "@/store/acp";
+import { useSettings } from "@/store/settings";
+import { useUI } from "@/store/ui";
 import { useVault } from "@/store/vault";
 import { cn } from "@/util/cn";
+import { AgentIcon } from "./AgentIcon";
 import "./agent.css";
 
 /** The AI assistant: a right dock where you ask, in plain language, for edits to the
@@ -17,7 +20,15 @@ export function AgentPanel() {
   const running = useAcp((s) => s.running);
   const input = useAcp((s) => s.input);
   const hasVault = useVault((s) => !!s.root);
+  const agents = useAcp((s) => s.agents);
+  const defaultLabel = useSettings((s) => s.agentLabel);
+  const agentInfo = agents.find((a) => a.label === defaultLabel);
+  const needsSetup = agentInfo?.availability === "missing";
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    void useAcp.getState().init();
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: keep the newest content in view.
   useEffect(() => {
@@ -47,10 +58,30 @@ export function AgentPanel() {
       <div className="agent-scroll" ref={scrollRef}>
         {entries.length === 0 ? (
           <div className="agent-empty">
-            <Bot size={22} className="agent-empty__icon" />
-            <p className="agent-empty__hint">
-              {hasVault ? t("agent.emptyHint") : t("agent.emptyNoVault")}
-            </p>
+            {agentInfo ? (
+              <AgentIcon id={agentInfo.id} size={28} />
+            ) : (
+              <Bot size={22} className="agent-empty__icon" />
+            )}
+            {needsSetup ? (
+              <>
+                <p className="agent-empty__hint">{t("agent.notReady", { agent: defaultLabel })}</p>
+                <button
+                  type="button"
+                  className="agent-setup-btn"
+                  onClick={() => {
+                    useAcp.getState().hide();
+                    useUI.getState().setView("settings");
+                  }}
+                >
+                  {t("agent.openSettings")}
+                </button>
+              </>
+            ) : (
+              <p className="agent-empty__hint">
+                {hasVault ? t("agent.emptyHint") : t("agent.emptyNoVault")}
+              </p>
+            )}
           </div>
         ) : (
           entries.map((e) => <EntryRow key={e.id} entry={e} />)

@@ -74,6 +74,9 @@ export const setAgentConfig = (configId: string, valueId: string) =>
 export const answerAgentPermission = (id: number, index: number) =>
   invoke<void>("agent_answer_permission", { id, index });
 export const stopAgentSession = () => invoke<void>("agent_stop_session");
+/** Open the OS terminal running a setup command (install / interactive login). */
+export const agentOpenTerminal = (command: string) =>
+  invoke<void>("agent_open_terminal", { command });
 
 /** Subscribe to the streamed session updates. Returns an unlisten fn. */
 export const onAgentUpdate = (cb: (u: AgentUpdate) => void) =>
