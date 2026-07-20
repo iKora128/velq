@@ -1,6 +1,7 @@
 import type { EditorView } from "@codemirror/view";
-import { useCallback, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { PreviewPane } from "@/preview/PreviewPane";
+import { PaneDivider } from "@/shell/PaneDivider";
 import { type Doc, useDoc } from "@/store/doc";
 import { effectiveRunScripts, useHtmlRuntime } from "@/store/htmlRuntime";
 import { useSettings } from "@/store/settings";
@@ -15,6 +16,14 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
   const [previewSource, setPreviewSource] = useState(content);
   const viewRef = useRef<EditorView | null>(null);
   const debounce = useRef(0);
+  // Resizable source|preview split: the editor gets a px width (dragged via the divider),
+  // the preview flexes. Seed it to half the pane on first mount so it starts 50/50.
+  const [editorW, setEditorW] = useState(0);
+  const splitRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = splitRef.current;
+    if (el && editorW === 0) setEditorW(Math.round(el.clientWidth / 2));
+  }, [editorW]);
 
   const onChange = useCallback(
     (text: string) => {
@@ -40,7 +49,11 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
   const runScripts = doc.language === "html" && effectiveRunScripts(overrides, doc.id, content);
 
   return (
-    <div className="split">
+    <div
+      className="split"
+      ref={splitRef}
+      style={{ "--split-w": editorW ? `${editorW}px` : undefined } as CSSProperties}
+    >
       <div className="split__pane split__editor">
         <CodeMirror
           initialDoc={content}
@@ -55,6 +68,7 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
           }}
         />
       </div>
+      <PaneDivider value={editorW || 460} min={280} max={1200} onChange={setEditorW} />
       <div className="split__pane split__preview">
         <PreviewPane
           source={previewSource}
@@ -64,6 +78,7 @@ export function SplitView({ doc, content }: { doc: Doc; content: string }) {
           editable={doc.language === "html"}
           onEdit={onPreviewEdit}
           runScripts={runScripts}
+          docPath={doc.path ?? undefined}
         />
       </div>
     </div>

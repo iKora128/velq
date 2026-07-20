@@ -42,14 +42,17 @@
   min-height: 0;
 }
 .split__pane {
-  flex: 1 1 50%;
   min-width: 0;
   height: 100%;
   overflow: hidden;
 }
 .split__editor {
+  flex: none;
+  width: var(--split-w, 50%);
   border-right: 1px solid var(--border-subtle);
 }
 .split__preview {
+  flex: 1 1 0;
+  min-width: 0;
   background: var(--bg);
 }

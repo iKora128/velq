@@ -9,6 +9,7 @@ import { useResolvedDark } from "@/util/theme";
 import { attachElementSelect } from "./elementSelect";
 import { forwardAppShortcuts } from "./forwardShortcuts";
 import { extractBodyTextRuns, rebuildHtml, replaceBodyHtml } from "./htmlTextMap";
+import { rewriteLocalImages } from "./localAssets";
 import { enrichOgpCards } from "./ogpCards";
 import { buildPreviewDoc, htmlDocument } from "./previewStyles";
 import { collectScriptNodes, serializeBodyInnerClean } from "./scriptRuntime";
@@ -29,6 +30,8 @@ interface Props {
    * fits its slides to the window, a self-building widget) renders correctly.
    * Runtime-generated nodes are kept out of every write-back (`scriptRuntime`). */
   runScripts?: boolean;
+  /** The document's path (markdown only) — resolves relative local image `src`. */
+  docPath?: string;
 }
 
 /** The iframe's visible text nodes, in document order, minus script/style bodies —
@@ -157,6 +160,7 @@ export function PreviewPane({
   editable = false,
   onEdit,
   runScripts = false,
+  docPath,
 }: Props) {
   const t = useT();
   const dark = useResolvedDark();
@@ -263,6 +267,7 @@ export function PreviewPane({
 
     renderMarkdown(source)
       .then(enrichOgpCards) // bare-URL paragraphs → rich OGP link cards
+      .then((html) => rewriteLocalImages(html, docPath)) // relative local images → asset URLs
       .then((bodyHtml) => {
         if (my !== seq.current) return; // out-of-order render — drop
         const idoc = iframe.contentDocument;
@@ -280,7 +285,7 @@ export function PreviewPane({
         }
       })
       .catch((e) => console.error("preview render failed", e));
-  }, [source, language, dark, template, viewRef, editable, sandbox, scriptsOn]);
+  }, [source, language, dark, template, viewRef, editable, sandbox, scriptsOn, docPath]);
 
   useEffect(
     () => () => {

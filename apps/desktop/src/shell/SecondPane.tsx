@@ -66,6 +66,7 @@ export function SecondPane() {
             source={tab.content}
             language={doc.language === "html" ? "html" : "markdown"}
             runScripts={runScripts}
+            docPath={doc.path ?? undefined}
           />
         ) : effective === "rendered" ? (
           <RenderedView
