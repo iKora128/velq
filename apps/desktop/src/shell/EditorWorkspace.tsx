@@ -1,9 +1,11 @@
 import { type CSSProperties, useState } from "react";
 import { HistoryPanel } from "@/history/HistoryPanel";
+import { useAcp } from "@/store/acp";
 import { useDoc } from "@/store/doc";
 import { useHistory } from "@/store/history";
 import { useSettings } from "@/store/settings";
 import { useUI } from "@/store/ui";
+import { AgentPanel } from "./AgentPanel";
 import { EditorPane } from "./EditorPane";
 import { PaneDivider } from "./PaneDivider";
 import { SecondPane } from "./SecondPane";
@@ -18,6 +20,7 @@ export function EditorWorkspace() {
   const [wideW, setWideW] = useState(460);
   const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
   const historyOpen = useHistory((s) => s.open);
+  const acpOpen = useAcp((s) => s.open);
   const hasSecond = useDoc((s) => !!s.secondaryId);
   const [secondW, setSecondW] = useState(460);
   const view = useSettings((s) => s.sidebarView);
@@ -44,13 +47,14 @@ export function EditorWorkspace() {
         </>
       )}
       <EditorPane />
-      {hasSecond && !historyOpen && (
+      {hasSecond && !historyOpen && !acpOpen && (
         <>
           <PaneDivider value={secondW} min={320} max={900} onChange={setSecondW} invert />
           <SecondPane />
         </>
       )}
-      {historyOpen && <HistoryPanel />}
+      {historyOpen && !acpOpen && <HistoryPanel />}
+      {acpOpen && <AgentPanel />}
     </div>
   );
 }

@@ -397,6 +397,21 @@ export const en = {
   // ---- Native dialog titles ----
   "dialog.chooseHtml": "Choose an HTML file to package",
   "dialog.openVault": "Open folder as a Velq vault",
+
+  // ---- AI assistant ----
+  "common.assistant": "AI assistant",
+  "action.assistant": "AI assistant",
+  "agent.title": "Assistant",
+  "agent.close": "Close assistant",
+  "agent.placeholder": "Ask for an edit — e.g. “shorten the intro”",
+  "agent.send": "Send",
+  "agent.thinking": "Working…",
+  "agent.plan": "Plan",
+  "agent.newFile": "New file",
+  "agent.emptyNoVault":
+    "Open a folder first — the assistant edits the files in the folder you have open.",
+  "agent.emptyHint":
+    "Ask in plain language, like “shorten the intro” or “create about.md”. Edits appear in your open document.",
 } as const;
 
 /** Every key defined in the English catalog. */

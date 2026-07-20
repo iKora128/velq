@@ -6,6 +6,7 @@ members = [
     "crates/velq-bundler",
     "crates/velq-search",
     "crates/velq-vcs",
+    "crates/velq-acp",
 ]
 
 [workspace.package]

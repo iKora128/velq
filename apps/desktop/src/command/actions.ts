@@ -1,4 +1,5 @@
 import {
+  Bot,
   Code,
   Columns2,
   Eye,
@@ -29,6 +30,7 @@ import { renderMarkdown } from "@/ipc/render";
 import { revealInOs, writeFileContent } from "@/ipc/vault";
 import { saveVersion } from "@/ipc/vcs";
 import { saveVelqIndex, saveVelqMd } from "@/ipc/velq";
+import { useAcp } from "@/store/acp";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { usePalette } from "@/store/palette";
@@ -195,6 +197,13 @@ export const ACTIONS: Action[] = [
     titleKey: "action.viewLive",
     icon: Eye,
     run: () => useSettings.getState().update({ editorMode: "live" }),
+  },
+  {
+    id: "assistant",
+    titleKey: "action.assistant",
+    hint: "Mod+J",
+    icon: Bot,
+    run: () => useAcp.getState().toggle(),
   },
   {
     id: "toggle-theme",

@@ -396,4 +396,19 @@ export const ja: Dict = {
   // ---- ネイティブダイアログのタイトル ----
   "dialog.chooseHtml": "パッケージする HTML ファイルを選択",
   "dialog.openVault": "Velq のフォルダとして開く",
+
+  // ---- AI アシスタント ----
+  "common.assistant": "AI アシスタント",
+  "action.assistant": "AI アシスタント",
+  "agent.title": "アシスタント",
+  "agent.close": "アシスタントを閉じる",
+  "agent.placeholder": "編集を頼む — 例:「導入を短く」",
+  "agent.send": "送信",
+  "agent.thinking": "作業中…",
+  "agent.plan": "計画",
+  "agent.newFile": "新規ファイル",
+  "agent.emptyNoVault":
+    "先にフォルダを開いてください — アシスタントは開いているフォルダ内のファイルを編集します。",
+  "agent.emptyHint":
+    "「導入を短く」「about.md を作って」のように言葉で頼めます。編集は開いているドキュメントに反映されます。",
 };

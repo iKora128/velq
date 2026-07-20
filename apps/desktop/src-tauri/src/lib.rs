@@ -287,6 +287,7 @@ pub fn run() {
         .on_menu_event(|app, event| on_menu(app, event.id().0.as_str()))
         .manage(commands::watch::WatchState::default())
         .manage(commands::velq::VelqViewers::default())
+        .manage(commands::agent::AcpState::default())
         .manage(OpenedFilesState::default())
         .register_uri_scheme_protocol("velq", |ctx, request| {
             let id = request.uri().host().unwrap_or("").to_string();
@@ -358,6 +359,13 @@ pub fn run() {
             commands::bundle::package_md_file,
             commands::bundle::fetch_ogp,
             commands::bundle::bundle_md_doc,
+            commands::agent::agent_list_agents,
+            commands::agent::agent_start_session,
+            commands::agent::agent_send_prompt,
+            commands::agent::agent_set_mode,
+            commands::agent::agent_set_config,
+            commands::agent::agent_answer_permission,
+            commands::agent::agent_stop_session,
         ])
         .setup(|app| {
             // Now that the path resolver is available, localize the menu from the

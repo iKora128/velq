@@ -39,6 +39,9 @@ velq-core = { path = "../../../crates/velq-core" }
 velq-vcs = { path = "../../../crates/velq-vcs" }
 velq-bundler = { path = "../../../crates/velq-bundler" }
 velq-search = { path = "../../../crates/velq-search" }
+velq-acp = { path = "../../../crates/velq-acp" }
+# ACP session plumbing: the mpsc channels bridging the agent session to Tauri commands/events.
+futures = "0.3"
 notify = "8.2.0"
 notify-debouncer-full = "0.7.0"
 

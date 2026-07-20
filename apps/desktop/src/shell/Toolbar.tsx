@@ -1,4 +1,5 @@
 import {
+  Bot,
   Check,
   Code,
   Columns2,
@@ -15,6 +16,7 @@ import type { MsgKey } from "@/i18n";
 import { useT } from "@/i18n/useT";
 import type { EditorMode, PreviewTemplate } from "@/ipc/types";
 import { containsScript } from "@/preview/scriptRuntime";
+import { useAcp } from "@/store/acp";
 import { useDoc } from "@/store/doc";
 import { useHistory } from "@/store/history";
 import { effectiveRunScripts, isEditing, useHtmlRuntime } from "@/store/htmlRuntime";
@@ -49,6 +51,7 @@ export function Toolbar() {
   const previewTemplate = useSettings((s) => s.previewTemplate);
   const update = useSettings((s) => s.update);
   const historyOpen = useHistory((s) => s.open);
+  const acpOpen = useAcp((s) => s.open);
   const diffing = useHistory((s) => !!s.selected);
   const hasDoc = useDoc((s) => !!s.doc);
   const isHtml = useDoc((s) => s.doc?.language === "html");
@@ -124,6 +127,15 @@ export function Toolbar() {
           </span>
         </button>
       )}
+      <button
+        type="button"
+        className={cn("icon-btn", acpOpen && "icon-btn--active")}
+        title={t("common.assistant")}
+        aria-label={t("common.assistant")}
+        onClick={() => useAcp.getState().toggle()}
+      >
+        <Bot size={16} />
+      </button>
       <button
         type="button"
         className={cn("icon-btn", historyOpen && "icon-btn--active")}

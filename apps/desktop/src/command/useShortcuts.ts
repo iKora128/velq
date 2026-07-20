@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useAcp } from "@/store/acp";
 import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { usePalette } from "@/store/palette";
@@ -89,6 +90,10 @@ export function useShortcuts() {
       } else if (k === "\\") {
         e.preventDefault();
         useUI.getState().toggleSidebar();
+      } else if (k === "j") {
+        // ⌘J toggles the AI assistant dock (⌘I stays free for the editor's italic).
+        e.preventDefault();
+        useAcp.getState().toggle();
       }
     };
     window.addEventListener("keydown", onKey);

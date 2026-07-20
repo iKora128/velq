@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import { ACTIONS } from "@/command/actions";
 import { routeUndo } from "@/editor/undoRouter";
 import { resolveLocale, t } from "@/i18n";
+import { onAgentUpdate } from "@/ipc/acp";
 import { applyMenuLanguage, getOpenedFiles } from "@/ipc/app";
 import { isTauri, listen } from "@/ipc/tauri";
 import { ensureDefaultVault } from "@/ipc/vault";
 import { registerBuiltins } from "@/plugins/builtin";
 import { AppShell } from "@/shell/AppShell";
+import { useAcp } from "@/store/acp";
 import { describeError, useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { restoreSession, startSessionPersist } from "@/store/session";
@@ -159,6 +161,15 @@ export function App() {
         else void reloadTab(p);
       }
     }).then((u) => {
+      unlisten = u;
+    });
+    return () => unlisten?.();
+  }, []);
+
+  // Streamed updates from the AI agent session → the assistant transcript.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void onAgentUpdate((u) => useAcp.getState().receive(u)).then((u) => {
       unlisten = u;
     });
     return () => unlisten?.();

@@ -1,0 +1,19 @@
+[package]
+name = "velq-acp"
+description = "ACP (Agent Client Protocol) client — spawns an AI coding agent and streams its edits. UI/Tauri-independent; ported from shirushi's acp_client."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+anyhow.workspace = true
+# Pinned to the exact version shirushi builds against so the high-level client API
+# (Client::builder / connect_with / attach_session / read_update / MatchDispatch) matches.
+agent-client-protocol = "=1.2.0"
+blocking = "1"
+futures = "0.3"

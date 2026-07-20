@@ -318,6 +318,23 @@ registerMock("delete_path", ({ path }: { path: string }) => {
 registerMock("reveal_in_os", () => null);
 registerMock("watch_vault", () => null);
 registerMock("unwatch_vault", () => null);
+
+// ---- AI agent (browser mock: no real subprocess; the panel just no-ops) ----
+registerMock("agent_list_agents", () => [
+  {
+    id: "claude",
+    label: "Claude Code",
+    availability: "installed",
+    installCmd: "npm i -g @anthropic-ai/claude-code",
+    loginCmd: "claude",
+  },
+]);
+registerMock("agent_start_session", () => null);
+registerMock("agent_send_prompt", () => null);
+registerMock("agent_set_mode", () => null);
+registerMock("agent_set_config", () => null);
+registerMock("agent_answer_permission", () => null);
+registerMock("agent_stop_session", () => null);
 registerMock("write_file_binary", () => 0);
 registerMock("open_velq_viewer", () => null);
 registerMock("read_velq_index", ({ path }: { path: string }) => {
