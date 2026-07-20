@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { t } from "@/i18n";
+import { resolveLocale, t } from "@/i18n";
 import {
   type AgentConfig,
   type AgentInfo,
@@ -13,7 +13,11 @@ import {
   setAgentMode,
   startAgentSession,
   stopAgentSession,
+  velqAgentExtract,
 } from "@/ipc/acp";
+import { renderMarkdown } from "@/ipc/render";
+import { readFile } from "@/ipc/vault";
+import { saveVelqIndex, saveVelqMd } from "@/ipc/velq";
 import { useDoc } from "./doc";
 import { useSettings } from "./settings";
 import { useToast } from "./toast";
@@ -33,6 +37,16 @@ interface PendingPermission {
   options: { label: string; kind: string }[];
 }
 
+/** An in-flight packaged-doc edit: the agent edits `workingPath`, which we pack back
+ *  into `velqPath` (rendering md→html) once its turn ends. */
+interface VelqEdit {
+  workingPath: string;
+  velqPath: string;
+  language: string;
+  docId: string;
+  baseline: string;
+}
+
 let entrySeq = 0;
 
 interface AcpState {
@@ -48,6 +62,7 @@ interface AcpState {
   currentModeId: string | null;
   configs: AgentConfig[];
   pending: PendingPermission | null;
+  velqEdit: VelqEdit | null;
   tokensUsed: number;
   tokensMax: number;
   input: string;
@@ -64,6 +79,8 @@ interface AcpState {
   setConfig: (configId: string, valueId: string) => void;
   answer: (index: number) => void;
   stop: () => void;
+  /** Repack the .velq the agent just edited (on turn end) and reflect it in the editor. */
+  finishVelqEdit: () => Promise<void>;
   /** Reduce one streamed update into the transcript/state. */
   receive: (u: AgentUpdate) => void;
 }
@@ -78,28 +95,29 @@ function appendText(entries: Entry[], kind: "agent" | "thought", text: string): 
 }
 
 /**
- * A short context block prepended to each prompt so the agent knows which file the user
- * is looking at (it then edits that file directly). For a `.velq` — a ZIP whose inner
- * content isn't a plain file on disk — we include the current content inline instead.
+ * A short context block prepended to each prompt: which file the user is viewing (so the
+ * agent edits the right one) plus the UI language to prefer. For a `.velq` — a ZIP whose
+ * inner document isn't a plain file — the agent edits the working file we extracted
+ * (`velqWorking`); it's packed back into the .velq after the turn.
  */
-function editorContext(): string {
+function editorContext(velqWorking: string | null): string {
   const doc = useDoc.getState().doc;
-  if (!doc) return "";
   const root = useVault.getState().root?.path ?? "";
   const rel = (p: string) => (root && p.startsWith(`${root}/`) ? p.slice(root.length + 1) : p);
   const parts: string[] = [];
-  if (doc.path) {
+  if (doc?.velqSource && velqWorking) {
+    parts.push(
+      `The document "${doc.name}" is a packaged .velq. Its editable ${doc.language} content is in this working file: \`${rel(velqWorking)}\`. To change the document, edit THAT file — it is packed back into the .velq automatically after your turn. Do not edit the .velq file itself.`,
+    );
+  } else if (doc?.path) {
     parts.push(
       `The user is currently viewing \`${rel(doc.path)}\` (${doc.language}) in the editor. Unless they say otherwise, make your changes to this file.`,
     );
   }
-  if (doc.velqSource) {
-    const fence = doc.language === "html" ? "html" : "markdown";
-    parts.push(
-      `This document is packaged inside a .velq (a ZIP archive), so its ${doc.language} content is not a plain file you can read or write on disk. Here is the current content — for this one, propose changes as text rather than editing files:\n\n\`\`\`${fence}\n${useDoc.getState().content}\n\`\`\``,
-    );
-  }
-  if (parts.length === 0) return "";
+  const locale = resolveLocale(useSettings.getState().locale);
+  parts.push(
+    `The user's interface language is ${locale === "ja" ? "Japanese" : "English"}; prefer that language in your replies unless they write in another language.`,
+  );
   return `<editor-context>\n${parts.join("\n\n")}\n</editor-context>\n\n`;
 }
 
@@ -114,6 +132,7 @@ export const useAcp = create<AcpState>((set, get) => ({
   currentModeId: null,
   configs: [],
   pending: null,
+  velqEdit: null,
   tokensUsed: 0,
   tokensMax: 0,
   input: "",
@@ -165,13 +184,37 @@ export const useAcp = create<AcpState>((set, get) => ({
         return;
       }
     }
+    // For a packaged .velq, hand the agent a plain working file it can edit (it can't
+    // read the inner document out of the ZIP); it's repacked into the .velq on turn end.
+    let velqWorking: string | null = null;
+    const doc = useDoc.getState().doc;
+    if (doc?.velqSource) {
+      try {
+        const content = useDoc.getState().content;
+        velqWorking = await velqAgentExtract(doc.velqSource, content, doc.language);
+        set({
+          velqEdit: {
+            workingPath: velqWorking,
+            velqPath: doc.velqSource,
+            language: doc.language,
+            docId: doc.id,
+            baseline: content,
+          },
+        });
+      } catch (e) {
+        console.error("velq extract failed", e);
+        set({ velqEdit: null });
+      }
+    } else {
+      set({ velqEdit: null });
+    }
     set((s) => ({
       entries: [...s.entries, { id: entrySeq++, kind: "user", text: trimmed }],
       input: "",
       running: true,
     }));
     try {
-      await sendAgentPrompt(editorContext() + trimmed);
+      await sendAgentPrompt(editorContext(velqWorking) + trimmed);
     } catch (e) {
       set((s) => ({
         entries: [...s.entries, { id: entrySeq++, kind: "agent", text: `⚠️ ${String(e)}` }],
@@ -201,7 +244,26 @@ export const useAcp = create<AcpState>((set, get) => ({
 
   stop: () => {
     void stopAgentSession().catch(() => {});
-    set({ sessionActive: false, running: false, pending: null });
+    set({ sessionActive: false, running: false, pending: null, velqEdit: null });
+  },
+
+  finishVelqEdit: async () => {
+    const edit = get().velqEdit;
+    if (!edit) return;
+    set({ velqEdit: null });
+    try {
+      const next = (await readFile(edit.workingPath)).content;
+      if (next === edit.baseline) return; // the agent didn't change the content
+      if (edit.language === "markdown") {
+        await saveVelqMd(edit.velqPath, next, await renderMarkdown(next));
+      } else {
+        await saveVelqIndex(edit.velqPath, next);
+      }
+      // reloadTab re-reads the .velq's inner content and remounts the editor.
+      await useDoc.getState().reloadTab(edit.velqPath);
+    } catch (e) {
+      console.error("velq repack failed", e);
+    }
   },
 
   receive: (u) => {
@@ -226,10 +288,13 @@ export const useAcp = create<AcpState>((set, get) => ({
         return set({ plan: u.items });
       case "permissionRequest":
         return set({ pending: { id: u.id, title: u.title, diffs: u.diffs, options: u.options } });
-      case "turnEnded":
-        return set({ running: false });
+      case "turnEnded": {
+        set({ running: false });
+        if (get().velqEdit) void get().finishVelqEdit();
+        return;
+      }
       case "sessionEnded":
-        return set({ sessionActive: false, running: false, pending: null });
+        return set({ sessionActive: false, running: false, pending: null, velqEdit: null });
       case "failed":
         return set((s) => ({
           entries: [...s.entries, { id: entrySeq++, kind: "agent", text: `⚠️ ${u.message}` }],

@@ -77,6 +77,9 @@ export const stopAgentSession = () => invoke<void>("agent_stop_session");
 /** Open the OS terminal running a setup command (install / interactive login). */
 export const agentOpenTerminal = (command: string) =>
   invoke<void>("agent_open_terminal", { command });
+/** Write a .velq's current content to a plain working file the agent can edit; returns its path. */
+export const velqAgentExtract = (velqPath: string, content: string, language: string) =>
+  invoke<string>("velq_agent_extract", { velqPath, content, language });
 
 /** Subscribe to the streamed session updates. Returns an unlisten fn. */
 export const onAgentUpdate = (cb: (u: AgentUpdate) => void) =>

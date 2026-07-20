@@ -367,6 +367,7 @@ pub fn run() {
             commands::agent::agent_answer_permission,
             commands::agent::agent_stop_session,
             commands::agent::agent_open_terminal,
+            commands::agent::velq_agent_extract,
         ])
         .setup(|app| {
             // Now that the path resolver is available, localize the menu from the

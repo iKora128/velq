@@ -302,6 +302,32 @@ fn open_terminal_impl(command: &str) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Extract a `.velq`'s current editable content to a plain working file the ACP agent can
+/// edit — the agent can't read the inner document out of the ZIP. Returns the working
+/// file's absolute path (in a hidden `.velq-agent/` beside the package); the frontend packs
+/// it back into the `.velq` (rendering Markdown→HTML) after the agent's turn.
+#[tauri::command]
+pub fn velq_agent_extract(
+    velq_path: String,
+    content: String,
+    language: String,
+) -> Result<String, String> {
+    let velq = std::path::Path::new(&velq_path);
+    let parent = velq
+        .parent()
+        .ok_or_else(|| "invalid .velq path".to_string())?;
+    let dir = parent.join(".velq-agent");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let stem = velq
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "document".to_string());
+    let ext = if language == "html" { "html" } else { "md" };
+    let working = dir.join(format!("{stem}.{ext}"));
+    std::fs::write(&working, content).map_err(|e| e.to_string())?;
+    Ok(working.to_string_lossy().to_string())
+}
+
 // ---- helpers ----
 
 fn with_command_tx<F>(state: &State<AcpState>, f: F) -> Result<(), String>
