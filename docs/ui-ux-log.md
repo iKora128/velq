@@ -1099,3 +1099,24 @@ agent: **Claude Code**.
 **Pending (honest):** a visual screenshot pass with the panel open (open folder → Bot → prompt) is
 for the next hands-on session; the wiring and launch are verified, but the pixel-level UX comparison
 to Cursor / Zed isn't logged yet.
+
+## M38 — Agent picker, sign-in, brand icons; Settings reads normally again
+
+Follow-up to M37 on the user's feedback: "which agent, and where do I sign in?" — and the Settings
+screen had gone fully center-aligned ("画面の全てが中心揃え … そういう意味ではない").
+
+- **Settings › AI assistant.** A row per agent (mirrors shirushi): its brand mark, a status dot
+  (Ready / Fetched on first use / Not installed — probed on disk, never auth), **Set as default**,
+  and **Log in** / **Install**. Log in / Install open the agent's own CLI in a terminal
+  (`agent_open_terminal`) — Velq holds no keys, so `claude` etc. run their own browser login. The
+  default persists (`Settings.agentLabel`) and drives new assistant sessions; the panel shows a
+  setup prompt when the default isn't installed.
+- **Brand icons like shirushi.** The 5 Simple Icons marks (CC0) are copied in with their LICENSE;
+  `AgentIcon` tints them via `currentColor` so they read on light and dark, and renders Codex/Grok
+  (no Simple Icons mark) as a brand-colored monogram chip. Icons show in the settings rows and the
+  panel's empty state.
+- **Settings layout fixed.** The earlier pass had centered *everything* (`text-align` / `align-items:
+  center` on the title, headers, and every field). Now the column stays centered on screen but the
+  content reads normally: left-aligned headers, and each field a label-left / control-right row that
+  wraps wide controls (theme cards, the 7 preview templates) onto their own line.
+- Verified: cargo check · tsc · Biome · vite build clean; the app boots with no panic.
