@@ -456,3 +456,50 @@ fn permission_kind_str(k: velq_acp::PermissionKind) -> &'static str {
         velq_acp::PermissionKind::Other => "other",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::velq_agent_extract;
+
+    /// End-to-end .velq editing plumbing (deterministic, no agent): create a Markdown
+    /// `.velq` → extract its content to a working file → edit that file → repack → read the
+    /// package back and confirm the inner document changed. The "agent edits the working
+    /// file" half is covered by velq-acp's `live_edit`.
+    #[test]
+    fn velq_agent_roundtrip() {
+        let dir = std::env::temp_dir().join(format!("velq-agent-rt-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let velq = dir.join("Doc.velq").to_string_lossy().to_string();
+
+        // A real Markdown .velq via the app's own save path.
+        crate::commands::velq::save_new_velq(
+            velq.clone(),
+            "# Title\n\noriginal\n".to_string(),
+            "<h1>Title</h1><p>original</p>".to_string(),
+        )
+        .expect("save_new_velq");
+
+        let md = crate::commands::velq::read_velq_doc(velq.clone())
+            .expect("read_velq_doc")
+            .md
+            .expect("markdown .velq");
+
+        // Extract to the plain working file the agent would edit, then edit it.
+        let working =
+            velq_agent_extract(velq.clone(), md, "markdown".to_string()).expect("extract");
+        std::fs::write(&working, "# Title\n\nGOODBYE\n").unwrap();
+
+        // Repack: read the working file back into the .velq.
+        let edited = std::fs::read_to_string(&working).unwrap();
+        crate::commands::velq::save_velq_md(
+            velq.clone(),
+            edited,
+            "<h1>Title</h1><p>GOODBYE</p>".to_string(),
+        )
+        .expect("save_velq_md");
+
+        let after = crate::commands::velq::read_velq_doc(velq).expect("read back");
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(after.md.as_deref(), Some("# Title\n\nGOODBYE\n"));
+    }
+}
