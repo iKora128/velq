@@ -22,7 +22,7 @@
 }
 
 .agent-panel {
-  width: 360px;
+  width: var(--agent-w, 360px);
   flex: none;
   display: flex;
   flex-direction: column;

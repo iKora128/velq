@@ -23,6 +23,7 @@ export function EditorWorkspace() {
   const acpOpen = useAcp((s) => s.open);
   const hasSecond = useDoc((s) => !!s.secondaryId);
   const [secondW, setSecondW] = useState(460);
+  const [agentW, setAgentW] = useState(380);
   const view = useSettings((s) => s.sidebarView);
   const wide = view === "columns" || view === "icons";
   const sideW = wide ? wideW : sidebarW;
@@ -30,6 +31,7 @@ export function EditorWorkspace() {
   const vars = {
     "--sidebar-w": `${sideW}px`,
     "--second-w": `${secondW}px`,
+    "--agent-w": `${agentW}px`,
   } as CSSProperties;
 
   return (
@@ -54,7 +56,12 @@ export function EditorWorkspace() {
         </>
       )}
       {historyOpen && !acpOpen && <HistoryPanel />}
-      {acpOpen && <AgentPanel />}
+      {acpOpen && (
+        <>
+          <PaneDivider value={agentW} min={300} max={900} onChange={setAgentW} invert />
+          <AgentPanel />
+        </>
+      )}
     </div>
   );
 }
