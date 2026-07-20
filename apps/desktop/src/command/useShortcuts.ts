@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { usePalette } from "@/store/palette";
 import { useUI } from "@/store/ui";
@@ -29,6 +30,23 @@ export function useShortcuts() {
       if (!mod) return;
       const k = e.key.toLowerCase();
       const p = usePalette.getState();
+
+      // ---- Chrome-style tab shortcuts ----
+      // ⌘⌥←/→ walks the tab strip (⌃⇥ / ⌃⇧⇥ ride the native menu, so they also
+      // work while focus is inside the HTML preview). Alt distinguishes these from
+      // the editor's plain-arrow motion.
+      if (e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+        e.preventDefault();
+        if (e.key === "ArrowRight") useDoc.getState().activateNext();
+        else useDoc.getState().activatePrev();
+        return;
+      }
+      // ⌘1–8 jump to that tab; ⌘9 to the last one (as in Chrome/Safari).
+      if (!e.shiftKey && !e.altKey && /^[1-9]$/.test(k)) {
+        e.preventDefault();
+        useDoc.getState().activateIndex(k === "9" ? Number.MAX_SAFE_INTEGER : Number(k) - 1);
+        return;
+      }
 
       // File-operation undo/redo — only outside the editor (which has its own
       // text undo) and text fields, so ⌘Z there still edits text.
@@ -64,6 +82,10 @@ export function useShortcuts() {
       } else if (k === "o") {
         e.preventDefault();
         run("open-folder");
+      } else if (k === "t" && !e.shiftKey) {
+        // New tab (⌘T). ⌘⇧T (reopen closed) is a native menu accelerator.
+        e.preventDefault();
+        useDoc.getState().openScratch();
       } else if (k === "\\") {
         e.preventDefault();
         useUI.getState().toggleSidebar();

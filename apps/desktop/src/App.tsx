@@ -26,6 +26,10 @@ const MENU_VIEWS: Record<string, AppView> = {
 function runMenu(id: string) {
   if (id === "menu-undo") return routeUndo(false);
   if (id === "menu-redo") return routeUndo(true);
+  if (id === "close-tab") return useDoc.getState().closeActive();
+  if (id === "reopen-tab") return useDoc.getState().reopenClosed();
+  if (id === "tab-next") return useDoc.getState().activateNext();
+  if (id === "tab-prev") return useDoc.getState().activatePrev();
   const view = MENU_VIEWS[id];
   if (view) {
     useUI.getState().setView(view);
@@ -98,6 +102,7 @@ export function App() {
       if (hash === "#sample") return useDoc.getState().openSample();
       if (hash === "#sample-html") return useDoc.getState().openSampleHtml();
       if (hash === "#sample-plugins") return useDoc.getState().openSamplePlugins();
+      if (hash === "#settings") return useUI.getState().setView("settings");
       if (hash === "#vault") return void useVault.getState().openPath("/Users/you/Notes");
 
       // Files Velq was launched with (double-click / "Open with") take precedence.

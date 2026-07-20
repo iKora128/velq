@@ -61,8 +61,10 @@ export interface SessionTab {
   mode?: EditorMode | null;
 }
 export type FileView = "grid" | "list" | "columns" | "tree";
-/** The editor's left panel view mode: an outline tree, Finder columns, or an icon grid. */
-export type SidebarView = "tree" | "columns" | "icons";
+/** The one file-browser view mode, shared by the editor's side panel and the full
+ * Files view: a previewed **list**, an outline **tree**, Finder **columns**, or an
+ * **icon** grid — all views of the same files, with search on top of any of them. */
+export type SidebarView = "list" | "tree" | "columns" | "icons";
 /** UI language preference; "system" follows the OS language. Resolved to a concrete
  * locale by `resolveLocale` in `@/i18n`. */
 export type LocalePref = "system" | "en" | "ja";
@@ -104,7 +106,7 @@ export const DEFAULT_SETTINGS: Settings = {
   density: "comfortable",
   editorMode: "live",
   fileView: "grid",
-  sidebarView: "tree",
+  sidebarView: "list",
   vimMode: false,
   showLineNumbers: false,
   proseFont: true,

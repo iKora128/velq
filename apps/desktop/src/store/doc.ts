@@ -40,6 +40,15 @@ interface Tab {
   conflict: boolean; // file changed on disk while this tab had unsaved edits
 }
 
+/** A just-closed tab, kept so "reopen closed tab" (⌘⇧T) can bring it back exactly
+ * as it was — content, per-tab view, and pinned state. Session-only, capped. */
+interface ClosedTab {
+  doc: Doc;
+  content: string;
+  mode?: EditorMode;
+  pinned: boolean;
+}
+
 interface DocState {
   tabs: Tab[];
   activeId: string | null;
@@ -48,6 +57,8 @@ interface DocState {
   /** Tab ids, most recently visited first. Closing the tab you're in hands you back
    * to the one you came from, rather than whichever tab happens to sit next to it. */
   mru: string[];
+  /** Recently closed tabs (oldest→newest), so ⌘⇧T can reopen them in order. */
+  closedStack: ClosedTab[];
   // ---- mirror of the active tab (keeps the simple selector API) ----
   doc: Doc | null;
   content: string;
@@ -65,12 +76,22 @@ interface DocState {
   openFile: (node: FileNode, opts?: { preview?: boolean }) => Promise<void>;
   /** Open an absolute path (e.g. a file association / "Open with"). */
   openByPath: (path: string) => Promise<void>;
-  openScratch: () => void;
+  openScratch: (format?: "md" | "html") => void;
   openSample: () => void;
   openSampleHtml: () => void;
   openSamplePlugins: () => void;
   activate: (id: string) => void;
   close: (id: string) => void;
+  /** Close the active tab (⌘W). No-op when nothing is open. */
+  closeActive: () => void;
+  /** Reopen the most recently closed tab (⌘⇧T), restoring its content. */
+  reopenClosed: () => void;
+  /** Move the active tab one step along the strip, wrapping at the ends
+   * (⌃⇥ / ⌘⌥→ next, ⌃⇧⇥ / ⌘⌥← previous). */
+  activateNext: () => void;
+  activatePrev: () => void;
+  /** Jump to the tab at `index` (⌘1–9); clamped to the last tab. */
+  activateIndex: (index: number) => void;
   togglePin: (id: string) => void;
   setTabMode: (id: string, mode: EditorMode | null) => void;
   /** W3: show `id` beside the active tab (null closes the split). */
@@ -182,11 +203,30 @@ export function describeError(e: unknown): string {
 
 let scratchSeq = 0;
 
+/** How many closed tabs we remember for ⌘⇧T (like a browser's recently-closed list). */
+const REOPEN_LIMIT = 12;
+
+/** Starter content for a brand-new document. Plain files on disk — Markdown or a
+ * minimal HTML skeleton — never a `.velq` (packaging is an explicit share step). */
+export const NEW_MARKDOWN = "# Untitled\n\n";
+export const NEW_HTML = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Untitled</title>
+  </head>
+  <body>
+    <h1>Untitled</h1>
+  </body>
+</html>
+`;
+
 export const useDoc = create<DocState>((set, get) => ({
   tabs: [],
   activeId: null,
   secondaryId: null,
   mru: [],
+  closedStack: [],
   doc: null,
   content: "",
   dirty: false,
@@ -287,11 +327,18 @@ export const useDoc = create<DocState>((set, get) => ({
     }
   },
 
-  openScratch: () => {
+  openScratch: (format = "md") => {
     scratchSeq += 1;
+    const html = format === "html";
     get().open(
-      { id: `scratch:${scratchSeq}`, path: null, name: "Untitled", language: "markdown" },
-      "# Untitled\n\nStart writing…\n",
+      {
+        id: `scratch:${scratchSeq}`,
+        path: null,
+        name: html ? "Untitled.html" : "Untitled",
+        language: html ? "html" : "markdown",
+      },
+      html ? NEW_HTML : "# Untitled\n\nStart writing…\n",
+      html ? { mode: "live" } : undefined,
     );
   },
 
@@ -328,6 +375,12 @@ export const useDoc = create<DocState>((set, get) => ({
     set((s) => {
       const idx = s.tabs.findIndex((t) => t.doc.id === id);
       if (idx < 0) return {};
+      // Remember the tab so ⌘⇧T can bring it back with its content intact.
+      const gone = s.tabs[idx];
+      const closedStack = [
+        ...s.closedStack,
+        { doc: gone.doc, content: gone.content, mode: gone.mode, pinned: gone.pinned },
+      ].slice(-REOPEN_LIMIT);
       const tabs = s.tabs.filter((t) => t.doc.id !== id);
       const mru = s.mru.filter((x) => x !== id);
       let activeId = s.activeId;
@@ -338,12 +391,51 @@ export const useDoc = create<DocState>((set, get) => ({
         activeId = back ?? tabs[idx]?.doc.id ?? tabs[idx - 1]?.doc.id ?? null;
       }
       const secondaryId = s.secondaryId === id ? null : s.secondaryId;
-      return { tabs, activeId, secondaryId, mru, ...mirror(tabs, activeId) };
+      return { tabs, activeId, secondaryId, mru, closedStack, ...mirror(tabs, activeId) };
     });
     // Closing your last document takes you home to the file browser (not a blank editor).
     if (get().tabs.length === 0 && useUI.getState().view === "editor") {
       useUI.getState().setView("explorer");
     }
+  },
+
+  closeActive: () => {
+    const id = get().activeId;
+    if (id) get().close(id);
+  },
+
+  reopenClosed: () => {
+    const stack = get().closedStack;
+    const last = stack[stack.length - 1];
+    if (!last) return;
+    set({ closedStack: stack.slice(0, -1) });
+    // Route through `open` so recents/velq provenance/mirror all stay correct; it
+    // re-activates the reopened tab. Appends at the end (like most editors).
+    get().open(last.doc, last.content, { pinned: last.pinned, mode: last.mode });
+  },
+
+  activateNext: () => {
+    const { tabs, activeId } = get();
+    if (tabs.length < 2) return;
+    const i = tabs.findIndex((t) => t.doc.id === activeId);
+    const next = tabs[(Math.max(i, 0) + 1) % tabs.length];
+    if (next) get().activate(next.doc.id);
+  },
+
+  activatePrev: () => {
+    const { tabs, activeId } = get();
+    if (tabs.length < 2) return;
+    const i = tabs.findIndex((t) => t.doc.id === activeId);
+    const from = i < 0 ? 0 : i;
+    const prev = tabs[(from - 1 + tabs.length) % tabs.length];
+    if (prev) get().activate(prev.doc.id);
+  },
+
+  activateIndex: (index) => {
+    const { tabs } = get();
+    if (!tabs.length) return;
+    const t = tabs[Math.min(Math.max(index, 0), tabs.length - 1)];
+    if (t) get().activate(t.doc.id);
   },
 
   renameDoc: (oldId, newPath, newName) =>

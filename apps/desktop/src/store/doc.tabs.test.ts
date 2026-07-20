@@ -89,3 +89,73 @@ describe("closing a tab hands you back to where you came from", () => {
     expect(active()).toBe("renamed.md");
   });
 });
+
+describe("Chrome-style tab navigation", () => {
+  beforeEach(() => {
+    useDoc.setState({ tabs: [], activeId: null, secondaryId: null, mru: [], closedStack: [] });
+  });
+
+  it("closeActive closes the current tab and is a no-op when empty", () => {
+    openTab("a.md");
+    openTab("b.md");
+    useDoc.getState().closeActive();
+    expect(ids()).toEqual(["a.md"]);
+    useDoc.getState().closeActive();
+    expect(ids()).toEqual([]);
+    expect(() => useDoc.getState().closeActive()).not.toThrow();
+  });
+
+  it("⌘⌥→ / ⌘⌥← walk the strip and wrap at both ends", () => {
+    openTab("a.md");
+    openTab("b.md");
+    openTab("c.md");
+    useDoc.getState().activate("/v/a.md");
+    useDoc.getState().activateNext();
+    expect(active()).toBe("b.md");
+    useDoc.getState().activateNext();
+    expect(active()).toBe("c.md");
+    useDoc.getState().activateNext(); // wraps
+    expect(active()).toBe("a.md");
+    useDoc.getState().activatePrev(); // wraps back
+    expect(active()).toBe("c.md");
+  });
+
+  it("⌘1–9 jump to a tab by position; ⌘9 always lands on the last", () => {
+    openTab("a.md");
+    openTab("b.md");
+    openTab("c.md");
+    useDoc.getState().activateIndex(0);
+    expect(active()).toBe("a.md");
+    useDoc.getState().activateIndex(1);
+    expect(active()).toBe("b.md");
+    useDoc.getState().activateIndex(Number.MAX_SAFE_INTEGER); // ⌘9 → last, clamped
+    expect(active()).toBe("c.md");
+  });
+
+  it("reopens closed tabs in reverse order (⌘⇧T)", () => {
+    openTab("a.md");
+    openTab("b.md");
+    useDoc.getState().close("/v/a.md");
+    useDoc.getState().close("/v/b.md");
+    expect(ids()).toEqual([]);
+
+    useDoc.getState().reopenClosed();
+    expect(active()).toBe("b.md"); // last closed comes back first
+    useDoc.getState().reopenClosed();
+    expect(ids()).toEqual(["b.md", "a.md"]);
+
+    // Nothing left to reopen → no-op, no throw.
+    expect(() => useDoc.getState().reopenClosed()).not.toThrow();
+  });
+
+  it("restores an unsaved scratch tab's content on reopen", () => {
+    const scratch: Doc = { id: "scratch:1", path: null, name: "Untitled", language: "markdown" };
+    useDoc.getState().open(scratch, "keep me");
+    useDoc.getState().reportChange("keep me — edited");
+    useDoc.getState().close("scratch:1");
+
+    useDoc.getState().reopenClosed();
+    const back = useDoc.getState().tabs.find((t) => t.doc.id === "scratch:1");
+    expect(back?.content).toBe("keep me — edited");
+  });
+});

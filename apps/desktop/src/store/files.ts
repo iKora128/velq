@@ -13,8 +13,7 @@ import {
   renamePath,
   writeFileContent,
 } from "@/ipc/vault";
-import { newVelq } from "@/ipc/velq";
-import { describeError, useDoc } from "./doc";
+import { describeError, NEW_HTML, NEW_MARKDOWN, useDoc } from "./doc";
 import { useToast } from "./toast";
 
 function parentOf(path: string): string {
@@ -108,7 +107,7 @@ interface FilesState {
   /** The folder a new item should land in: the selected dir, the selected file's
    * folder, or the vault root. */
   targetDir: () => string;
-  newFile: (parentPath: string) => Promise<void>;
+  newFile: (parentPath: string, format: "md" | "html") => Promise<void>;
   newFolder: (parentPath: string) => Promise<void>;
   startRename: (path: string) => void;
   cancelRename: () => void;
@@ -290,12 +289,16 @@ export const useFiles = create<FilesState>((set, get) => ({
     return selected.kind === "dir" ? selected.path : parentOf(selected.path);
   },
 
-  // A new document IS a `.velq` — the working format — created explicitly here.
-  // (This is the ONLY automatic packaging: opening an existing file never converts
-  // it; see convertToVelq for the explicit conversion of files you already have.)
-  newFile: async (parentPath) => {
+  // A new document is a PLAIN file on disk — Markdown or HTML, the user's choice —
+  // never a `.velq`. Packaging to `.velq` stays an explicit share/export step (see
+  // convertToVelq); opening an existing file never converts it either.
+  newFile: async (parentPath, format) => {
     if (parentPath !== get().rootPath) await get().expand(parentPath);
-    const node = await newVelq(parentPath, "Untitled.velq");
+    const html = format === "html";
+    const name = html ? "Untitled.html" : "Untitled.md";
+    const content = html ? NEW_HTML : NEW_MARKDOWN;
+    const node = await createFile(parentPath, name);
+    await writeFileContent(node.path, content);
     await get().loadDir(parentPath);
     set({ ...leadState(node), renaming: node.path });
     get().pushUndo({
@@ -307,7 +310,8 @@ export const useFiles = create<FilesState>((set, get) => ({
         useDoc.getState().close(node.path);
       },
       redo: async () => {
-        const n = await newVelq(parentPath, baseName(node.path));
+        const n = await createFile(parentPath, baseName(node.path));
+        await writeFileContent(n.path, content);
         await get().loadDir(parentPath);
         set({ ...leadState(n) });
       },

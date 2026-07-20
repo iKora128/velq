@@ -26,6 +26,13 @@ export function TabBar() {
           aria-selected={t.doc.id === activeId}
           className={cn("tab", t.doc.id === activeId && "tab--active", t.preview && "tab--preview")}
           onClick={() => activate(t.doc.id)}
+          onAuxClick={(e) => {
+            // Middle-click closes the tab, as in a browser.
+            if (e.button === 1) {
+              e.preventDefault();
+              close(t.doc.id);
+            }
+          }}
           onContextMenu={(e) => {
             e.preventDefault();
             setMenu({ x: e.clientX, y: e.clientY, id: t.doc.id });

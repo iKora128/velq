@@ -1,14 +1,16 @@
 import {
   Columns3,
-  FilePlus,
   FolderOpen,
   FolderPlus,
   LayoutGrid,
+  List,
   ListTree,
   PanelLeft,
+  Search,
+  X,
 } from "lucide-react";
-import type { ReactNode } from "react";
-import velqMark from "@/assets/velq-mark.png";
+import { type ReactNode, useRef } from "react";
+import { FileList } from "@/filemanager/FileList";
 import { Tree } from "@/filemanager/Tree";
 import { useT } from "@/i18n/useT";
 import type { SidebarView } from "@/ipc/types";
@@ -19,41 +21,97 @@ import { useVault } from "@/store/vault";
 import { cn } from "@/util/cn";
 import { GridBrowser } from "./GridBrowser";
 import { MillerColumns } from "./MillerColumns";
+import { NewDocButton } from "./NewDocButton";
 
-/** The editor's left panel. In `finder` mode it's a real file browser you can flip
- *  between an outline **tree**, Finder **columns** and an **icon** grid via the footer
- *  switch; otherwise it stays the plain tree (used inside the Explorer's list mode). */
-export function Sidebar({ finder = false }: { finder?: boolean }) {
+/** The one file browser — the editor's left panel, and with `full` the whole Files
+ * view. A single search box works in every mode; the footer switch flips between
+ * **list** (previewed cards) · **tree** · **columns** · **icons**, all views of the
+ * same files. There is no separate "file list" pane any more: list is just a mode. */
+export function Sidebar({ finder = false, full = false }: { finder?: boolean; full?: boolean }) {
   const t = useT();
   const root = useVault((s) => s.root);
   const open = useVault((s) => s.open);
   const setting = useSettings((s) => s.sidebarView);
-  const view: SidebarView = finder ? setting : "tree";
+  const view: SidebarView = finder ? setting : "list";
+  const searchQuery = useFiles((s) => s.searchQuery);
+  const timer = useRef(0);
+
+  const onSearch = (value: string) => {
+    useFiles.setState({ searchQuery: value }); // controlled input updates immediately
+    clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => void useFiles.getState().runSearch(value), 140);
+  };
+  const newFolder = () => {
+    const f = useFiles.getState();
+    void f.newFolder(f.targetDir());
+  };
+
+  // A live search overrides whatever mode you're in with ranked results (search is
+  // inherently flat) — that's how one search box serves every view.
+  const searching = searchQuery.trim().length > 0;
 
   return (
-    <aside className="sidebar" data-view={view}>
+    <aside className={cn("sidebar", full && "sidebar--full")} data-view={view}>
       <div className="pane-head">
-        <div className="brand">
-          <img className="brand__mark" src={velqMark} alt="" width={22} height={22} aria-hidden />
-          Velq
+        {!full && (
+          <button
+            type="button"
+            className="icon-btn"
+            title={t("common.toggleSidebar")}
+            aria-label={t("common.toggleSidebar")}
+            onClick={() => useUI.getState().toggleSidebar()}
+          >
+            <PanelLeft size={16} />
+          </button>
+        )}
+        <div className="search">
+          <Search size={15} />
+          <input
+            type="text"
+            placeholder={t("filelist.searchPlaceholder")}
+            spellCheck={false}
+            disabled={!root}
+            value={searchQuery}
+            onChange={(e) => onSearch(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="search__clear"
+              aria-label={t("common.clearSearch")}
+              onClick={() => useFiles.getState().clearSearch()}
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
-        <button
-          type="button"
-          className="icon-btn"
-          title={t("common.toggleSidebar")}
-          aria-label={t("common.toggleSidebar")}
-          onClick={() => useUI.getState().toggleSidebar()}
-        >
-          <PanelLeft size={16} />
-        </button>
+        {root && (
+          <>
+            <NewDocButton />
+            <button
+              type="button"
+              className="icon-btn"
+              title={t("common.newFolder")}
+              aria-label={t("common.newFolder")}
+              onClick={newFolder}
+            >
+              <FolderPlus size={16} />
+            </button>
+          </>
+        )}
       </div>
 
       {root ? (
         <>
-          {/* Columns has no header of its own, so it keeps the vault head (name + New).
-              Icons has its own breadcrumb bar with New, so we drop the duplicate. */}
-          {view !== "icons" && <VaultHead name={root.name} />}
-          {view === "columns" ? <MillerColumns /> : view === "icons" ? <GridBrowser /> : <Tree />}
+          {searching || view === "list" ? (
+            <FileList />
+          ) : view === "columns" ? (
+            <MillerColumns />
+          ) : view === "icons" ? (
+            <GridBrowser />
+          ) : (
+            <Tree />
+          )}
           {finder && <ViewSwitch view={setting} />}
         </>
       ) : (
@@ -63,50 +121,11 @@ export function Sidebar({ finder = false }: { finder?: boolean }) {
   );
 }
 
-function VaultHead({ name }: { name: string }) {
-  const t = useT();
-  const newFile = () => {
-    const f = useFiles.getState();
-    void f.newFile(f.targetDir());
-  };
-  const newFolder = () => {
-    const f = useFiles.getState();
-    void f.newFolder(f.targetDir());
-  };
-
-  return (
-    <div className="vault-head">
-      <span className="vault-head__name" title={name}>
-        {name}
-      </span>
-      <div className="vault-head__actions">
-        <button
-          type="button"
-          className="icon-btn"
-          title={t("common.newDoc")}
-          aria-label={t("common.newDoc")}
-          onClick={newFile}
-        >
-          <FilePlus size={15} />
-        </button>
-        <button
-          type="button"
-          className="icon-btn"
-          title={t("common.newFolder")}
-          aria-label={t("common.newFolder")}
-          onClick={newFolder}
-        >
-          <FolderPlus size={15} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** Finder-style view switch pinned to the panel's foot (tree / columns / icons). */
+/** Finder-style view switch pinned to the panel's foot (list / tree / columns / icons). */
 function ViewSwitch({ view }: { view: SidebarView }) {
   const t = useT();
   const items: { v: SidebarView; icon: ReactNode; label: string }[] = [
+    { v: "list", icon: <List size={15} />, label: t("sidebar.view.list") },
     { v: "tree", icon: <ListTree size={15} />, label: t("sidebar.view.tree") },
     { v: "columns", icon: <Columns3 size={15} />, label: t("sidebar.view.columns") },
     { v: "icons", icon: <LayoutGrid size={15} />, label: t("sidebar.view.icons") },

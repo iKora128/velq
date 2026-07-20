@@ -7,6 +7,7 @@ import { useSettings } from "@/store/settings";
 import { isMac } from "@/util/platform";
 import { useResolvedDark } from "@/util/theme";
 import { attachElementSelect } from "./elementSelect";
+import { forwardAppShortcuts } from "./forwardShortcuts";
 import { extractBodyTextRuns, rebuildHtml, replaceBodyHtml } from "./htmlTextMap";
 import { enrichOgpCards } from "./ogpCards";
 import { buildPreviewDoc, htmlDocument } from "./previewStyles";
@@ -46,11 +47,6 @@ function collectEditableTextNodes(root: HTMLElement): Text[] {
   return nodes;
 }
 
-/** App shortcuts that must keep working while the caret is inside the iframe —
- * re-dispatched on the parent window for `useShortcuts`. ⌘Z is deliberately absent:
- * the iframe's own contenteditable undo stack handles it. */
-const FORWARDED_KEYS = new Set(["s", "k", "p", "o", "n", "f", "\\"]);
-
 /**
  * Make the iframe body a real editing surface (W6). On each `input`:
  *   - if the live text-node count still matches the source's runs, the edit was
@@ -59,8 +55,8 @@ const FORWARDED_KEYS = new Set(["s", "k", "p", "o", "n", "f", "\\"]);
  *     re-serialize the body and splice it over the source's body range; the head
  *     is never touched. Either way the DOM stays authoritative, so a mapping miss
  *     self-heals on the next serialization.
- * ⌘B/I/U format in place; app shortcuts are forwarded to the parent window.
- * Returns a teardown. No script runs inside the iframe.
+ * ⌘B/I/U format in place; other app shortcuts leave the frame via
+ * `forwardAppShortcuts`. Returns a teardown. No script runs inside the iframe.
  */
 function attachEditable(
   iframe: HTMLIFrameElement,
@@ -124,16 +120,6 @@ function attachEditable(
       // The DOM mutates synchronously; write back now rather than trusting the
       // engine to fire `input` for execCommand (a later duplicate is a no-op).
       writeBack();
-    } else if (FORWARDED_KEYS.has(k)) {
-      e.preventDefault();
-      window.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: e.key,
-          metaKey: e.metaKey,
-          ctrlKey: e.ctrlKey,
-          shiftKey: e.shiftKey,
-        }),
-      );
     }
   };
 
@@ -189,6 +175,9 @@ export function PreviewPane({
   const lastLang = useRef(language);
   const lastTemplate = useRef(template);
   const cleanup = useRef<(() => void) | null>(null);
+  // Torn down/re-attached on every document write; kept apart from `cleanup` so it
+  // survives the editable path's cleanup composition.
+  const fwdCleanup = useRef<(() => void) | null>(null);
   const seq = useRef(0);
   // The source the iframe currently reflects; edits build on it, and it re-syncs to
   // `source` whenever an external (left-pane) change rewrites the frame.
@@ -218,6 +207,10 @@ export function PreviewPane({
       lastDark.current = dark;
       lastLang.current = language;
       lastTemplate.current = template;
+      // Fresh document → fresh listeners: keep app/tab shortcuts alive while focus
+      // is inside the frame (⌘K, ⌘⌥←/→, ⌘1–9, …).
+      fwdCleanup.current?.();
+      fwdCleanup.current = forwardAppShortcuts(idoc);
       cleanup.current?.();
       cleanup.current = null;
       const view = viewRef?.current;
@@ -289,7 +282,13 @@ export function PreviewPane({
       .catch((e) => console.error("preview render failed", e));
   }, [source, language, dark, template, viewRef, editable, sandbox, scriptsOn]);
 
-  useEffect(() => () => cleanup.current?.(), []);
+  useEffect(
+    () => () => {
+      cleanup.current?.();
+      fwdCleanup.current?.();
+    },
+    [],
+  );
 
   return (
     <iframe

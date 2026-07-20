@@ -46,6 +46,19 @@
 .sidebar[data-view="columns"] .miller__col {
   width: 190px;
 }
+/* The same panel, stretched to fill the full-window Files view. */
+.sidebar--full {
+  width: auto;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+  border-right: none;
+}
+/* Columns get their roomier full-window width back (the 190px squeeze is only for
+   the slim editor panel). */
+.sidebar--full[data-view="columns"] .miller__col {
+  width: 248px;
+}
 
 /* ---- Footer view switch (tree / columns / icons), Finder-style ---- */
 .sidebar-foot {

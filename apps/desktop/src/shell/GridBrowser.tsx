@@ -1,12 +1,4 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  FilePlus,
-  FolderPlus,
-  House,
-  Sparkles,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, FolderPlus, House, Sparkles } from "lucide-react";
 import { type MouseEvent, useEffect, useState } from "react";
 import { FileGlyph } from "@/filemanager/FileGlyph";
 import { clickSelect } from "@/filemanager/selectionClick";
@@ -22,6 +14,7 @@ import { useFiles } from "@/store/files";
 import { useSettings } from "@/store/settings";
 import { useVault } from "@/store/vault";
 import { cn } from "@/util/cn";
+import { NewDocButton } from "./NewDocButton";
 
 /** Build a lightweight FileNode for a remembered (path + name) recent entry, so it
  * renders through the same Tile as everything else. */
@@ -173,15 +166,7 @@ export function GridBrowser() {
           ))}
         </nav>
         <div className="crumbbar__spacer" />
-        <button
-          type="button"
-          className="icon-btn"
-          title={t("common.newDoc")}
-          aria-label={t("common.newDoc")}
-          onClick={() => void useFiles.getState().newFile(here)}
-        >
-          <FilePlus size={16} />
-        </button>
+        <NewDocButton dir={here} />
         <button
           type="button"
           className="icon-btn"

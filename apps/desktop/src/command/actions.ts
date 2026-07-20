@@ -2,6 +2,7 @@ import {
   Code,
   Columns2,
   Eye,
+  FileCode,
   FileDown,
   FilePlus,
   FolderOpen,
@@ -27,8 +28,8 @@ import { dirOf, pickSaveFile } from "@/ipc/dialog";
 import { renderMarkdown } from "@/ipc/render";
 import { revealInOs, writeFileContent } from "@/ipc/vault";
 import { saveVersion } from "@/ipc/vcs";
-import { saveNewVelq, saveVelqIndex, saveVelqMd } from "@/ipc/velq";
-import { openVelq, useDoc } from "@/store/doc";
+import { saveVelqIndex, saveVelqMd } from "@/ipc/velq";
+import { useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { usePalette } from "@/store/palette";
 import { useSettings } from "@/store/settings";
@@ -62,21 +63,23 @@ function scratchTitle(content: string): string {
   );
 }
 
-/** Saving an untitled scratch = "Save As a .velq": the quick note becomes a real
- * `.velq` (its Markdown kept as the source). Opens the saved package so further
- * saves write back into it. */
-async function saveScratchAsVelq(scratchId: string, content: string) {
+/** Saving an untitled scratch = "Save As" a plain file: the quick note becomes a
+ * real `.md` (or `.html`) on disk — never a `.velq` (packaging is an explicit share
+ * step). Opens the saved file so further saves write straight to it. */
+async function saveScratchAsFile(scratchId: string, content: string, language: string) {
   const root = useVault.getState().root?.path ?? null;
-  const path = await pickSaveFile(`${scratchTitle(content)}.velq`, "velq", root);
+  const ext = language === "html" ? "html" : "md";
+  const path = await pickSaveFile(`${scratchTitle(content)}.${ext}`, ext, root);
   if (!path) return; // cancelled
   try {
-    await saveNewVelq(path, content, await renderMarkdown(content));
+    if (root && isUnder(path, root)) await saveVersion(root, path, content);
+    else await writeFileContent(path, content);
     useDoc.getState().markSaved();
     if (root && isUnder(path, root)) await useFiles.getState().loadDir(dirOf(path));
-    await openVelq(path, { preview: false });
+    await useDoc.getState().openByPath(path);
     useDoc.getState().close(scratchId);
   } catch (e) {
-    console.error("save scratch as .velq failed", e);
+    console.error("save scratch failed", e);
   }
 }
 
@@ -88,9 +91,9 @@ async function saveScratchAsVelq(scratchId: string, content: string) {
 async function saveActive() {
   const { doc, content, markSaved } = useDoc.getState();
   if (!doc) return;
-  // An untitled Markdown scratch: "save" means "save as a .velq".
+  // An untitled scratch: "save" means "Save As" a plain .md/.html.
   if (!doc.path) {
-    if (doc.language === "markdown") await saveScratchAsVelq(doc.id, content);
+    await saveScratchAsFile(doc.id, content, doc.language);
     return;
   }
   const root = useVault.getState().root?.path;
@@ -117,18 +120,33 @@ async function saveActive() {
   }
 }
 
-function newDocument() {
+/** Create a new document in the user's chosen format — a plain `.md` or `.html`
+ * in the open folder, or an in-memory scratch when no folder is open. This is the
+ * one creation path the UI, the palette, and (later) an ACP agent all funnel into. */
+function newDocument(format: "md" | "html" = "md") {
   const v = useVault.getState();
   if (v.root) {
     const f = useFiles.getState();
-    void f.newFile(f.targetDir());
+    void f.newFile(f.targetDir(), format);
   } else {
-    useDoc.getState().openScratch();
+    useDoc.getState().openScratch(format);
   }
 }
 
 export const ACTIONS: Action[] = [
-  { id: "new-doc", titleKey: "action.newDoc", hint: "Mod+N", icon: FilePlus, run: newDocument },
+  {
+    id: "new-doc",
+    titleKey: "action.newDoc",
+    hint: "Mod+N",
+    icon: FilePlus,
+    run: () => newDocument("md"),
+  },
+  {
+    id: "new-doc-html",
+    titleKey: "action.newDocHtml",
+    icon: FileCode,
+    run: () => newDocument("html"),
+  },
   {
     id: "new-folder",
     titleKey: "action.newFolder",

@@ -1,4 +1,4 @@
-import { Copy, FilePlus, FolderPlus, Package, Pencil, Trash2 } from "lucide-react";
+import { Copy, FileCode, FileText, FolderPlus, Package, Pencil, Trash2 } from "lucide-react";
 import { canConvertToVelq, convertToVelq } from "@/export/convert";
 import type { MsgKey } from "@/i18n";
 import type { FileNode } from "@/ipc/types";
@@ -70,9 +70,14 @@ export function fileMenuEntries(node: FileNode | null, t: TFn, emptyDir?: string
   }
   if (target) {
     entries.push({
-      label: t("common.newDoc"),
-      icon: <FilePlus size={15} />,
-      onClick: () => void files.newFile(target),
+      label: t("action.newDoc"),
+      icon: <FileText size={15} />,
+      onClick: () => void files.newFile(target, "md"),
+    });
+    entries.push({
+      label: t("action.newDocHtml"),
+      icon: <FileCode size={15} />,
+      onClick: () => void files.newFile(target, "html"),
     });
     entries.push({
       label: t("common.newFolder"),

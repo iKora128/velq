@@ -79,6 +79,26 @@ fn build_menu(
         .quit()
         .build()?;
 
+    // Tab lifecycle carries Chrome-style accelerators. ⌘W closes the current tab
+    // (the OS-level accelerator fires even when focus is inside the HTML preview);
+    // ⌘⇧T reopens the last closed one; the window itself closes with ⌘⇧W (Chrome's
+    // key), freeing ⌘W for the tab.
+    let close_tab = MenuItemBuilder::with_id("close-tab", ml(locale, "Close Tab", "タブを閉じる"))
+        .accelerator("CmdOrCtrl+W")
+        .build(app)?;
+    let reopen_tab = MenuItemBuilder::with_id(
+        "reopen-tab",
+        ml(locale, "Reopen Closed Tab", "閉じたタブを開き直す"),
+    )
+    .accelerator("CmdOrCtrl+Shift+T")
+    .build(app)?;
+    let close_window = MenuItemBuilder::with_id(
+        "close-window",
+        ml(locale, "Close Window", "ウインドウを閉じる"),
+    )
+    .accelerator("CmdOrCtrl+Shift+W")
+    .build(app)?;
+
     let file_menu = SubmenuBuilder::new(app, ml(locale, "File", "ファイル"))
         .text("new-doc", ml(locale, "New Document", "新規ドキュメント"))
         .text("new-folder", ml(locale, "New Folder", "新規フォルダ"))
@@ -101,7 +121,10 @@ fn build_menu(
         )
         .text("export-pdf", ml(locale, "Export to PDF", "PDF に書き出す"))
         .separator()
-        .close_window()
+        .item(&close_tab)
+        .item(&reopen_tab)
+        .separator()
+        .item(&close_window)
         .build()?;
 
     // Custom Undo/Redo (not the predefined ones): they carry ⌘Z but forward to the
@@ -141,8 +164,25 @@ fn build_menu(
         )
         .build()?;
 
+    // Tab navigation lives in Window (Safari's home for it). Ctrl+Tab is the same
+    // on every platform — and, being a native accelerator, it keeps working when
+    // the HTML preview has focus. ⌘⌥←/→ (handled in the webview) does the same.
+    let tab_prev = MenuItemBuilder::with_id(
+        "tab-prev",
+        ml(locale, "Show Previous Tab", "前のタブを表示"),
+    )
+    .accelerator("Ctrl+Shift+Tab")
+    .build(app)?;
+    let tab_next =
+        MenuItemBuilder::with_id("tab-next", ml(locale, "Show Next Tab", "次のタブを表示"))
+            .accelerator("Ctrl+Tab")
+            .build(app)?;
+
     let window_menu = SubmenuBuilder::new(app, ml(locale, "Window", "ウインドウ"))
         .minimize()
+        .separator()
+        .item(&tab_prev)
+        .item(&tab_next)
         .separator()
         .fullscreen()
         .build()?;
@@ -177,7 +217,16 @@ fn apply_menu_language(app: tauri::AppHandle, locale: String) -> Result<(), Stri
     Ok(())
 }
 
-/// Route a menu click: open links in Rust, forward everything else to the webview.
+/// The window the user is currently interacting with — the main editor or a
+/// `.velq` viewer pop-out — if any is focused.
+fn focused_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
+    app.webview_windows()
+        .into_values()
+        .find(|w| w.is_focused().unwrap_or(false))
+}
+
+/// Route a menu click: open links in Rust, handle window/tab close here (they need
+/// the focused window), forward everything else to the webview.
 fn on_menu(app: &tauri::AppHandle, id: &str) {
     match id {
         "help-github" => {
@@ -191,6 +240,22 @@ fn on_menu(app: &tauri::AppHandle, id: &str) {
                 None::<&str>,
             );
         }
+        // ⌘⇧W closes whichever window is focused (editor or viewer pop-out).
+        "close-window" => {
+            if let Some(w) = focused_window(app).or_else(|| app.get_webview_window("main")) {
+                let _ = w.close();
+            }
+        }
+        // ⌘W closes a tab in the editor; a viewer pop-out has no tabs, so there ⌘W
+        // closes the window itself (matching what users expect from ⌘W anywhere).
+        "close-tab" => match focused_window(app) {
+            Some(w) if w.label().starts_with("velq-viewer") => {
+                let _ = w.close();
+            }
+            _ => {
+                let _ = app.emit("menu", "close-tab".to_string());
+            }
+        },
         other => {
             let _ = app.emit("menu", other.to_string());
         }

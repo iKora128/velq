@@ -4,7 +4,6 @@ import {
   Columns2,
   Eye,
   History,
-  List,
   Palette,
   PanelLeft,
   PenLine,
@@ -79,7 +78,6 @@ export function Toolbar() {
   const editing = isEditing(editingMap, activeDocId);
 
   const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
-  const fileListCollapsed = useUI((s) => s.fileListCollapsed);
 
   return (
     <div className="editor-toolbar">
@@ -92,16 +90,6 @@ export function Toolbar() {
         onClick={() => useUI.getState().toggleSidebar()}
       >
         <PanelLeft size={16} />
-      </button>
-      <button
-        type="button"
-        className={cn("icon-btn", !fileListCollapsed && "icon-btn--active")}
-        title={t("toolbar.toggleFileList")}
-        aria-label={t("toolbar.toggleFileList")}
-        aria-pressed={!fileListCollapsed}
-        onClick={() => useUI.getState().toggleFileList()}
-      >
-        <List size={16} />
       </button>
       <nav className="crumbs" aria-label={t("toolbar.locationAria")}>
         <Breadcrumb />

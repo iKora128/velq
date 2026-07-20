@@ -4,7 +4,7 @@
   background: var(--bg);
 }
 .settings-view__inner {
-  max-width: 720px;
+  max-width: 820px;
   margin: 0 auto;
   padding: var(--space-8) var(--space-7) var(--space-9);
 }
@@ -12,36 +12,43 @@
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
   letter-spacing: -0.02em;
+  text-align: center;
   margin-bottom: var(--space-7);
 }
 
+/* Centered single column: each section is a full-width header stacked above its
+ * centered controls (the layout the user picked). */
 .settings-section {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: var(--space-6);
-  padding: var(--space-6) 0;
+  padding: var(--space-7) 0;
   border-top: 1px solid var(--border-subtle);
+}
+.settings-section__head {
+  text-align: center;
+  margin-bottom: var(--space-6);
 }
 .settings-section__title {
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
 }
 .settings-section__desc {
-  margin-top: var(--space-2);
+  max-width: 52ch;
+  margin: var(--space-2) auto 0;
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 .settings-section__body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  align-items: center;
+  gap: var(--space-6);
 }
 
 .settings-field {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-5);
+  gap: var(--space-3);
+  text-align: center;
 }
 .settings-field__meta {
   min-width: 0;
@@ -105,7 +112,7 @@
   display: inline-flex;
   flex: none; /* don't compress the control — let the label column yield instead */
   flex-wrap: wrap; /* long option sets (preview templates) fold to extra rows */
-  justify-content: flex-end;
+  justify-content: center;
   padding: 2px;
   gap: 2px;
   background: var(--surface-sunken);
@@ -156,8 +163,7 @@
 }
 
 @media (max-width: 680px) {
-  .settings-section {
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
+  .settings-view__inner {
+    padding: var(--space-6) var(--space-5) var(--space-8);
   }
 }

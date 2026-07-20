@@ -4,9 +4,9 @@ import { useT } from "@/i18n/useT";
 import type {
   Density,
   EditorMode,
-  FileView,
   LocalePref,
   PreviewTemplate,
+  SidebarView,
   ThemePref,
   VelqOpenIn,
 } from "@/ipc/types";
@@ -136,13 +136,14 @@ export function SettingsView() {
             label={t("settings.files.defaultView")}
             hint={t("settings.files.defaultView.hint")}
           >
-            <Segmented<FileView>
-              value={s.fileView === "columns" ? "columns" : s.fileView === "list" ? "list" : "grid"}
-              onChange={(fileView) => update({ fileView })}
+            <Segmented<SidebarView>
+              value={s.sidebarView}
+              onChange={(sidebarView) => update({ sidebarView })}
               options={[
-                { value: "grid", label: t("settings.files.icons") },
                 { value: "list", label: t("settings.files.list") },
+                { value: "tree", label: t("sidebar.view.tree") },
                 { value: "columns", label: t("settings.files.columns") },
+                { value: "icons", label: t("settings.files.icons") },
               ]}
             />
           </Field>

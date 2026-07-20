@@ -12,6 +12,11 @@ const ROWS: [MsgKey, string][] = [
   ["cheatsheet.runCommand", "Mod+Shift+P"],
   ["cheatsheet.newDoc", "Mod+N"],
   ["cheatsheet.newFolder", "Mod+Shift+N"],
+  ["cheatsheet.newTab", "Mod+T"],
+  ["cheatsheet.closeTab", "Mod+W"],
+  ["cheatsheet.reopenTab", "Mod+Shift+T"],
+  ["cheatsheet.switchTab", "Ctrl+Tab"],
+  ["cheatsheet.jumpTab", "Mod+1…9"],
   ["cheatsheet.save", "Mod+S"],
   ["cheatsheet.openFolder", "Mod+O"],
   ["cheatsheet.toggleSidebar", "Mod+\\"],
@@ -20,7 +25,7 @@ const ROWS: [MsgKey, string][] = [
   ["cheatsheet.shortcuts", "?"],
 ];
 
-const LITERAL = new Set(["Space", "Return", "?"]);
+const LITERAL = new Set(["Space", "Return", "?", "Ctrl+Tab"]);
 
 export function Cheatsheet() {
   const open = usePalette((s) => s.cheatsheet);

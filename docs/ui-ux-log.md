@@ -1002,3 +1002,68 @@ double-click into a .velq.
 **Gates:** tsc · Vitest · cargo test workspace · clippy · Biome — run at the end of the batch (see
 commit). Playwright spot-checks on the mock: split pane, [[ completion, spellcheck attribute,
 session snapshot shape.
+
+## M34 — Browser-grade tab shortcuts + a centered, roomier Settings
+
+Two small user-driven passes.
+
+- **Chrome-style tab keys.** ⌘W close, ⌘⇧T reopen-closed (a 12-deep stack that restores content,
+  view and pin), ⌃⇥/⌃⇧⇥ and ⌘⌥←/→ to walk the strip, ⌘1–8 jump / ⌘9 last, ⌘T new, plus
+  middle-click-to-close. The subtle part was the user's real ask — *"⌘W must work when I've clicked
+  into the HTML preview."* The preview is an iframe (its own document), so its keydown never reaches
+  the window handler. Fix is two-pronged: **⌘W and ⌃⇥ ride native menu accelerators** (the OS fires
+  them regardless of focus — this also meant moving window-close off ⌘W onto ⌘⇧W, Chrome's key),
+  and the rest are **re-dispatched out of every preview iframe** by a shared `forwardAppShortcuts`.
+  Verified: app launches with the new menu (no accelerator-parse panic), 92 Vitest green incl. new
+  close/reopen/nav/jump cases.
+- **Settings: centered single column, wider.** Was a 720px two-column grid (200px left title │
+  controls); felt cramped and off-center. User picked **中央寄せ・1カラム** from a preview menu:
+  full-width centered section headers stacked above centered controls, `max-width` 720 → 820. The
+  wide template row now sits on one line instead of wrapping. Checked headless (dark + a 1400px
+  window) — the block holds centered at any width. Added a `#settings` screenshot seam alongside the
+  existing `#sample` ones.
+
+## M35 — One file browser, not four: fold the "file list" into the tree's mode switch
+
+The user, digging into the earlier clutter: the editor carried **two** file panes at once — the
+folder **tree** (a Sidebar that already flips tree/columns/icons) *and* the previewed **file list**
+(a separate `FileListPane`) — while the full Files view showed the *same* browser again, and only
+the list had a search box. "ツリーとリストって同じじゃん。統合しきって。" They're right: tree and
+list are two views of the same files; the list's only real edge is content snippets, and search
+should belong to the *panel*, not one mode.
+
+- **One component, everywhere.** `Sidebar` is now the single browser, used in the editor (slim) and
+  as the whole Files view (`full`). `FileListPane` is deleted; "list" is just a **fourth mode** of
+  the footer switch: **list · tree · columns · icons**. `ExplorerView` is now literally
+  `<Sidebar finder full/>` — the old toolbar/seg/two-pane list-mode are gone.
+- **Search on the panel, not a mode.** One search box in the panel head; a live query overrides
+  whatever mode you're in with ranked results (search is inherently flat), so it works from tree,
+  columns or icons too — fixing "検索が片方だけ".
+- **Editor de-cluttered.** The redundant second toggle left the toolbar; `fileListCollapsed` /
+  `toggleFileList` are gone. Default view is **list** (the spec's previewed browser). Settings' "file
+  view" now drives the one `sidebarView` (list/tree/columns/icons); `fileView` is left vestigial to
+  avoid a settings-shape migration.
+- Verified headless (mock UI, the real frontend): Files view = one full-width panel with search +
+  the four-mode switch; editor = one slim panel, no second pane, no duplicate toggle. tsc · Biome ·
+  92 Vitest green.
+
+## M36 — New documents are plain files (Markdown **or** HTML), chosen at creation
+
+Follow-on from the "is a new doc really a `.velq`?" thread. It was: `newFile` always made an
+`Untitled.velq` package — which clashes with Velq's own "plain Markdown on disk, open anywhere"
+promise, and (the user's forward-looking point) would make an **ACP agent** write *into a ZIP* when
+we later let agents generate HTML. So new docs become **plain files whose format you pick**.
+
+- **The "+" is now a chooser.** A shared `NewDocButton` (Sidebar head + grid crumbbar) pops a small
+  menu: **Markdown** / **HTML**. Right-click "New" offers both too; the palette gains *New HTML
+  document*; ⌘N stays Markdown (fast default). All roads funnel into one `newDocument(format)` —
+  the same entry an ACP agent will call with `format`.
+- **Plain on disk.** `newFile(parent, "md"|"html")` writes `Untitled.md` / `Untitled.html` (HTML gets
+  a minimal skeleton) via the existing create+write path — no `.velq`. Saving an untitled scratch is
+  now "Save As" a `.md`/`.html`, not a package. `.velq` is demoted to the **explicit share/export**
+  step, matching the philosophy and [[velq-no-auto-file-mutation]].
+- Verified: a store test proves `newFile` yields `.md`/`.html` (never `.velq`) for each format; the
+  Files view still renders (byte-identical). tsc · Biome · 94 Vitest green.
+
+**Open follow-up (noted, not done):** the welcome-screen subtitle and native File-menu still lean on
+"`.velq`"/"New Document" wording — worth a copy pass once the ACP work lands.

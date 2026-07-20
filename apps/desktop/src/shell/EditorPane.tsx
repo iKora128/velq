@@ -120,7 +120,7 @@ function Welcome() {
         {t("welcome.subtitlePost")}
       </p>
       <div className="welcome__actions">
-        <button type="button" className="btn btn--primary" onClick={openScratch}>
+        <button type="button" className="btn btn--primary" onClick={() => openScratch()}>
           {t("welcome.newDoc")}
         </button>
         <button type="button" className="btn" onClick={openVault}>
