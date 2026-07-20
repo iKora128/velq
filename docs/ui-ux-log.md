@@ -1067,3 +1067,35 @@ we later let agents generate HTML. So new docs become **plain files whose format
 
 **Open follow-up (noted, not done):** the welcome-screen subtitle and native File-menu still lean on
 "`.velq`"/"New Document" wording — worth a copy pass once the ACP work lands.
+
+## M37 — An AI assistant that actually edits your files (ACP)
+
+The payoff M36 foreshadowed: let an **AI agent** edit the open folder's HTML/MD in plain language.
+The user had already built this in their **shirushi** editor and asked to bring Velq "かなり近い状態に"
+— so Velq speaks the same protocol, **ACP (Agent Client Protocol)**, the one Zed created. Default
+agent: **Claude Code**.
+
+- **The engine is portable, not bespoke.** `crates/velq-acp` is shirushi's `acp_client` ported
+  almost verbatim (its `Host` remote layer dropped for a direct `std::process` spawn;
+  `agent-client-protocol` 1.2.0). One resident session, two channels: prompts / mode / model go in,
+  streamed text · thoughts · tool-calls · plan · permission come out. The client **deliberately does
+  not advertise the `fs` capability** — the agent writes to disk itself, and Velq's existing
+  `fs:changed` watcher (the same external-change path M35 and every save already use) reloads the
+  open document. So "the edit shows up in the editor" cost **zero** new machinery.
+- **The dock reads like the rest of Velq.** A right-side `AgentPanel` in the shape of `HistoryPanel`
+  (calm `--bg-subtle` chrome, `pane-head`, tokens only), toggled by a **Bot** button in the toolbar,
+  the command palette, and **⌘J** (⌘I stays the editor's italic). The transcript streams the agent's
+  reply; a **permission card** shows *what will change* (path + a "New file" badge) with the agent's
+  own **Allow / Reject** buttons — no "diff" / "commit" words leak in (non-negotiable #3). A plan
+  checklist and model / mode pickers appear only when the agent advertises them.
+- **Benchmarks:** Cursor's and Zed's agent docks (a conversation that edits your files) — but Bear-
+  calm, and honest: nothing writes without the permission card.
+- **Proven, not assumed.** cargo check · tsc · Biome · vite build all clean. A live end-to-end test
+  (`velq-acp live_edit`) spawns the **real** `claude-agent-acp`, asks it to rewrite a file, auto-
+  approves, and asserts the bytes on disk changed (`hello world` → `GOODBYE`). `cargo tauri dev`
+  launches the window with no panic / no red console. Ties off [[velq-new-doc-format]] — the funnel
+  M36 built for `format` is exactly what an agent now drives.
+
+**Pending (honest):** a visual screenshot pass with the panel open (open folder → Bot → prompt) is
+for the next hands-on session; the wiring and launch are verified, but the pixel-level UX comparison
+to Cursor / Zed isn't logged yet.
