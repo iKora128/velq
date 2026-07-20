@@ -405,6 +405,7 @@ export const en = {
   "agent.close": "Close assistant",
   "agent.placeholder": "Ask for an edit — e.g. “shorten the intro”",
   "agent.send": "Send",
+  "agent.sendHint": "{key} to send",
   "agent.thinking": "Working…",
   "agent.plan": "Plan",
   "agent.newFile": "New file",

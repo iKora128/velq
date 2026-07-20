@@ -6,7 +6,9 @@ import { useSettings } from "@/store/settings";
 import { useUI } from "@/store/ui";
 import { useVault } from "@/store/vault";
 import { cn } from "@/util/cn";
+import { fmtShortcut } from "@/util/platform";
 import { AgentIcon } from "./AgentIcon";
+import { AgentMarkdown } from "./AgentMarkdown";
 import "./agent.css";
 
 /** The AI assistant: a right dock where you ask, in plain language, for edits to the
@@ -124,27 +126,41 @@ export function AgentPanel() {
           submit();
         }}
       >
-        <textarea
-          className="agent-compose__input"
-          value={input}
-          rows={2}
-          placeholder={t("agent.placeholder")}
-          onChange={(ev) => useAcp.getState().setInput(ev.target.value)}
-          onKeyDown={(ev) => {
-            if (ev.key === "Enter" && !ev.shiftKey) {
-              ev.preventDefault();
-              submit();
-            }
-          }}
-        />
-        <button
-          type="submit"
-          className={cn("agent-compose__send", input.trim() && !running && "is-ready")}
-          aria-label={running ? t("agent.thinking") : t("agent.send")}
-          disabled={!input.trim() || running}
-        >
-          {running ? <Loader2 size={15} className="agent-spin" /> : <Send size={15} />}
-        </button>
+        <div className="agent-compose__row">
+          <textarea
+            className="agent-compose__input"
+            value={input}
+            rows={2}
+            placeholder={t("agent.placeholder")}
+            onChange={(ev) => useAcp.getState().setInput(ev.target.value)}
+            onKeyDown={(ev) => {
+              if (ev.key !== "Enter") return;
+              // Cmd/Ctrl+Enter always sends — reliable even mid-IME-composition.
+              if (ev.metaKey || ev.ctrlKey) {
+                ev.preventDefault();
+                submit();
+                return;
+              }
+              // Plain Enter sends too, but not while an IME is composing (that Enter
+              // confirms the conversion — essential for Japanese input) nor with Shift.
+              if (!ev.shiftKey && !ev.nativeEvent.isComposing) {
+                ev.preventDefault();
+                submit();
+              }
+            }}
+          />
+          <button
+            type="submit"
+            className={cn("agent-compose__send", input.trim() && !running && "is-ready")}
+            aria-label={running ? t("agent.thinking") : t("agent.send")}
+            disabled={!input.trim() || running}
+          >
+            {running ? <Loader2 size={15} className="agent-spin" /> : <Send size={15} />}
+          </button>
+        </div>
+        <div className="agent-compose__hint">
+          {t("agent.sendHint", { key: fmtShortcut("Mod+Enter") })}
+        </div>
       </form>
     </aside>
   );
@@ -155,16 +171,20 @@ function EntryRow({ entry }: { entry: Entry }) {
     case "user":
       return <div className="agent-msg agent-msg--user">{entry.text}</div>;
     case "thought":
-      return <div className="agent-msg agent-msg--thought">{entry.text}</div>;
+      return <div className="agent-thought">{entry.text}</div>;
     case "tool":
       return (
         <div className="agent-tool">
           <span className="agent-tool__dot">⏺</span>
-          {entry.title}
+          <span className="agent-tool__title">{entry.title}</span>
         </div>
       );
     default:
-      return <div className="agent-msg agent-msg--agent">{entry.text}</div>;
+      return (
+        <div className="agent-msg agent-msg--agent">
+          <AgentMarkdown text={entry.text} />
+        </div>
+      );
   }
 }
 

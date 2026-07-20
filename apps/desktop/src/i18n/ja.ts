@@ -404,6 +404,7 @@ export const ja: Dict = {
   "agent.close": "アシスタントを閉じる",
   "agent.placeholder": "編集を頼む — 例:「導入を短く」",
   "agent.send": "送信",
+  "agent.sendHint": "{key} で送信",
   "agent.thinking": "作業中…",
   "agent.plan": "計画",
   "agent.newFile": "新規ファイル",
