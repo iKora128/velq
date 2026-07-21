@@ -28,6 +28,28 @@ const fonts =
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline define:vars={{ isEn: lang === "en", jaPath: `/ja${enPath}` }}>
+      // First-visit language redirect — client-side fallback for the edge Function
+      // in functions/_middleware.js (which only runs once Cloudflare Pages picks up
+      // the functions dir). English pages only, when the browser prefers Japanese
+      // and no explicit English choice (velq_lang cookie, set by the nav switcher).
+      (function () {
+        if (!isEn) return;
+        try {
+          var c = document.cookie.match(/(?:^|;\s*)velq_lang=(en|ja)/);
+          if (c && c[1] === "en") return;
+          var prefersJa = (navigator.languages || [navigator.language || ""]).some(
+            function (l) {
+              return /^ja/i.test(l);
+            },
+          );
+          if ((c && c[1] === "ja") || prefersJa) {
+            document.cookie = "velq_lang=ja; path=/; max-age=31536000; samesite=lax";
+            location.replace(jaPath + location.search + location.hash);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
