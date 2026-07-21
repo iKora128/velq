@@ -11,6 +11,14 @@ const { t } = Astro.props;
 const ic = (name: string, size = 18) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] ?? ""}</svg>`;
 const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="${githubPath}"/></svg>`;
+
+// Wrap Japanese body copy at sentence boundaries (。) so each line ends at a
+// natural stop instead of an arbitrary mid-phrase position. A no-op for English
+// (sentences end with "."), so it is safe on the shared EN/JA fields. `jaText`
+// escapes plain strings; `jaHtml` keeps intentional inline HTML such as <code>.
+const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const jaHtml = (s: string) => s.replace(/。(?!$)/g, "。<br />");
+const jaText = (s: string) => jaHtml(escHtml(s));
 ---
 
 <BaseLayout lang={t.lang} title={t.meta.title} description={t.meta.description} ogImage={t.meta.ogImage}>
@@ -44,7 +52,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
         <span>{t.hero.h1a}</span>
         <span class="hero__accent">{t.hero.h1b}</span>
       </h1>
-      <p class="lede" data-reveal set:html={t.hero.lede} />
+      <p class="lede" data-reveal set:html={jaHtml(t.hero.lede)} />
       <div class="hero__cta" data-reveal>
         <a class="btn btn--primary btn--lg" href={RELEASES} data-dl="auto" data-auto-cta={t.download.autoCta}>
           <span set:html={ic("download", 18)} /><span class="dl-label">{t.hero.ctaPrimary}</span>
@@ -75,7 +83,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
             <article class="qa" data-reveal>
               <span class="qa__ic" set:html={ic(w.icon, 19)} />
               <h3>{w.q}</h3>
-              <p>{w.a}</p>
+              <p set:html={jaText(w.a)} />
             </article>
           ))
         }
@@ -95,7 +103,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
             <article class="pillar" data-reveal>
               <span class="pillar__ic" set:html={ic(p.icon, 20)} />
               <h3>{p.title}</h3>
-              <p>{p.body}</p>
+              <p set:html={jaText(p.body)} />
             </article>
           ))
         }
@@ -111,7 +119,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
             <div class="feature__text">
               <p class="kicker">{f.kicker}</p>
               <h3 set:html={f.title} />
-              <p class="feature__body" set:html={f.body} />
+              <p class="feature__body" set:html={jaHtml(f.body)} />
               <ul class="checks">
                 {f.points.map((pt) => (
                   <li>
@@ -154,7 +162,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
                 <span class="step__ic" set:html={ic(s.icon, 18)} />
               </div>
               <h3>{s.title}</h3>
-              <p>{s.body}</p>
+              <p set:html={jaText(s.body)} />
             </article>
           ))
         }
@@ -172,14 +180,14 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
           </div>
           <div>
             <h3>{t.velq.zip.title}</h3>
-            <p set:html={t.velq.zip.body} />
+            <p set:html={jaHtml(t.velq.zip.body)} />
           </div>
         </div>
         <div class="sandboxcard" data-reveal>
           <img src="/illust/offline.webp" alt={t.velq.sandboxAlt} width="512" height="344" />
           <div>
             <h3>{t.velq.sandbox.title}</h3>
-            <p>{t.velq.sandbox.body}</p>
+            <p set:html={jaText(t.velq.sandbox.body)} />
           </div>
         </div>
       </div>
@@ -244,7 +252,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
                 {f.q}
                 <span class="faq__plus" aria-hidden="true" />
               </summary>
-              <p>{f.a}</p>
+              <p set:html={jaText(f.a)} />
             </details>
           ))
         }
@@ -255,7 +263,7 @@ const gh = `<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" 
   <section class="finale">
     <div class="wrap" data-reveal>
       <img class="finale__mark" src="/brand/icon-256.png" alt="" width="88" height="88" />
-      <p class="finale__line">{t.cta.line}</p>
+      <p class="finale__line" set:html={jaHtml(t.cta.line)} />
       <div class="hero__cta">
         <a class="btn btn--primary btn--lg" href={RELEASES} data-dl="auto">
           <span set:html={ic("download", 18)} />{t.cta.button}
