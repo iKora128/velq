@@ -14,6 +14,6 @@ path = "src/lib.rs"
 anyhow.workspace = true
 # Pinned to the exact version shirushi builds against so the high-level client API
 # (Client::builder / connect_with / attach_session / read_update / MatchDispatch) matches.
-agent-client-protocol = "=1.2.0"
+agent-client-protocol = "=1.3.0"
 blocking = "1"
 futures = "0.3"
