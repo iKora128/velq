@@ -23,7 +23,7 @@
     "dedupe": "pnpm dedupe"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.1.0"
+    "@biomejs/biome": "^2.5.5"
   },
   "engines": {
     "node": ">=20",
