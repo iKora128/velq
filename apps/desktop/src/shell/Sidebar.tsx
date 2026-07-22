@@ -5,7 +5,6 @@ import {
   LayoutGrid,
   List,
   ListTree,
-  PanelLeft,
   Search,
   X,
 } from "lucide-react";
@@ -16,7 +15,6 @@ import { useT } from "@/i18n/useT";
 import type { SidebarView } from "@/ipc/types";
 import { useFiles } from "@/store/files";
 import { useSettings } from "@/store/settings";
-import { useUI } from "@/store/ui";
 import { useVault } from "@/store/vault";
 import { cn } from "@/util/cn";
 import { GridBrowser } from "./GridBrowser";
@@ -53,17 +51,6 @@ export function Sidebar({ finder = false, full = false }: { finder?: boolean; fu
   return (
     <aside className={cn("sidebar", full && "sidebar--full")} data-view={view}>
       <div className="pane-head">
-        {!full && (
-          <button
-            type="button"
-            className="icon-btn"
-            title={t("common.toggleSidebar")}
-            aria-label={t("common.toggleSidebar")}
-            onClick={() => useUI.getState().toggleSidebar()}
-          >
-            <PanelLeft size={16} />
-          </button>
-        )}
         <div className="search">
           <Search size={15} />
           <input
