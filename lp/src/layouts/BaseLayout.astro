@@ -26,6 +26,13 @@ const fonts =
 <!doctype html>
 <html lang={lang}>
   <head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-86ZGV8G8NH"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-86ZGV8G8NH');
+    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script is:inline define:vars={{ isEn: lang === "en", jaPath: `/ja${enPath}` }}>
