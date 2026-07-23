@@ -57,6 +57,8 @@ export function Toolbar() {
   const isHtml = useDoc((s) => s.doc?.language === "html");
   const isMarkdown = useDoc((s) => s.doc?.language === "markdown");
   const isVelq = useDoc((s) => s.doc?.language === "velq");
+  // A view-only document (a PDF): no edit modes, templates, or save history apply.
+  const isViewer = useDoc((s) => s.doc?.viewer != null);
   const activeDocId = useDoc((s) => s.doc?.id);
   const content = useDoc((s) => s.content);
   const overrides = useHtmlRuntime((s) => s.overrides);
@@ -67,7 +69,7 @@ export function Toolbar() {
 
   // Templates style the rendered-Markdown iframe, which only Split shows
   // (HTML documents carry their own styles).
-  const showTemplates = !diffing && isMarkdown && editorMode === "split";
+  const showTemplates = !diffing && !isViewer && isMarkdown && editorMode === "split";
 
   // A JS-driven HTML page (a deck that fits itself to the window) only renders
   // right with its scripts alive. Offer the toggle when the page has any and a
@@ -141,7 +143,7 @@ export function Toolbar() {
         className={cn("icon-btn", historyOpen && "icon-btn--active")}
         title={t("common.versionHistory")}
         aria-label={t("common.versionHistory")}
-        disabled={!hasDoc || isVelq}
+        disabled={!hasDoc || isVelq || isViewer}
         onClick={() => useHistory.getState().toggle()}
       >
         <History size={16} />
@@ -160,7 +162,7 @@ export function Toolbar() {
           </span>
         </button>
       )}
-      {!diffing && !isVelq && (
+      {!diffing && !isVelq && !isViewer && (
         <div className="seg" role="group" aria-label={t("toolbar.viewModeAria")}>
           {MODES.map((m) => {
             const Icon = m.icon;

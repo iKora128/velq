@@ -257,6 +257,10 @@ export const ja: Dict = {
   "contextmenu.trash": "ゴミ箱に入れる",
   "contextmenu.deleteN": "{count} 件をゴミ箱に入れる",
 
+  // ---- PDF ビューア ----
+  "pdf.openExternal": "外部アプリで開く",
+  "pdf.previewUnavailable": "ここでは PDF を表示できません",
+
   // ---- クイックルック ----
   "quicklook.close": "プレビューを閉じる",
   "quicklook.frameTitle": "クイックルックプレビュー",

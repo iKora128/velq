@@ -241,6 +241,17 @@
   color: var(--accent-text);
   font-weight: var(--weight-medium);
 }
+/* The file open in the editor: a solid accent ring (vs. selection's faint one) and
+ * a bolder label, so it stands out among the icon grid. */
+.tile.is-open,
+.tile.is-open:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+}
+.tile.is-open .tile__label {
+  color: var(--accent-text);
+  font-weight: var(--weight-semibold);
+}
 
 /* Drag-and-drop: folder tile / column row / ancestor crumb as a drop target
    (matches the sidebar tree's accent ring). */
@@ -254,5 +265,18 @@
 /* Multi-selected column row (distinct from the navigation trail's is-active). */
 .miller__row.is-selected {
   background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+
+/* The document currently open in the editor: an accent gutter bar marks it apart
+ * from selection/navigation, so the file in the viewer is easy to find. */
+.miller__row.is-open,
+.miller__row.is-open:hover {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+  font-weight: var(--weight-semibold);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.miller__row.is-open .miller__icon {
   color: var(--accent-text);
 }

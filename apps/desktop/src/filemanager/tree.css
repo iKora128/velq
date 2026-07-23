@@ -25,6 +25,18 @@
   background: var(--accent-subtle);
   color: var(--accent-text);
 }
+/* The document open in the editor: an accent gutter bar + bolder name, kept visible
+ * even when the selection is elsewhere, so the viewer's file is easy to spot. */
+.tree-row--open,
+.tree-row--open:hover {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+  font-weight: var(--weight-semibold);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.tree-row--open .tree-row__icon {
+  color: var(--accent-text);
+}
 
 .tree-row__caret {
   width: 16px;

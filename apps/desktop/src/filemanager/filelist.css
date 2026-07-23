@@ -57,6 +57,18 @@
 .filelist-card.is-selected:hover {
   background: var(--accent-subtle);
 }
+/* The document currently open in the editor. An accent left-bar (plus a bolder,
+ * accent-coloured title) makes it unmistakable which card is in the viewer — and it
+ * stays marked even when the click selection moves to another file. */
+.filelist-card.is-open,
+.filelist-card.is-open:hover {
+  background: var(--accent-subtle);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.filelist-card.is-open .filelist-card__title {
+  color: var(--accent-text);
+  font-weight: var(--weight-bold);
+}
 .filelist-card__title {
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
@@ -107,6 +119,13 @@
 .filelist-result.is-selected {
   background: var(--accent-subtle);
   color: var(--accent-text);
+}
+.filelist-result.is-open,
+.filelist-result.is-open:hover {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+  font-weight: var(--weight-semibold);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .filelist-result__icon {
   color: var(--text-muted);

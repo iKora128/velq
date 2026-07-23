@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Editor } from "@/editor/Editor";
+import { PdfView } from "@/editor/PdfView";
 import { RenderedView } from "@/editor/RenderedView";
 import { SplitView } from "@/editor/SplitView";
 import { canConvertToVelq } from "@/export/convert";
@@ -51,7 +52,10 @@ export function EditorPane() {
     useToast.getState().push(tr("hint.renderedEdit"));
   }, [isHtmlDoc]);
   const key = doc ? `${doc.id}:${rev}` : "none";
-  const showDiff = doc && diffVersion && baseContent != null;
+  // A PDF is view-only: it renders in the built-in viewer, skipping the editor,
+  // diff, and the convert/script banners entirely.
+  const isPdf = doc?.viewer === "pdf";
+  const showDiff = doc && !isPdf && diffVersion && baseContent != null;
 
   // A plain Markdown/HTML file (not one already inside a .velq) may be offered a
   // one-click "make a .velq copy" — dismissible, and NEVER automatic.
@@ -91,6 +95,8 @@ export function EditorPane() {
       <div className="editor-body">
         {!doc ? (
           <Welcome />
+        ) : isPdf && doc.path ? (
+          <PdfView key={key} path={doc.path} name={doc.name} />
         ) : showDiff ? (
           <DiffView base={baseContent} current={content} language={doc.language} />
         ) : effective === "split" ? (

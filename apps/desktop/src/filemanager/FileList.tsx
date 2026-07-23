@@ -29,6 +29,9 @@ export function FileList() {
   const searchQuery = useFiles((s) => s.searchQuery);
   const searchResults = useFiles((s) => s.searchResults);
   const openFile = useDoc((s) => s.openFile);
+  // The file whose document is showing in the editor right now — marked distinctly
+  // from the transient click selection so "which file am I looking at?" is obvious.
+  const activePath = useDoc((s) => s.doc?.path ?? null);
 
   const folder = selected
     ? selected.kind === "dir"
@@ -71,7 +74,11 @@ export function FileList() {
             <button
               type="button"
               key={n.path}
-              className={cn("filelist-result", selected?.path === n.path && "is-selected")}
+              className={cn(
+                "filelist-result",
+                selected?.path === n.path && "is-selected",
+                n.path === activePath && "is-open",
+              )}
               onClick={() => {
                 useFiles.getState().select(n);
                 if (n.kind === "file") void openFile(n, { preview: true });
@@ -153,7 +160,11 @@ export function FileList() {
           key={p.node.path}
           {...dnd.dragProps(p.node)}
           data-path={p.node.path}
-          className={cn("filelist-card", selection.has(p.node.path) && "is-selected")}
+          className={cn(
+            "filelist-card",
+            selection.has(p.node.path) && "is-selected",
+            p.node.path === activePath && "is-open",
+          )}
           onClick={(e) => {
             if (clickSelect(e, p.node, ordered)) void openFile(p.node, { preview: true });
           }}

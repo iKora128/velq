@@ -43,6 +43,7 @@ export function GridBrowser() {
   const rootName = useVault((s) => s.root?.name) ?? t("explorer.defaultName");
   const childrenByPath = useFiles((s) => s.childrenByPath);
   const selection = useFiles((s) => s.selection);
+  const activePath = useDoc((s) => s.doc?.path ?? null);
   const recentDocs = useSettings((s) => s.recentDocs);
   const [cwd, setCwd] = useState<string | null>(rootPath);
   const [added, setAdded] = useState<FileNode[]>([]);
@@ -221,6 +222,7 @@ export function GridBrowser() {
                       key={`ro:${n.path}`}
                       node={n}
                       selected={selection.has(n.path)}
+                      open={n.path === activePath}
                       onOpen={open}
                       onMenu={openMenu}
                     />
@@ -240,6 +242,7 @@ export function GridBrowser() {
                     key={`ra:${n.path}`}
                     node={n}
                     selected={selection.has(n.path)}
+                    open={n.path === activePath}
                     onOpen={open}
                     onMenu={openMenu}
                   />
@@ -256,6 +259,7 @@ export function GridBrowser() {
                     key={n.path}
                     node={n}
                     selected={selection.has(n.path)}
+                    open={n.path === activePath}
                     onOpen={open}
                     ordered={gridOrdered}
                     dnd={dnd}
@@ -274,6 +278,7 @@ export function GridBrowser() {
                     key={n.path}
                     node={n}
                     selected={selection.has(n.path)}
+                    open={n.path === activePath}
                     onOpen={open}
                     ordered={gridOrdered}
                     dnd={dnd}
@@ -293,6 +298,7 @@ export function GridBrowser() {
 function Tile({
   node,
   selected,
+  open,
   onOpen,
   ordered,
   dnd,
@@ -300,6 +306,7 @@ function Tile({
 }: {
   node: FileNode;
   selected: boolean;
+  open?: boolean;
   onOpen: (n: FileNode) => void;
   ordered?: FileNode[];
   dnd?: ReturnType<typeof useFileDnd>;
@@ -311,7 +318,12 @@ function Tile({
       type="button"
       {...(dnd ? dnd.dragProps(node) : {})}
       {...(isDir && dnd ? dnd.dropProps(node.path) : {})}
-      className={cn("tile", selected && "is-selected", dnd?.dropTarget === node.path && "is-drop")}
+      className={cn(
+        "tile",
+        selected && "is-selected",
+        open && "is-open",
+        dnd?.dropTarget === node.path && "is-drop",
+      )}
       title={node.name}
       data-path={ordered ? node.path : undefined}
       onClick={(e) => (ordered ? clickSelect(e, node, ordered) : useFiles.getState().select(node))}

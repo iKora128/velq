@@ -20,6 +20,7 @@ export function MillerColumns() {
   const selection = useFiles((s) => s.selection);
   const rootPath = useFiles((s) => s.rootPath);
   const childrenByPath = useFiles((s) => s.childrenByPath);
+  const activePath = useDoc((s) => s.doc?.path ?? null);
   const [trail, setTrail] = useState<string[]>([]);
   const [fileSel, setFileSel] = useState<string | null>(null);
 
@@ -94,6 +95,7 @@ export function MillerColumns() {
                         "miller__row",
                         active && "is-active",
                         selection.has(node.path) && "is-selected",
+                        !isDir && node.path === activePath && "is-open",
                         dnd.dropTarget === node.path && "is-drop",
                       )}
                       onClick={(e) => {

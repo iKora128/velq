@@ -21,6 +21,8 @@ export function Tree() {
   const renaming = useFiles((s) => s.renaming);
   const files = useFiles;
   const openFile = useDoc((s) => s.openFile);
+  // The file currently shown in the editor — marked apart from the click selection.
+  const activePath = useDoc((s) => s.doc?.path ?? null);
   const parentRef = useRef<HTMLDivElement>(null);
   const { dropTarget, dragProps, dropProps } = useFileDnd();
   const { openMenu, contextMenu } = useFileContextMenu();
@@ -77,6 +79,7 @@ export function Tree() {
               className={cn(
                 "tree-row",
                 selection.has(node.path) && "tree-row--selected",
+                node.path === activePath && "tree-row--open",
                 dropTarget === node.path && "tree-row--drop",
               )}
               style={{

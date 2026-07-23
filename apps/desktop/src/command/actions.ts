@@ -93,6 +93,9 @@ async function saveScratchAsFile(scratchId: string, content: string, language: s
 async function saveActive() {
   const { doc, content, markSaved } = useDoc.getState();
   if (!doc) return;
+  // A view-only document (a PDF) has no editable content — saving "" would wipe the
+  // file on disk. Nothing to persist.
+  if (doc.viewer) return;
   // An untitled scratch: "save" means "Save As" a plain .md/.html.
   if (!doc.path) {
     await saveScratchAsFile(doc.id, content, doc.language);

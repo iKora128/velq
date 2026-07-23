@@ -65,6 +65,12 @@
         "mimeType": "text/html",
         "description": "HTML Document",
         "role": "Editor"
+      },
+      {
+        "ext": ["pdf"],
+        "mimeType": "application/pdf",
+        "description": "PDF Document",
+        "role": "Viewer"
       }
     ]
   },

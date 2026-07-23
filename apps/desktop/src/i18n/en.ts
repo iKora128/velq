@@ -259,6 +259,10 @@ export const en = {
   "contextmenu.trash": "Move to Trash",
   "contextmenu.deleteN": "Move {count} items to Trash",
 
+  // ---- PDF viewer ----
+  "pdf.openExternal": "Open in default app",
+  "pdf.previewUnavailable": "PDF preview isn't available here.",
+
   // ---- Quick Look ----
   "quicklook.close": "Close preview",
   "quicklook.frameTitle": "Quick Look preview",

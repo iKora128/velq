@@ -24,6 +24,10 @@ export interface Doc {
   /** Set when this tab IS a `.velq` opened for editing: the package the inner HTML
    * came from. Saving writes the edited HTML back into it (never a loose file). */
   velqSource?: string;
+  /** A view-only document shown by a native viewer instead of the text editor
+   * (a PDF renders in the webview's built-in viewer). Its `content` stays empty —
+   * saving and history don't apply. */
+  viewer?: "pdf";
 }
 
 interface Tab {
@@ -151,6 +155,17 @@ function makeTab(
 export function langFromName(name: string): Lang {
   if (/\.velq$/i.test(name)) return "velq";
   return /\.html?$/i.test(name) ? "html" : "markdown";
+}
+
+/** A PDF isn't text — it's opened in a view-only viewer, never read into the editor. */
+export function isPdfName(name: string): boolean {
+  return /\.pdf$/i.test(name);
+}
+
+/** The Doc for a view-only PDF: no content is read from disk (the viewer loads the
+ * file itself), so the tab carries only its identity. */
+function pdfDoc(path: string, name: string): Doc {
+  return { id: path, path, name, language: "markdown", viewer: "pdf" };
 }
 
 /** Open a `.velq` the way the user prefers: a read-only tab in the main window
@@ -287,6 +302,12 @@ export const useDoc = create<DocState>((set, get) => ({
       await openVelq(node.path, { preview: opts?.preview ?? true });
       return;
     }
+    // A PDF opens in the built-in viewer, not the text editor (reading its bytes as
+    // text would land as garbage). The viewer loads the file straight from disk.
+    if (isPdfName(node.name)) {
+      get().open(pdfDoc(node.path, node.name), "", { preview: opts?.preview ?? true });
+      return;
+    }
     // A file opened from Velq's own browser is always editable — packaging to
     // `.velq` is an explicit action (command palette / "Package an HTML file" /
     // Export), never a side effect of opening.
@@ -307,6 +328,11 @@ export const useDoc = create<DocState>((set, get) => ({
     const name = path.split(/[/\\]/).pop() ?? path;
     if (/\.velq$/i.test(name)) {
       await openVelq(path);
+      return;
+    }
+    // A PDF (double-click / "Open with" / drag-to-dock) opens in the viewer.
+    if (isPdfName(name)) {
+      get().open(pdfDoc(path, name), "");
       return;
     }
     try {
@@ -514,7 +540,11 @@ export const useDoc = create<DocState>((set, get) => ({
     }),
 
   reloadTab: async (path) => {
-    if (!get().tabs.some((t) => t.doc.path === path)) return;
+    const target = get().tabs.find((t) => t.doc.path === path);
+    if (!target) return;
+    // A view-only doc (a PDF) holds no text to reload — the viewer reads the file
+    // itself. Reading its bytes as a string here would only produce garbage.
+    if (target.doc.viewer) return;
     try {
       // A `.velq` tab edits the package's INNER document, not the raw ZIP on disk.
       // Reading the file as bytes (`readFile`) would hand the editor the binary ZIP

@@ -28,6 +28,7 @@ fn is_openable(path: &str) -> bool {
         || p.ends_with(".markdown")
         || p.ends_with(".html")
         || p.ends_with(".htm")
+        || p.ends_with(".pdf")
 }
 
 /// Frontend calls this on startup to fetch any files it was launched with.
@@ -384,6 +385,14 @@ pub fn run() {
             if let Ok(p) = std::env::var("VELQ_OPEN_VELQ") {
                 if !p.is_empty() {
                     let _ = commands::velq::spawn_viewer(app.handle(), &p);
+                }
+            }
+            // Test seam: open a plain document (e.g. a PDF) on startup as if it came
+            // from a file association, when VELQ_OPEN_FILE is set. Mirrors the macOS
+            // Opened path the frontend pulls via `get_opened_files`.
+            if let Ok(p) = std::env::var("VELQ_OPEN_FILE") {
+                if !p.is_empty() {
+                    *app.state::<OpenedFilesState>().paths.lock().unwrap() = vec![p];
                 }
             }
             // Windows/Linux deliver associated files as CLI args at launch.

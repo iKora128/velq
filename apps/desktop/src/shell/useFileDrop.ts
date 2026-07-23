@@ -20,7 +20,7 @@ const dirOf = (p: string) => p.slice(0, Math.max(p.lastIndexOf("/"), p.lastIndex
  * `attachments/` beside the doc and insert links at the caret (W1). */
 async function importImagesIntoDoc(paths: string[]): Promise<boolean> {
   const doc = useDoc.getState().doc;
-  if (!doc?.path || doc.language !== "markdown") return false;
+  if (!doc?.path || doc.language !== "markdown" || doc.viewer) return false;
   if (!paths.every((p) => IMAGE_EXT.test(p))) return false;
   const destDir = `${dirOf(doc.path)}/attachments`;
   let ok = 0;
