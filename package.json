@@ -1,7 +1,7 @@
 {
   "name": "velq",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Markdown / HTML viewer & editor with .velq packaging",
   "author": "Daichi Nagashima",
   "license": "Apache-2.0",
