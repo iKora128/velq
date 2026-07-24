@@ -877,4 +877,47 @@ mod tests {
             "エージェントがファイルを実際に書き換えた（中身に GOODBYE を含む）: {after:?}"
         );
     }
+
+    /// 診断: セッション開始時にエージェントが広告する権限モード・設定オプション（モデル/思考レベル）を
+    /// 実際に何を送ってくるか覗く。UI のセレクタに出せる材料があるかの確認用（一時）。
+    /// `cargo test -p velq-acp -- --ignored --nocapture live_capabilities`
+    #[test]
+    #[ignore = "claude-agent-acp（実プロセス）+ 認証が要る"]
+    fn live_capabilities() {
+        let dir = std::env::temp_dir().join(format!("velq-acp-live-caps-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let command = AgentCommand::claude(&dir).expect("claude-agent-acp が PATH に無い");
+        let (prompt_tx, prompt_rx) = mpsc::unbounded();
+        let (event_tx, mut event_rx) = mpsc::unbounded();
+        // 何も prompt せず、開始時に流れる Modes / Configs / Usage だけ拾って即終了する。
+        prompt_tx
+            .unbounded_send(SessionCommand::Prompt("hi".to_string()))
+            .expect("send");
+        drop(prompt_tx);
+
+        futures::executor::block_on(async move {
+            let session = run_session(command, prompt_rx, event_tx);
+            let drain = async move {
+                while let Some(event) = event_rx.next().await {
+                    match event {
+                        AgentEvent::Modes { modes, current } => {
+                            eprintln!("[MODES] current={current} 一覧={modes:?}");
+                        }
+                        AgentEvent::Configs(configs) => {
+                            eprintln!("[CONFIGS] {configs:#?}");
+                        }
+                        AgentEvent::Usage { used, size } => {
+                            eprintln!("[USAGE] used={used} size={size}");
+                        }
+                        AgentEvent::TurnEnded => eprintln!("[turn ended]"),
+                        AgentEvent::Failed(error) => eprintln!("[failed] {error}"),
+                        _ => {}
+                    }
+                }
+            };
+            let (session_result, ()) = futures::join!(session, drain);
+            let _ = session_result;
+        });
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

@@ -6,16 +6,27 @@ import "./contextmenu.css";
 
 export type MenuEntry =
   | { separator: true }
-  | { label: string; icon?: ReactNode; onClick: () => void; danger?: boolean; disabled?: boolean };
+  | {
+      label: string;
+      icon?: ReactNode;
+      onClick: () => void;
+      danger?: boolean;
+      disabled?: boolean;
+      /** Mark the currently-selected entry (shows a trailing check). */
+      active?: boolean;
+    };
 
 interface Props {
   x: number;
   y: number;
   entries: MenuEntry[];
   onClose: () => void;
+  /** Anchor the menu's bottom edge at `y` and grow upward — for menus opened from a
+   *  control near the bottom of the screen (e.g. the assistant's selector pills). */
+  openUp?: boolean;
 }
 
-export function ContextMenu({ x, y, entries, onClose }: Props) {
+export function ContextMenu({ x, y, entries, onClose, openUp }: Props) {
   const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x, y });
@@ -26,11 +37,11 @@ export function ContextMenu({ x, y, entries, onClose }: Props) {
     if (!el) return;
     const r = el.getBoundingClientRect();
     let nx = x;
-    let ny = y;
+    let ny = openUp ? y - r.height : y;
     if (x + r.width > window.innerWidth - 8) nx = window.innerWidth - r.width - 8;
-    if (y + r.height > window.innerHeight - 8) ny = window.innerHeight - r.height - 8;
+    if (ny + r.height > window.innerHeight - 8) ny = window.innerHeight - r.height - 8;
     setPos({ x: Math.max(8, nx), y: Math.max(8, ny) });
-  }, [x, y]);
+  }, [x, y, openUp]);
 
   useLayoutEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -73,7 +84,12 @@ export function ContextMenu({ x, y, entries, onClose }: Props) {
             }}
           >
             {e.icon && <span className="ctx-menu__icon">{e.icon}</span>}
-            {e.label}
+            <span className="ctx-menu__label">{e.label}</span>
+            {e.active && (
+              <span className="ctx-menu__check" aria-hidden="true">
+                ✓
+              </span>
+            )}
           </button>
         ),
       )}

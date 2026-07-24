@@ -92,9 +92,7 @@
 .agent-thought {
   border-left: 2px solid var(--border-subtle);
   padding-left: var(--space-3);
-  font-size: var(--text-xs);
   color: var(--text-muted);
-  white-space: pre-wrap;
   word-break: break-word;
 }
 
@@ -197,14 +195,52 @@
   border-top: 1px solid var(--border-subtle);
   margin: var(--space-4) 0;
 }
-
-/* Streaming indicator */
-.agent-working {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+/* GFM task lists (`- [ ]` / `- [x]`): hang the checkbox, drop the bullet. */
+.agent-md li:has(> input[type="checkbox"]) {
+  list-style: none;
+  margin-left: calc(-1 * var(--space-4));
+}
+.agent-md input[type="checkbox"] {
+  margin-right: var(--space-2);
+  accent-color: var(--accent);
+  vertical-align: -1px;
+}
+.agent-md table {
+  border-collapse: collapse;
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-xs);
+}
+.agent-md th,
+.agent-md td {
+  border: 1px solid var(--border-subtle);
+  padding: 3px var(--space-2);
+  text-align: left;
+}
+.agent-md th {
+  background: var(--surface-sunken);
+  font-weight: var(--weight-semibold);
+}
+/* Keep the thinking stream visually subordinate to the reply, even rendered as Markdown. */
+.agent-thought .agent-md {
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+
+/* Live-reply caret: a blinking block after the last line of a streaming message. */
+.agent-md.is-streaming > :last-child::after {
+  content: "▌";
+  display: inline-block;
+  margin-left: 1px;
+  color: var(--accent);
+  animation: agent-blink 1s step-start infinite;
+}
+.agent-thought .agent-md.is-streaming > :last-child::after {
+  color: var(--text-muted);
+}
+@keyframes agent-blink {
+  50% {
+    opacity: 0;
+  }
 }
 .agent-spin {
   animation: agent-spin 0.9s linear infinite;
@@ -225,12 +261,22 @@
   flex-direction: column;
   gap: var(--space-2);
 }
+.agent-plan__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .agent-plan__title {
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+.agent-plan__count {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 .agent-plan__item {
   display: flex;
@@ -281,11 +327,60 @@
 }
 .agent-permission__file {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.agent-permission__filehead {
+  display: flex;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-xs);
   font-family: var(--font-mono);
   color: var(--text-secondary);
+}
+.agent-permission__path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* "What will change": a compact, scrollable ±line preview of the proposed edit. */
+.agent-diff {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.agent-diff__line {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  white-space: pre;
+}
+.agent-diff__line.is-add {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+}
+.agent-diff__line.is-del {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+.agent-diff__sign {
+  flex: none;
+  width: 1ch;
+  color: var(--text-muted);
+}
+.agent-diff__line.is-add .agent-diff__sign {
+  color: var(--success);
+}
+.agent-diff__line.is-del .agent-diff__sign {
+  color: var(--danger);
+}
+.agent-diff__more {
+  padding: 2px var(--space-2);
+  color: var(--text-muted);
+  font-size: 10.5px;
 }
 .agent-permission__badge {
   padding: 0 6px;
@@ -321,27 +416,148 @@
   background: var(--accent-hover);
 }
 
-/* Advertised mode / model / thinking-level pickers */
+/* Session controls + live state, grouped just above the composer. */
+.agent-toolbar {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Assistant / model / effort / mode pills (populated from what the agent advertises) */
 .agent-selectors {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  border-top: 1px solid var(--border-subtle);
+  padding: var(--space-3) var(--space-4);
 }
-.agent-select {
+.agent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
   font-size: var(--text-xs);
   color: var(--text-secondary);
   background: var(--surface-sunken);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  padding: 3px var(--space-3);
-  max-width: 48%;
+  padding: 3px var(--space-2) 3px var(--space-3);
   cursor: pointer;
 }
-.agent-select:hover {
+.agent-pill:hover:not(:disabled) {
   color: var(--text);
   border-color: var(--border);
+}
+.agent-pill:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.agent-pill__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-pill__chev {
+  flex: none;
+  opacity: 0.55;
+}
+.agent-pill .agent-icon {
+  flex: none;
+}
+
+/* Live status (left) + always-visible context-usage meter (right) */
+.agent-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.agent-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-xs);
+}
+.agent-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--text-muted);
+  flex: none;
+}
+.agent-status__label {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agent-status__elapsed {
+  flex: none;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.agent-status.is-idle .agent-status__label {
+  color: var(--text-muted);
+}
+.agent-status.is-thinking .agent-status__dot,
+.agent-status.is-writing .agent-status__dot {
+  background: var(--accent);
+  animation: agent-pulse 1.2s ease-in-out infinite;
+}
+.agent-status.is-thinking .agent-status__label,
+.agent-status.is-writing .agent-status__label {
+  color: var(--text);
+}
+.agent-status.is-blocked .agent-status__dot {
+  background: var(--warning);
+  animation: agent-pulse 1.2s ease-in-out infinite;
+}
+.agent-status.is-blocked .agent-status__label {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+@keyframes agent-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.agent-tokens {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+.agent-tokens__bar {
+  width: 56px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+  flex: none;
+}
+.agent-tokens__fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.agent-tokens.is-full .agent-tokens__fill {
+  background: var(--warning);
+}
+.agent-tokens__label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* Composer */

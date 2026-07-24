@@ -65,12 +65,18 @@ interface AcpState {
   velqEdit: VelqEdit | null;
   tokensUsed: number;
   tokensMax: number;
+  /** When the in-flight turn started (ms epoch) — drives the elapsed readout; null when idle. */
+  turnStartedAt: number | null;
   input: string;
 
   toggle: () => void;
   show: () => void;
   hide: () => void;
   init: () => Promise<void>;
+  /** Start the resident session eagerly (on panel open) so the model / mode / token
+   *  readouts populate before the first prompt. Best-effort: silent if there's no open
+   *  folder or the agent isn't installed yet (the first prompt still starts it lazily). */
+  ensureSession: () => Promise<void>;
   setInput: (v: string) => void;
   /** Change the persisted default agent (drops any running session so the next prompt restarts). */
   setDefaultAgent: (label: string) => void;
@@ -135,16 +141,17 @@ export const useAcp = create<AcpState>((set, get) => ({
   velqEdit: null,
   tokensUsed: 0,
   tokensMax: 0,
+  turnStartedAt: null,
   input: "",
 
   toggle: () => {
     const next = !get().open;
     set({ open: next });
-    if (next && get().agents.length === 0) void get().init();
+    if (next) void get().ensureSession();
   },
   show: () => {
     set({ open: true });
-    if (get().agents.length === 0) void get().init();
+    void get().ensureSession();
   },
   hide: () => set({ open: false }),
 
@@ -153,6 +160,26 @@ export const useAcp = create<AcpState>((set, get) => ({
       set({ agents: await listAgents() });
     } catch (e) {
       console.error("agent_list_agents failed", e);
+    }
+  },
+
+  ensureSession: async () => {
+    if (get().sessionActive) return;
+    if (get().agents.length === 0) await get().init();
+    const root = useVault.getState().root?.path;
+    if (!root) return; // no folder open — nothing to work against yet
+    const label = useSettings.getState().agentLabel || "Claude Code";
+    // Only auto-start when the agent is actually installed; otherwise the panel shows
+    // its setup prompt and the first prompt starts it lazily once it's ready.
+    const info = get().agents.find((a) => a.label === label);
+    if (info && info.availability === "missing") return;
+    try {
+      await startAgentSession(root, label);
+      set({ sessionActive: true });
+    } catch (e) {
+      // Best-effort: stay lazy. The next prompt surfaces any real error.
+      console.error("eager agent session start failed", e);
+      set({ sessionActive: false });
     }
   },
 
@@ -212,6 +239,7 @@ export const useAcp = create<AcpState>((set, get) => ({
       entries: [...s.entries, { id: entrySeq++, kind: "user", text: trimmed }],
       input: "",
       running: true,
+      turnStartedAt: Date.now(),
     }));
     try {
       await sendAgentPrompt(editorContext(velqWorking) + trimmed);
@@ -219,6 +247,7 @@ export const useAcp = create<AcpState>((set, get) => ({
       set((s) => ({
         entries: [...s.entries, { id: entrySeq++, kind: "agent", text: `⚠️ ${String(e)}` }],
         running: false,
+        turnStartedAt: null,
       }));
     }
   },
@@ -244,7 +273,20 @@ export const useAcp = create<AcpState>((set, get) => ({
 
   stop: () => {
     void stopAgentSession().catch(() => {});
-    set({ sessionActive: false, running: false, pending: null, velqEdit: null });
+    // Also drop the agent-advertised state (models / modes / token usage) — it belongs to
+    // the session that's ending, so it mustn't linger when switching to another assistant.
+    set({
+      sessionActive: false,
+      running: false,
+      pending: null,
+      velqEdit: null,
+      turnStartedAt: null,
+      configs: [],
+      modes: [],
+      currentModeId: null,
+      tokensUsed: 0,
+      tokensMax: 0,
+    });
   },
 
   finishVelqEdit: async () => {
@@ -289,16 +331,23 @@ export const useAcp = create<AcpState>((set, get) => ({
       case "permissionRequest":
         return set({ pending: { id: u.id, title: u.title, diffs: u.diffs, options: u.options } });
       case "turnEnded": {
-        set({ running: false });
+        set({ running: false, turnStartedAt: null });
         if (get().velqEdit) void get().finishVelqEdit();
         return;
       }
       case "sessionEnded":
-        return set({ sessionActive: false, running: false, pending: null, velqEdit: null });
+        return set({
+          sessionActive: false,
+          running: false,
+          pending: null,
+          velqEdit: null,
+          turnStartedAt: null,
+        });
       case "failed":
         return set((s) => ({
           entries: [...s.entries, { id: entrySeq++, kind: "agent", text: `⚠️ ${u.message}` }],
           running: false,
+          turnStartedAt: null,
         }));
     }
   },

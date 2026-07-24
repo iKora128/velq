@@ -43,6 +43,21 @@
 .ctx-menu__item:hover .ctx-menu__icon {
   color: inherit;
 }
+.ctx-menu__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ctx-menu__check {
+  flex: none;
+  margin-left: var(--space-3);
+  color: var(--accent-text);
+  font-size: var(--text-xs);
+}
+.ctx-menu__item:hover .ctx-menu__check {
+  color: inherit;
+}
 .ctx-menu__sep {
   height: 1px;
   margin: var(--space-2) var(--space-1);
