@@ -308,15 +308,16 @@ export const useDoc = create<DocState>((set, get) => ({
       get().open(pdfDoc(node.path, node.name), "", { preview: opts?.preview ?? true });
       return;
     }
-    // A file opened from Velq's own browser is always editable — packaging to
-    // `.velq` is an explicit action (command palette / "Package an HTML file" /
-    // Export), never a side effect of opening.
+    // Opening a document from the browser is a "view" first: it lands in the
+    // read-only Preview (the template skin for Markdown, the page for HTML), like
+    // opening a file in a viewer. Editing is one toolbar click away and the choice
+    // sticks per tab. Packaging to `.velq` stays explicit — never a side effect.
     try {
       const fc = await readFile(node.path);
       get().open(
         { id: node.path, path: node.path, name: node.name, language: langFromName(node.name) },
         fc.content,
-        { preview: opts?.preview ?? true },
+        { preview: opts?.preview ?? true, mode: "preview" },
       );
     } catch (e) {
       console.error("read_file failed", node.path, e);

@@ -1120,3 +1120,35 @@ screen had gone fully center-aligned ("画面の全てが中心揃え … そう
   content reads normally: left-aligned headers, and each field a label-left / control-right row that
   wraps wide controls (theme cards, the 7 preview templates) onto their own line.
 - Verified: cargo check · tsc · Biome · vite build clean; the app boots with no panic.
+
+## M39 — A standalone, skinned Preview mode for Markdown
+
+Gap the user hit: Split shows the templated preview on the right, but there was no way to see a
+Markdown document *alone*, full-width and read-only, with the skin on — "Live" for Markdown is the
+CodeMirror inline-WYSIWYG editor, so trying to "just preview" dropped you back into editing.
+
+- **New `preview` editor mode** → a 4th toolbar button **Preview / プレビュー** (BookOpen), plus a
+  palette command and a Settings default-view option. Renders `PreviewView`: a read-only, full-width
+  `PreviewPane` — Markdown through the chosen template, HTML as the page itself. No editor chrome.
+- The **template picker now shows in Preview too** (not just Split), so you can switch skins while
+  reading. Distinct from Live (edits in place) — Preview is purely the finished look.
+- Verified headless (mock UI): the Preview button renders the sample Markdown skinned + read-only,
+  full width. tsc · Biome · 94 Vitest green. Frontend-only (no Rust); native View menu still lists
+  Source/Split/Live — adding "Preview" there is a small follow-up.
+
+## M40 — Open = view; import lands you on the file
+
+Two "この辺の使い勝手が変" fixes the user hit right after Preview landed.
+
+- **Opening a doc from the browser opens the viewer.** `openFile` now opens Markdown/HTML in the
+  read-only **Preview** (rendered) mode instead of the source editor — double-click a file and you
+  see the finished document, like a viewer. It's a per-tab choice, so switching that tab to
+  Source/Split/Live to edit sticks; `.velq` and PDF already opened in their viewers. Trade-off:
+  editing is now one toolbar click after opening (noted — can split single=view / double=edit if it
+  chafes).
+- **Import now selects + opens.** `importRawIntoVault` used to copy + refresh + toast and leave you
+  hunting; it now **highlights** the imported file in the browser and, for a single document, opens
+  it (images just get selected — opening one as text would be garbage). Matches the drop-to-package
+  path, which already opened its `.velq`.
+- Verified: a store test proves `openFile` lands a Markdown file in Preview mode; tsc · Biome · 102
+  Vitest green. Frontend-only.

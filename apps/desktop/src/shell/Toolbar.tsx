@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Bot,
   Check,
   Code,
@@ -30,6 +31,7 @@ const MODES: { id: EditorMode; label: MsgKey; icon: typeof Code }[] = [
   { id: "source", label: "settings.editor.source", icon: Code },
   { id: "split", label: "settings.editor.split", icon: Columns2 },
   { id: "live", label: "settings.editor.live", icon: Eye },
+  { id: "preview", label: "settings.editor.preview", icon: BookOpen },
 ];
 
 const TEMPLATES: { id: PreviewTemplate; label: MsgKey }[] = [
@@ -69,7 +71,8 @@ export function Toolbar() {
 
   // Templates style the rendered-Markdown iframe, which only Split shows
   // (HTML documents carry their own styles).
-  const showTemplates = !diffing && !isViewer && isMarkdown && editorMode === "split";
+  const showTemplates =
+    !diffing && !isViewer && isMarkdown && (editorMode === "split" || editorMode === "preview");
 
   // A JS-driven HTML page (a deck that fits itself to the window) only renders
   // right with its scripts alive. Offer the toggle when the page has any and a

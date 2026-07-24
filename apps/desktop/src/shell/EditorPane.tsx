@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Editor } from "@/editor/Editor";
 import { PdfView } from "@/editor/PdfView";
+import { PreviewView } from "@/editor/PreviewView";
 import { RenderedView } from "@/editor/RenderedView";
 import { SplitView } from "@/editor/SplitView";
 import { canConvertToVelq } from "@/export/convert";
@@ -103,6 +104,13 @@ export function EditorPane() {
           <SplitView key={key} doc={doc} content={content} />
         ) : effective === "rendered" ? (
           <RenderedView key={key} content={content} />
+        ) : effective === "preview" ? (
+          <PreviewView
+            key={key}
+            content={content}
+            docId={doc.id}
+            language={doc.language === "html" ? "html" : "markdown"}
+          />
         ) : (
           <Editor key={key} doc={doc} content={content} live={effective === "live"} />
         )}

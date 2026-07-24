@@ -1,6 +1,7 @@
 import { t } from "@/i18n";
+import type { FileNode } from "@/ipc/types";
 import { importFile } from "@/ipc/vault";
-import { describeError } from "@/store/doc";
+import { describeError, useDoc } from "@/store/doc";
 import { useFiles } from "@/store/files";
 import { useToast } from "@/store/toast";
 import { useVault } from "@/store/vault";
@@ -21,7 +22,12 @@ export async function convertDroppedToVelq(paths: string[]): Promise<void> {
   }
 }
 
-/** Copy dropped files into the open vault AS-IS — no packaging, nothing converted. */
+/** Document types worth opening straight after import (an image just gets selected). */
+const OPENABLE = /\.(md|markdown|html?|velq|pdf)$/i;
+
+/** Copy dropped files into the open vault AS-IS — no packaging, nothing converted.
+ * Importing lands you ON the file: it's selected in the browser and (for a single
+ * document) opened, so you're not left hunting for where it went. */
 export async function importRawIntoVault(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   const vault = useVault.getState().root;
@@ -30,9 +36,10 @@ export async function importRawIntoVault(paths: string[]): Promise<void> {
     return;
   }
   let added = 0;
+  let last: FileNode | null = null;
   for (const p of paths) {
     try {
-      await importFile(p, vault.path);
+      last = await importFile(p, vault.path);
       added += 1;
     } catch (e) {
       console.error("import failed", p, e);
@@ -41,6 +48,10 @@ export async function importRawIntoVault(paths: string[]): Promise<void> {
   }
   if (added > 0) {
     await useFiles.getState().loadDir(vault.path);
+    if (last) {
+      useFiles.getState().select(last); // highlight the imported file in the browser
+      if (added === 1 && OPENABLE.test(last.name)) void useDoc.getState().openFile(last);
+    }
     useToast
       .getState()
       .push(

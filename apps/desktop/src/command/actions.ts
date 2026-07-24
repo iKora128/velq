@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Bot,
   Code,
   Columns2,
@@ -200,6 +201,12 @@ export const ACTIONS: Action[] = [
     titleKey: "action.viewLive",
     icon: Eye,
     run: () => useSettings.getState().update({ editorMode: "live" }),
+  },
+  {
+    id: "view-preview",
+    titleKey: "action.viewPreview",
+    icon: BookOpen,
+    run: () => useSettings.getState().update({ editorMode: "preview" }),
   },
   {
     id: "assistant",

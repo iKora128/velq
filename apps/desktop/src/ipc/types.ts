@@ -47,7 +47,7 @@ export interface FilePreview {
 
 export type ThemePref = "light" | "dark" | "system";
 export type Density = "comfortable" | "compact";
-export type EditorMode = "source" | "split" | "live";
+export type EditorMode = "source" | "split" | "live" | "preview";
 /** Markdown preview look — see `@/preview/previewStyles`. */
 export type PreviewTemplate = "paper" | "docs" | "note" | "magazine" | "tech" | "sky" | "glass";
 /** Where a .velq opens: a tab in the main window, or its own window. */

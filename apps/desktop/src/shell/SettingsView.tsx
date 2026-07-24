@@ -109,6 +109,7 @@ export function SettingsView() {
                 { value: "source", label: t("settings.editor.source") },
                 { value: "split", label: t("settings.editor.split") },
                 { value: "live", label: t("settings.editor.live") },
+                { value: "preview", label: t("settings.editor.preview") },
               ]}
             />
           </Field>
