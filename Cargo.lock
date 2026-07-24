@@ -5357,7 +5357,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "velq-acp"
-version = "0.1.4"
+version = "0.3.0"
 dependencies = [
  "agent-client-protocol",
  "anyhow",
@@ -5367,7 +5367,7 @@ dependencies = [
 
 [[package]]
 name = "velq-bundler"
-version = "0.1.4"
+version = "0.3.0"
 dependencies = [
  "futures",
  "lol_html",
@@ -5382,7 +5382,7 @@ dependencies = [
 
 [[package]]
 name = "velq-core"
-version = "0.1.4"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -5392,7 +5392,7 @@ dependencies = [
 
 [[package]]
 name = "velq-desktop"
-version = "0.1.4"
+version = "0.3.0"
 dependencies = [
  "base64 0.22.1",
  "block2",
@@ -5427,7 +5427,7 @@ dependencies = [
 
 [[package]]
 name = "velq-search"
-version = "0.1.4"
+version = "0.3.0"
 dependencies = [
  "serde",
  "thiserror 2.0.18",
@@ -5435,7 +5435,7 @@ dependencies = [
 
 [[package]]
 name = "velq-vcs"
-version = "0.1.4"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "git2",
