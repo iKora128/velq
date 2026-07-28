@@ -37,12 +37,23 @@ const fonts =
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script is:inline define:vars={{ isEn: lang === "en", jaPath: `/ja${enPath}` }}>
       // First-visit language redirect — client-side fallback for the edge Function
-      // in functions/_middleware.js (which only runs once Cloudflare Pages picks up
-      // the functions dir). English pages only, when the browser prefers Japanese
-      // and no explicit English choice (velq_lang cookie, set by the nav switcher).
+      // in /functions/_middleware.js, for the case where the Function is missing
+      // or errors. English pages only, when the browser prefers Japanese and no
+      // explicit English choice (velq_lang cookie, set by the nav switcher).
       (function () {
         if (!isEn) return;
         try {
+          // Crawlers are never redirected. Googlebot executes this script, and a
+          // JS redirect would make every English page look like a redirect to its
+          // /ja/ twin and drop it from the index. Keep in sync with BOT in
+          // /functions/_middleware.js.
+          if (
+            navigator.webdriver ||
+            /bot|crawl|spider|slurp|mediapartners|bingpreview|facebookexternalhit|embedly|quora link preview|pinterest|redditbot|vkshare|w3c_validator|whatsapp|telegram|discord|slack|twitterbot|linkedinbot|applebot|lighthouse|headlesschrome/i.test(
+              navigator.userAgent || "",
+            )
+          )
+            return;
           var c = document.cookie.match(/(?:^|;\s*)velq_lang=(en|ja)/);
           if (c && c[1] === "en") return;
           var prefersJa = (navigator.languages || [navigator.language || ""]).some(

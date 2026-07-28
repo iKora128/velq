@@ -9,8 +9,11 @@
 //     (paired with the hreflang tags already in <head>).
 //   • Only real HTML navigations are touched — assets and the /ja/ tree pass through.
 //
-// Lives outside Astro's build: `wrangler pages deploy dist` compiles ./functions
-// automatically and layers it in front of the static assets.
+// MUST live at the repository root, not under lp/. The Cloudflare Pages project
+// `velq` is Git-connected with its root directory set to the repo root and its
+// build output set to `lp/dist`, and Pages only compiles a `functions/` directory
+// found at that root directory. It sat in lp/functions/ until 2026-07-28 and was
+// therefore never deployed — see docs/seo-log.md.
 
 const COOKIE = "velq_lang";
 const ONE_YEAR = 60 * 60 * 24 * 365;

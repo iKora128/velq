@@ -27,6 +27,9 @@ docs/brand/
 # Astro cache
 lp/.astro/
 
+# Wrangler local state (`wrangler pages dev` for the /functions middleware)
+.wrangler/
+
 # OS / editor
 .DS_Store
 Thumbs.db
