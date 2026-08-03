@@ -32,7 +32,13 @@ pub struct Version {
     pub id: String,
     pub time: i64,
     pub label: Option<String>,
+    /// English fallback, e.g. "3 added · 1 removed". The UI builds its own
+    /// localized label from `added`/`removed` — this is for headless callers.
     pub summary: String,
+    /// Lines this version added, for the UI to phrase in the user's language.
+    pub added: usize,
+    /// Lines this version removed.
+    pub removed: usize,
 }
 
 /// One line in a unified diff (for summaries + headless tests).
@@ -147,11 +153,14 @@ impl History {
             .ok()
             .and_then(|p| content_at(&self.repo, &p, rel))
             .unwrap_or_default();
+        let (added, removed) = count_changes(&old, &new);
         Ok(Version {
             id: commit.id().to_string(),
             time: commit.time().seconds(),
             label: None,
             summary: summarize(&old, &new),
+            added,
+            removed,
         })
     }
 }
@@ -183,8 +192,8 @@ fn content_at(repo: &Repository, commit: &Commit, rel: &Path) -> Option<String> 
     Some(String::from_utf8_lossy(blob.content()).into_owned())
 }
 
-/// A friendly one-line summary of a change, e.g. "3 added · 1 removed".
-pub fn summarize(old: &str, new: &str) -> String {
+/// Lines added and removed between two revisions, as `(added, removed)`.
+pub fn count_changes(old: &str, new: &str) -> (usize, usize) {
     let diff = TextDiff::from_lines(old, new);
     let mut added = 0usize;
     let mut removed = 0usize;
@@ -195,6 +204,16 @@ pub fn summarize(old: &str, new: &str) -> String {
             ChangeTag::Equal => {}
         }
     }
+    (added, removed)
+}
+
+/// A friendly one-line summary of a change, e.g. "3 added · 1 removed".
+///
+/// English only, and deliberately so: the desktop UI phrases this itself from
+/// `Version::added`/`removed` so it can follow the user's language. Kept for
+/// headless callers and tests.
+pub fn summarize(old: &str, new: &str) -> String {
+    let (added, removed) = count_changes(old, new);
     match (added, removed) {
         (0, 0) => "No changes".into(),
         (a, 0) => format!("{a} line{} added", plural(a)),
@@ -294,5 +313,30 @@ mod tests {
         assert_eq!(summarize("a\nb\n", "a\nb\nc\n"), "1 line added");
         assert_eq!(summarize("a\nb\n", "a\n"), "1 line removed");
         assert_eq!(summarize("a\n", "a\n"), "No changes");
+    }
+
+    #[test]
+    fn counts_feed_the_localized_ui() {
+        // The UI phrases the summary itself, so the raw counts have to be right.
+        assert_eq!(count_changes("a\nb\n", "a\nb\nc\n"), (1, 0));
+        assert_eq!(count_changes("a\nb\n", "a\n"), (0, 1));
+        assert_eq!(count_changes("a\n", "a\n"), (0, 0));
+        assert_eq!(count_changes("a\nb\n", "a\nx\ny\n"), (2, 1));
+    }
+
+    #[test]
+    fn version_carries_counts() {
+        let root = tmp();
+        let file = root.join("note.md");
+        let h = History::open_or_init(&root).unwrap();
+
+        std::fs::write(&file, "one\n").unwrap();
+        h.commit_save(&file, None).unwrap();
+        std::fs::write(&file, "one\ntwo\nthree\n").unwrap();
+        h.commit_save(&file, None).unwrap();
+
+        // The UI phrases the summary from these, so they have to survive the DTO.
+        let newest = &h.list_versions(&file).unwrap()[0];
+        assert_eq!((newest.added, newest.removed), (2, 0));
     }
 }

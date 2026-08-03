@@ -417,12 +417,15 @@ interface MVersion {
   time: number;
   label: string | null;
   summary: string;
+  added: number;
+  removed: number;
   content: string;
 }
 const history = new Map<string, MVersion[]>();
 let vseq = 0;
 
-function summarizeLines(oldText: string, newText: string): string {
+/** Mirrors velq-vcs::count_changes so the browser demo counts like the real backend. */
+function countLines(oldText: string, newText: string): { added: number; removed: number } {
   const a = oldText.split("\n");
   const b = newText.split("\n");
   const setA = new Set(a);
@@ -431,6 +434,11 @@ function summarizeLines(oldText: string, newText: string): string {
   let removed = 0;
   for (const l of b) if (!setA.has(l)) added++;
   for (const l of a) if (!setB.has(l)) removed++;
+  return { added, removed };
+}
+
+/** English fallback, like the backend's. The UI localizes from the counts. */
+function summarizeLines(added: number, removed: number): string {
   if (!added && !removed) return "No changes";
   if (added && !removed) return `${added} line${added === 1 ? "" : "s"} added`;
   if (!added && removed) return `${removed} line${removed === 1 ? "" : "s"} removed`;
@@ -441,11 +449,14 @@ function pushVersion(path: string, content: string, label: string | null): MVers
   const prev = history.get(path) ?? [];
   const old = prev.length ? prev[0].content : "";
   vseq += 1;
+  const { added, removed } = countLines(old, content);
   const v: MVersion = {
     id: `v${vseq}`,
     time: Math.floor(Date.now() / 1000),
     label,
-    summary: summarizeLines(old, content),
+    summary: summarizeLines(added, removed),
+    added,
+    removed,
     content,
   };
   history.set(path, [v, ...prev]);
@@ -471,7 +482,14 @@ function pushVersion(path: string, content: string, label: string | null): MVers
     seeded[2].time = now - 3600; // 1h ago
   }
 })();
-const pub = (v: MVersion) => ({ id: v.id, time: v.time, label: v.label, summary: v.summary });
+const pub = (v: MVersion) => ({
+  id: v.id,
+  time: v.time,
+  label: v.label,
+  summary: v.summary,
+  added: v.added,
+  removed: v.removed,
+});
 
 registerMock("init_history", () => null);
 

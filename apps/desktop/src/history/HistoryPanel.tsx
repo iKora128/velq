@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, History as HistoryIcon, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { MsgKey } from "@/i18n";
 import { useLocale, useT } from "@/i18n/useT";
 import type { Version } from "@/ipc/types";
 import { useDoc } from "@/store/doc";
@@ -8,6 +9,22 @@ import { cn } from "@/util/cn";
 import { clockTime, dayGroupLabel, dayKey, relativeTime } from "@/util/time";
 import { groupIntoSessions } from "./sessions";
 import "./history.css";
+
+/**
+ * Phrase a version's line counts in the user's language.
+ *
+ * The backend also ships a `summary` string, but it is English-only (it has no
+ * idea what locale the window is in), so the UI builds its own from the counts.
+ */
+function versionSummary(v: Version, t: (k: MsgKey, p?: Record<string, number>) => string): string {
+  const { added, removed } = v;
+  if (added && removed) return t("history.addedRemoved", { added, removed });
+  if (added)
+    return added === 1 ? t("history.lineAdded") : t("history.linesAdded", { count: added });
+  if (removed)
+    return removed === 1 ? t("history.lineRemoved") : t("history.linesRemoved", { count: removed });
+  return t("history.noChanges");
+}
 
 export function HistoryPanel() {
   const versions = useHistory((s) => s.versions);
@@ -57,7 +74,7 @@ export function HistoryPanel() {
         <span className="history-item__time">{time}</span>
         {v.label && <span className="history-item__name">{v.label}</span>}
       </div>
-      <div className="history-item__summary">{v.summary}</div>
+      <div className="history-item__summary">{versionSummary(v, t)}</div>
     </button>
   );
 
@@ -122,7 +139,7 @@ export function HistoryPanel() {
                         {newest.label && <span className="history-item__name">{newest.label}</span>}
                         <span className="history-session__count">{session.versions.length}</span>
                       </div>
-                      <div className="history-item__summary">{newest.summary}</div>
+                      <div className="history-item__summary">{versionSummary(newest, t)}</div>
                     </button>
                     {isOpen && older.map((v) => versionRow(v, clockTime(v.time, locale), true))}
                   </div>

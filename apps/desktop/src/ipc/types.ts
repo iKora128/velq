@@ -132,7 +132,11 @@ export interface Version {
   id: string;
   time: number;
   label: string | null;
+  /** English fallback from the backend. Prefer `versionSummary()`, which phrases
+   * `added`/`removed` in the user's language. */
   summary: string;
+  added: number;
+  removed: number;
 }
 
 export type ChangeKind = "equal" | "insert" | "delete" | "replace";

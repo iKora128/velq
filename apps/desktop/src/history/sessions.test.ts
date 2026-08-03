@@ -5,7 +5,14 @@ import { groupIntoSessions } from "./sessions";
 const MIN = 60;
 // Newest-first, like `list_versions`. `t` is minutes-ago for readability.
 function v(id: string, minutesAgo: number): Version {
-  return { id, time: 1_000_000 - minutesAgo * MIN, label: null, summary: `${id} summary` };
+  return {
+    id,
+    time: 1_000_000 - minutesAgo * MIN,
+    label: null,
+    summary: `${id} summary`,
+    added: 1,
+    removed: 0,
+  };
 }
 
 describe("groupIntoSessions", () => {
