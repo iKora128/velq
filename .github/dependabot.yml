@@ -9,6 +9,13 @@ updates:
     groups:
       cargo:
         patterns: ["*"]
+    ignore:
+      # velq-acp is written against the 1.x high-level client API
+      # (Client::builder / connect_with / attach_session / read_update).
+      # 2.0 made `attach_session` private, so the major has to be a
+      # deliberate port, not a weekly bot bump.
+      - dependency-name: "agent-client-protocol"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: "/"
