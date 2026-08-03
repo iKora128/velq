@@ -118,5 +118,5 @@ jobs:
           releaseBody: "See the assets below to download and install. Velq updates itself automatically."
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true
+          uploadUpdaterJson: true
           args: ${{ matrix.args }}
