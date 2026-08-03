@@ -16,6 +16,17 @@ updates:
       # deliberate port, not a weekly bot bump.
       - dependency-name: "agent-client-protocol"
         update-types: ["version-update:semver-major"]
+      # `capture_to_pdf` casts the ICoreWebView2 that Tauri's own
+      # `with_webview` hands back, so our webview2-com/windows must be the
+      # same copies Tauri links. Bumping ahead of Tauri puts two sets of COM
+      # types in the tree and Windows stops compiling (E0277/E0599). These
+      # move only when Tauri moves.
+      - dependency-name: "webview2-com"
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "windows"
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: npm
     directory: "/"
