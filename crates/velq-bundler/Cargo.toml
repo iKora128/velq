@@ -12,7 +12,7 @@ futures = { version = "0.3", default-features = false, features = ["std", "async
 lol_html = "3.0"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 serde.workspace = true
-sha2 = "0.10"
+sha2 = "0.11"
 thiserror.workspace = true
 url = "2"
 velq-core = { path = "../velq-core" }
